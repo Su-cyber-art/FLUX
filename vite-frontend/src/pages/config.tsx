@@ -7,25 +7,24 @@ import type {
 
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import toast from "react-hot-toast";
 
-import { Button } from "@/shadcn-bridge/heroui/button";
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
-import { Input } from "@/shadcn-bridge/heroui/input";
-import { Textarea } from "@/shadcn-bridge/heroui/input";
-import { Spinner } from "@/shadcn-bridge/heroui/spinner";
-import { Divider } from "@/shadcn-bridge/heroui/divider";
-import { Switch } from "@/shadcn-bridge/heroui/switch";
-import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
-import { Checkbox } from "@/shadcn-bridge/heroui/checkbox";
+import toast from "@/lib/notifications";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { Divider } from "@/components/ui/divider";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectItem } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Modal,
   ModalBody,
   ModalContent,
   ModalFooter,
   ModalHeader,
-} from "@/shadcn-bridge/heroui/modal";
+} from "@/components/ui/modal";
 import {
   updateConfigs,
   activateLicense,
@@ -39,7 +38,6 @@ import {
   runSystemUpgrade,
   type AnnouncementData,
 } from "@/api";
-import { BackIcon, SettingsIcon } from "@/components/icons";
 import { ThemeSettings } from "@/components/theme-settings";
 import { isAdmin } from "@/utils/auth";
 import { getCachedConfigs, configCache, updateSiteConfig } from "@/config/site";
@@ -374,22 +372,6 @@ export default function ConfigPage() {
       !systemUpgradeExecuting,
   );
 
-  const canGoBack =
-    typeof window !== "undefined" &&
-    typeof window.history.state?.idx === "number" &&
-    window.history.state.idx > 0;
-
-  const handleBack = () => {
-    if (canGoBack) {
-      navigate(-1);
-
-      return;
-    }
-
-    navigate("/profile", { replace: true });
-  };
-
-  // 权限检查
   useEffect(() => {
     if (!isAdmin()) {
       toast.error("权限不足，只有管理员可以访问此页面");
@@ -988,7 +970,7 @@ export default function ConfigPage() {
             className="relative rounded-xl border border-divider h-32 flex items-center justify-center"
             style={{ backgroundColor: bgImage }}
           >
-            <span className="text-gray-500 bg-white/80 dark:bg-black/80 px-2 py-1 rounded text-sm font-medium border border-gray-200 dark:border-gray-800 shadow-sm">
+            <span className="text-gray-500 bg-content1 px-2 py-1 rounded text-sm font-medium border border-gray-200 dark:border-gray-800 shadow-sm">
               纯色背景 ({bgImage})
             </span>
           </div>
@@ -1430,29 +1412,8 @@ export default function ConfigPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      {/* 页面标题 */}
-      <div className="flex items-center gap-3 mb-6">
-        <Button
-          isIconOnly
-          aria-label="返回上一页"
-          className="min-w-0 w-9 h-9"
-          size="sm"
-          variant="flat"
-          onPress={handleBack}
-        >
-          <BackIcon className="w-5 h-5" />
-        </Button>
-        <SettingsIcon className="w-8 h-8 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">网站配置</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            管理网站的基本信息和显示设置
-          </p>
-        </div>
-      </div>
-
-      <Card className="shadow-md mb-6">
+    <div className="max-w-5xl space-y-6">
+      <Card className="shadow-sm mb-6">
         <CardHeader className="pb-6">
           <div className="flex items-center w-full">
             <div>
@@ -1533,7 +1494,7 @@ export default function ConfigPage() {
         </CardBody>
       </Card>
 
-      <Card className="shadow-md">
+      <Card className="shadow-sm">
         <CardHeader className="pb-6">
           <div className="flex items-center w-full">
             <div>
@@ -1823,7 +1784,7 @@ export default function ConfigPage() {
         </Card>
       )}
 
-      <Card className="mt-6 shadow-md">
+      <Card className="mt-6 shadow-sm">
         <CardHeader className="pb-6">
           <div className="flex justify-between items-center w-full">
             <div>
@@ -1893,7 +1854,7 @@ export default function ConfigPage() {
       </Card>
 
       {/* 备份与恢复 */}
-      <Card className="mt-6 shadow-md">
+      <Card className="mt-6 shadow-sm">
         <CardHeader className="pb-6">
           <div className="flex justify-between items-center w-full">
             <div>
@@ -1971,7 +1932,7 @@ export default function ConfigPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={exportSelectorOpen}
         onOpenChange={setExportSelectorOpen}
@@ -2003,7 +1964,7 @@ export default function ConfigPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={importSelectorOpen}
         onOpenChange={setImportSelectorOpen}
@@ -2035,7 +1996,7 @@ export default function ConfigPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={systemUpgradeModalOpen}
         onOpenChange={(open) => {
@@ -2090,29 +2051,18 @@ export default function ConfigPage() {
         </ModalContent>
       </Modal>
 
-      {/* Floating Save Button (FAB) */}
-      <AnimatePresence>
-        {hasChanges && (
-          <motion.div
-            animate={{ y: 0, opacity: 1 }}
-            className="fixed bottom-6 right-6 z-50"
-            exit={{ y: 100, opacity: 0 }}
-            initial={{ y: 100, opacity: 0 }}
-            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+      {hasChanges && (
+        <div className="fixed bottom-5 right-5 z-40">
+          <Button
+            color="primary"
+            isLoading={saving}
+            startContent={<SaveIcon className="w-4 h-4" />}
+            onPress={handleSave}
           >
-            <Button
-              isIconOnly
-              className="w-12 h-12 rounded-full shadow-lg"
-              color="primary"
-              isLoading={saving}
-              size="lg"
-              onPress={handleSave}
-            >
-              {!saving && <SaveIcon className="w-5 h-5" />}
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            保存更改
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

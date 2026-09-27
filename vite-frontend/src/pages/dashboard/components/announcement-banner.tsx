@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
-import { Card, CardBody } from "@/shadcn-bridge/heroui/card";
+import { Card, CardBody } from "@/components/ui/card";
 
 interface AnnouncementBannerProps {
   announcement: AnnouncementData;

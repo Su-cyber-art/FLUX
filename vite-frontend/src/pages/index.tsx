@@ -1,294 +1,246 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  Button,
+  Group,
+  Modal,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  ThemeIcon,
+  Title,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import {
+  ArrowRight,
+  Check,
+  Network,
+  Server,
+  ShieldCheck,
+  Target,
+} from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
-import { motion } from "framer-motion";
 
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
-import { Input } from "@/shadcn-bridge/heroui/input";
-import { Button } from "@/shadcn-bridge/heroui/button";
-import { siteConfig } from "@/config/site";
-import { VersionFooter } from "@/components/version-footer";
-import { BrandLogo } from "@/components/brand-logo";
-import { login, LoginData, checkCaptcha, getPublicConfigByName } from "@/api";
+import { login, checkCaptcha, getPublicConfigByName } from "@/api";
 import { writeLoginSession } from "@/utils/session";
+import { toast } from "@/lib/notifications";
 import { useWebViewMode } from "@/hooks/useWebViewMode";
+import { useSiteConfig } from "@/hooks/use-site-config";
+import { useThemeContext } from "@/themes/context";
+import { VersionFooter } from "@/components/version-footer";
+import DefaultLayout from "@/layouts/default";
 
-interface LoginForm {
-  username: string;
-  password: string;
-  captchaId: string;
-}
-
-export default function IndexPage() {
-  const [form, setForm] = useState<LoginForm>({
-    username: "",
-    password: "",
-    captchaId: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<LoginForm>>({});
-  const [showCaptcha, setShowCaptcha] = useState(false);
-  const [siteKey, setSiteKey] = useState("");
+export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const config = useSiteConfig();
   const isWebView = useWebViewMode();
-
-  // 验证表单
-  const validateForm = (): boolean => {
-    const newErrors: Partial<LoginForm> = {};
-
-    if (!form.username.trim()) {
-      newErrors.username = "请输入用户名";
-    }
-
-    if (!form.password.trim()) {
-      newErrors.password = "请输入密码";
-    } else if (form.password.length < 6) {
-      newErrors.password = "密码长度至少6位";
-    }
-
-    setErrors(newErrors);
-
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // 处理输入变化
-  const handleInputChange = (field: keyof LoginForm, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    // 清除该字段的错误
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
-    }
-  };
-
-  // 执行登录请求
-  const performLogin = async (captchaToken?: string) => {
+  const { effectiveMode } = useThemeContext();
+  const [loading, setLoading] = useState(false);
+  const [siteKey, setSiteKey] = useState("");
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const form = useForm({
+    initialValues: { username: "", password: "" },
+    validate: {
+      username: (value: string) => (value.trim() ? null : "请输入用户名"),
+      password: (value: string) =>
+        value.length >= 6 ? null : "密码长度至少 6 位",
+    },
+  });
+  const authenticate = async (captchaId = "") => {
     try {
-      const finalCaptchaId =
-        typeof captchaToken === "string" && captchaToken.trim()
-          ? captchaToken
-          : form.captchaId;
-
-      const loginData: LoginData = {
-        username: form.username.trim(),
-        password: form.password,
-        captchaId: finalCaptchaId,
-      };
-
-      const response = await login(loginData);
+      const response = await login({
+        username: form.values.username.trim(),
+        password: form.values.password,
+        captchaId,
+      });
 
       if (response.code !== 0) {
-        toast.error(response.msg || "登录失败");
-        if (showCaptcha) {
-          setForm((prev) => ({ ...prev, captchaId: "" }));
-        }
+        toast.error(response.msg || "登录失败，请检查账号和密码");
 
         return;
       }
-
-      // 检查是否需要强制修改密码
-      if (response.data.requirePasswordChange) {
-        writeLoginSession(response.data);
-        toast.success("检测到默认密码，即将跳转到修改密码页面");
-        navigate("/change-password");
-
-        return;
-      }
-
-      // 保存登录信息
       writeLoginSession(response.data);
+      if (response.data.requirePasswordChange) {
+        navigate("/change-password", { replace: true });
 
-      // 登录成功
-      toast.success("登录成功");
-      navigate("/dashboard");
+        return;
+      }
+      const from = (location.state as { from?: string } | null)?.from;
+
+      navigate(
+        from?.startsWith("/") && !from.startsWith("//") && from !== "/"
+          ? from
+          : "/dashboard",
+        { replace: true },
+      );
     } catch {
-      toast.error("网络错误，请稍后重试");
+      toast.error("暂时无法连接面板，请稍后重试");
     } finally {
       setLoading(false);
     }
   };
-
-  const handleLogin = async () => {
-    if (!validateForm()) return;
-
+  const submit = async () => {
     setLoading(true);
-
     try {
-      // 先检查是否需要验证码
-      const checkResponse = await checkCaptcha();
+      const check = await checkCaptcha();
 
-      if (checkResponse.code !== 0) {
-        toast.error("检查验证码状态失败，请重试" + checkResponse.msg);
+      if (check.code !== 0) {
+        toast.error(check.msg || "无法获取验证状态");
         setLoading(false);
 
         return;
       }
+      if (check.data === 0) {
+        await authenticate();
 
-      // 根据返回值决定是否显示验证码
-      if (checkResponse.data === 0) {
-        await performLogin();
-      } else {
-        const configResp = await getPublicConfigByName("cloudflare_site_key");
-
-        if (configResp.code === 0 && configResp.data && configResp.data.value) {
-          setSiteKey(configResp.data.value);
-          setShowCaptcha(true);
-        } else {
-          toast.error("未配置Cloudflare Site Key，请联系管理员");
-          setLoading(false);
-        }
+        return;
       }
-    } catch (error) {
-      toast.error("网络错误，请稍后重试" + error);
+      const result = await getPublicConfigByName("cloudflare_site_key");
+
+      if (result.code === 0 && result.data?.value) {
+        setSiteKey(result.data.value);
+        setCaptchaOpen(true);
+      } else {
+        toast.error("验证码尚未配置，请联系管理员");
+        setLoading(false);
+      }
+    } catch {
+      toast.error("暂时无法连接面板，请稍后重试");
       setLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !loading) {
-      handleLogin();
-    }
-  };
-
   return (
-    <div className="relative flex flex-col min-h-screen bg-mesh-gradient overflow-hidden">
-      <section className="flex flex-col items-center justify-center flex-1 w-full p-4 relative z-10">
-        <motion.div
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-[420px] px-4 sm:px-0"
-          initial={{ opacity: 0, y: 24 }}
-          transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-        >
-          <Card className="w-full bg-white/20 dark:bg-zinc-900/20 backdrop-blur-3xl shadow-[0_20px_40px_rgba(0,0,0,0.15)] border-white/80 dark:border-white/10 rounded-[32px] p-2 sm:p-4">
-            <CardHeader className="pb-0 pt-6 px-6 flex-col items-center">
-              <BrandLogo className="w-14 h-14 rounded-2xl mb-4" size={56} />
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {siteConfig.name}
-              </h1>
-              <p className="text-sm text-default-500 mt-2 font-medium">
-                Sign in to manage your networks
-              </p>
-            </CardHeader>
-            <CardBody className="px-6 py-6 mt-2">
-              <div className="flex flex-col gap-5">
-                <Input
-                  classNames={{
-                    inputWrapper:
-                      "bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/30 dark:border-white/10 h-12 shadow-sm rounded-xl",
-                    input: "text-base font-medium",
-                  }}
-                  errorMessage={errors.username}
-                  isDisabled={loading}
-                  isInvalid={!!errors.username}
-                  label="Username"
-                  placeholder="admin"
-                  value={form.username}
-                  variant="bordered"
-                  onChange={(e) =>
-                    handleInputChange("username", e.target.value)
-                  }
-                  onKeyDown={handleKeyPress}
-                />
-
-                <Input
-                  classNames={{
-                    inputWrapper:
-                      "bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/30 dark:border-white/10 h-12 shadow-sm rounded-xl",
-                    input: "text-base font-medium tracking-wider",
-                  }}
-                  isDisabled={loading}
-                  isInvalid={!!errors.password}
-                  label="Password"
-                  placeholder="••••••••"
-                  type="password"
-                  value={form.password}
-                  variant="bordered"
-                  onChange={(e) =>
-                    handleInputChange("password", e.target.value)
-                  }
-                  onKeyDown={handleKeyPress}
-                />
-
-                <Button
-                  className="mt-4 h-12 rounded-xl bg-primary text-white font-bold text-base shadow-[0_8px_16px_rgba(0,122,255,0.3)] transition-transform active:scale-[0.98]"
-                  disabled={loading}
-                  isLoading={loading}
-                  onPress={handleLogin}
-                >
-                  {loading
-                    ? showCaptcha
-                      ? "Verifying..."
-                      : "Signing in..."
-                    : "Sign In"}
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
-        </motion.div>
-
-        {/* 版权信息 - 固定在底部，不占据布局空间 */}
-
-        <VersionFooter
-          containerClassName="fixed inset-x-0 bottom-4 text-center py-4"
-          poweredClassName="text-xs text-gray-400 dark:text-gray-500"
-          updateBadgeClassName="ml-2 inline-flex items-center rounded-full bg-rose-500/90 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white"
-          version={isWebView ? siteConfig.app_version : siteConfig.version}
-          versionClassName="text-xs text-gray-400 dark:text-gray-500 mt-1"
-        />
-
-        {/* 验证码弹层 */}
-        {showCaptcha && siteKey && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            {/* 背景遮罩层 - 模糊效果，暗黑模式下更深 */}
-            <button
-              className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm captcha-backdrop-enter"
-              type="button"
-              onClick={() => {
-                setShowCaptcha(false);
-                setLoading(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  setShowCaptcha(false);
-                  setLoading(false);
-                }
-              }}
-            />
-            {/* 验证码容器 */}
-            <div className="mb-4 relative z-50 bg-white dark:bg-zinc-900 p-6 rounded-lg shadow-xl">
-              <div className="mb-4 text-center text-sm font-medium text-gray-700 dark:text-gray-200">
-                请完成安全验证
-              </div>
-              <div className="flex justify-center">
-                <Turnstile
-                  options={{
-                    theme: (document.documentElement.classList.contains(
-                      "dark",
-                    ) ||
-                    document.documentElement.getAttribute("data-theme") ===
-                      "dark" ||
-                    window.matchMedia("(prefers-color-scheme: dark)").matches
-                      ? "dark"
-                      : "light") as "light" | "dark" | "auto",
-                  }}
-                  siteKey={siteKey}
-                  onError={() => {
-                    toast.error("验证失败，请刷新重试");
-                    setLoading(false);
-                  }}
-                  onExpire={() => {
-                    setForm((prev) => ({ ...prev, captchaId: "" }));
-                  }}
-                  onSuccess={(token) => {
-                    setForm((prev) => ({ ...prev, captchaId: token }));
-                    void performLogin(token);
-                  }}
-                />
-              </div>
+    <DefaultLayout>
+      <div className="auth-grid">
+        <section className="auth-intro">
+          <Text c="blue" fw={650} mb="lg" size="xs">
+            节点 · 隧道 · 转发
+          </Text>
+          <Title fw={650} lh={1.3} order={1} size={42}>
+            掌握每一条连接。
+          </Title>
+          <Text c="dimmed" lh={1.8} mt="lg" size="md">
+            将转发规则、节点状态和访问权限集中到一个清晰的工作空间。
+          </Text>
+          <div className="auth-network">
+            <div className="auth-network-node">
+              <Server size={24} />
+              <span>入口节点</span>
+            </div>
+            <div className="auth-network-line" />
+            <div className="auth-network-node">
+              <Network color="var(--primary)" size={24} />
+              <span>转发隧道</span>
+            </div>
+            <div className="auth-network-line" />
+            <div className="auth-network-node">
+              <Target size={24} />
+              <span>目标服务</span>
             </div>
           </div>
-        )}
-      </section>
-    </div>
+          <Stack gap="sm">
+            {[
+              "集中管理转发与流量策略",
+              "实时查看节点和链路状态",
+              "精细配置用户与分组权限",
+            ].map((text) => (
+              <Group key={text} gap="xs">
+                <ThemeIcon color="teal" radius="xl" size={20} variant="light">
+                  <Check size={13} />
+                </ThemeIcon>
+                <Text c="dimmed" size="sm">
+                  {text}
+                </Text>
+              </Group>
+            ))}
+          </Stack>
+        </section>
+        <section className="auth-form-panel">
+          <div className="auth-form">
+            <Paper withBorder p={32} radius="lg">
+              <ThemeIcon mb="xl" radius="md" size={44} variant="light">
+                <ShieldCheck size={23} />
+              </ThemeIcon>
+              <Title order={2} size={25}>
+                登录控制台
+              </Title>
+              <Text c="dimmed" mb="xl" mt={6} size="sm">
+                欢迎回来，请使用你的面板账号登录。
+              </Text>
+              <form noValidate onSubmit={form.onSubmit(submit)}>
+                <Stack gap="md">
+                  <TextInput
+                    required
+                    autoComplete="username"
+                    disabled={loading}
+                    label="用户名"
+                    placeholder="输入用户名"
+                    {...form.getInputProps("username")}
+                  />
+                  <PasswordInput
+                    required
+                    autoComplete="current-password"
+                    disabled={loading}
+                    label="密码"
+                    placeholder="输入密码"
+                    visibilityToggleButtonProps={{
+                      "aria-label": "显示或隐藏密码",
+                    }}
+                    {...form.getInputProps("password")}
+                  />
+                  <Button
+                    fullWidth
+                    loading={loading}
+                    mt="sm"
+                    rightSection={<ArrowRight size={16} />}
+                    type="submit"
+                  >
+                    登录
+                  </Button>
+                </Stack>
+              </form>
+            </Paper>
+            <VersionFooter
+              containerClassName="mt-6 text-center"
+              poweredClassName="text-xs text-default-500 mt-1"
+              updateBadgeClassName="ml-2 rounded bg-primary-50 px-1.5 py-0.5 text-primary"
+              version={isWebView ? config.app_version : config.version}
+              versionClassName="text-xs text-default-500"
+            />
+          </div>
+        </section>
+      </div>
+      <Modal
+        centered
+        opened={captchaOpen}
+        title="安全验证"
+        onClose={() => {
+          setCaptchaOpen(false);
+          setLoading(false);
+        }}
+      >
+        <Group justify="center">
+          {siteKey && (
+            <Turnstile
+              options={{ theme: effectiveMode }}
+              siteKey={siteKey}
+              onError={() => {
+                toast.error("验证失败，请重试");
+                setLoading(false);
+              }}
+              onExpire={() => setLoading(false)}
+              onSuccess={(token) => {
+                setCaptchaOpen(false);
+                void authenticate(token);
+              }}
+            />
+          )}
+        </Group>
+      </Modal>
+    </DefaultLayout>
   );
 }

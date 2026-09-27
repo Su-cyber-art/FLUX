@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import toast from "react-hot-toast";
 import {
   DndContext,
   KeyboardSensor,
@@ -14,11 +13,22 @@ import {
   arrayMove,
   rectSortingStrategy,
   sortableKeyboardCoordinates,
-  useSortable,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { LayoutGrid, List } from "lucide-react";
 
+import {
+  NODE_FALLBACK_REFRESH_INTERVAL_MS,
+  Node,
+  NodeForm,
+  NodeTab,
+  RemoteUsageNode,
+  NodeFilterMode,
+  getNodeReminderEnabled,
+  getNodeExpiryMeta,
+  mergeNodeRealtimeState,
+  SortableItem,
+} from "@/pages/node/presentation";
+import toast from "@/lib/notifications";
 import { SearchBar } from "@/components/search-bar";
 import { formatTraffic } from "@/utils/traffic";
 import { AnimatedPage } from "@/components/animated-page";
@@ -29,26 +39,26 @@ import {
   TableBody,
   TableRow,
   TableCell,
-} from "@/shadcn-bridge/heroui/table";
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
-import { Button } from "@/shadcn-bridge/heroui/button";
-import { Input } from "@/shadcn-bridge/heroui/input";
-import { Textarea } from "@/shadcn-bridge/heroui/input";
+} from "@/components/ui/table";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/input";
 import {
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-} from "@/shadcn-bridge/heroui/modal";
-import { Chip } from "@/shadcn-bridge/heroui/chip";
-import { Switch } from "@/shadcn-bridge/heroui/switch";
-import { Spinner } from "@/shadcn-bridge/heroui/spinner";
-import { Alert } from "@/shadcn-bridge/heroui/alert";
-import { Progress } from "@/shadcn-bridge/heroui/progress";
-import { Accordion, AccordionItem } from "@/shadcn-bridge/heroui/accordion";
-import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
-import { Checkbox } from "@/shadcn-bridge/heroui/checkbox";
+} from "@/components/ui/modal";
+import { Chip } from "@/components/ui/chip";
+import { Switch } from "@/components/ui/switch";
+import { Spinner } from "@/components/ui/spinner";
+import { Alert } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Accordion, AccordionItem } from "@/components/ui/accordion";
+import { Select, SelectItem } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   createNode,
   getNodeList,
@@ -72,239 +82,15 @@ import {
 } from "@/pages/node/display";
 import { tryCopyInstallCommand } from "@/pages/node/install-command";
 import {
-  getNodeRenewalSnapshot,
   formatNodeRenewalTime,
   getNodeRenewalCycleLabel,
   type NodeRenewalCycle,
 } from "@/pages/node/renewal";
-import {
-  buildNodeSystemInfo,
-  type NodeSystemInfo,
-} from "@/pages/node/system-info";
+import { buildNodeSystemInfo } from "@/pages/node/system-info";
 import { useNodeOfflineTimers } from "@/pages/node/use-node-offline-timers";
 import { useNodeRealtime } from "@/pages/node/use-node-realtime";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { loadStoredOrder, saveOrder } from "@/utils/order-storage";
-
-const NODE_FALLBACK_REFRESH_INTERVAL_MS = 15000;
-
-interface Node {
-  id: number;
-  inx?: number;
-  name: string;
-  remark?: string;
-  expiryTime?: number;
-  renewalCycle?: NodeRenewalCycle;
-  expiryReminderDismissed?: number;
-  ip: string;
-  serverIp: string;
-  serverIpV4?: string;
-  serverIpV6?: string;
-  port: string;
-  tcpListenAddr?: string;
-  udpListenAddr?: string;
-  extraIPs?: string;
-  version?: string;
-  http?: number; // 0 关 1 开
-  tls?: number; // 0 关 1 开
-  socks?: number; // 0 关 1 开
-  status: number;
-  isRemote?: number;
-  forwardMode?: "agent" | "nftables";
-  sshConfig?: {
-    host?: string;
-    port?: number;
-    username?: string;
-    authType?: "password" | "private_key";
-    password?: string;
-    privateKey?: string;
-    passphrase?: string;
-    sudoMode?: "none" | "sudo" | "sudo_su";
-  } | null;
-  remoteUrl?: string;
-  syncError?: string;
-  connectionStatus: "online" | "offline";
-  systemInfo?: NodeSystemInfo | null;
-  copyLoading?: boolean;
-  upgradeLoading?: boolean;
-  rollbackLoading?: boolean;
-}
-
-interface NodeForm {
-  id: number | null;
-  name: string;
-  remark: string;
-  expiryTime: number;
-  renewalCycle: NodeRenewalCycle;
-  serverHost: string;
-  serverIpV4: string;
-  serverIpV6: string;
-  port: string;
-  tcpListenAddr: string;
-  udpListenAddr: string;
-  interfaceName: string;
-  extraIPs: string;
-  forwardMode: "agent" | "nftables";
-  sshHost: string;
-  sshPort: string;
-  sshUsername: string;
-  sshAuthType: "password" | "private_key";
-  sshPassword: string;
-  sshPrivateKey: string;
-  sshPassphrase: string;
-  sshSudoMode: "none" | "sudo" | "sudo_su";
-  http: number; // 0 关 1 开
-  tls: number; // 0 关 1 开
-  socks: number; // 0 关 1 开
-}
-
-type NodeTab = "local" | "remote";
-
-interface RemoteUsageBinding {
-  bindingId: number;
-  tunnelId: number;
-  tunnelName: string;
-  chainType: number;
-  hopInx: number;
-  allocatedPort: number;
-  resourceKey: string;
-  remoteBindingId: string;
-  updatedTime: number;
-}
-
-interface RemoteUsageNode {
-  nodeId: number;
-  nodeName: string;
-  remoteUrl: string;
-  shareId: number;
-  portRangeStart: number;
-  portRangeEnd: number;
-  maxBandwidth: number;
-  currentFlow: number;
-  usedPorts: number[];
-  bindings: RemoteUsageBinding[];
-  activeBindingNum: number;
-  syncError?: string;
-}
-
-const EXPIRING_SOON_DAYS = 7;
-
-type NodeExpiryState = "permanent" | "healthy" | "expiringSoon" | "expired";
-
-type NodeFilterMode = "all" | "expiringSoon" | "expired" | "withExpiry";
-
-const getNodeReminderEnabled = (node: Node): boolean => {
-  return !!node.expiryTime && node.expiryTime > 0 && !!node.renewalCycle;
-};
-
-const getNodeExpiryMeta = (timestamp?: number, cycle?: NodeRenewalCycle) => {
-  const renewal = getNodeRenewalSnapshot(timestamp, cycle, EXPIRING_SOON_DAYS);
-
-  if (renewal.state === "unset") {
-    return {
-      state: "permanent" as NodeExpiryState,
-      label: "未设置续费周期",
-      tone: "default" as const,
-      accentClassName: "",
-      bannerClassName: "",
-      isHighlighted: false,
-      sortWeight: 3,
-      nextDueTime: undefined,
-    };
-  }
-
-  if (renewal.state === "expired") {
-    return {
-      state: "expired" as NodeExpiryState,
-      label: "已过期",
-      tone: "danger" as const,
-      accentClassName:
-        "border-red-300/80 bg-red-50/70 shadow-red-100 dark:border-red-500/40 dark:bg-red-950/20",
-      bannerClassName:
-        "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300",
-      isHighlighted: true,
-      sortWeight: 0,
-      nextDueTime: renewal.nextDueTime,
-    };
-  }
-
-  if (renewal.state === "dueSoon") {
-    return {
-      state: "expiringSoon" as NodeExpiryState,
-      label: renewal.label,
-      tone: "warning" as const,
-      accentClassName:
-        "border-amber-300/80 bg-amber-50/80 shadow-amber-100 dark:border-amber-500/40 dark:bg-amber-950/20",
-      bannerClassName:
-        "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300",
-      isHighlighted: true,
-      sortWeight: 1,
-      nextDueTime: renewal.nextDueTime,
-    };
-  }
-
-  return {
-    state: "healthy" as NodeExpiryState,
-    label: renewal.label,
-    tone: "success" as const,
-    accentClassName: "",
-    bannerClassName: "",
-    isHighlighted: false,
-    sortWeight: 2,
-    nextDueTime: renewal.nextDueTime,
-  };
-};
-
-const mergeNodeRealtimeState = (
-  incomingNode: Node,
-  existingNode?: Node,
-): Node => {
-  return {
-    ...incomingNode,
-    systemInfo: existingNode?.systemInfo ?? incomingNode.systemInfo ?? null,
-    copyLoading: existingNode?.copyLoading ?? incomingNode.copyLoading ?? false,
-    upgradeLoading:
-      existingNode?.upgradeLoading ?? incomingNode.upgradeLoading ?? false,
-    rollbackLoading:
-      existingNode?.rollbackLoading ?? incomingNode.rollbackLoading ?? false,
-  };
-};
-
-const SortableItem = ({
-  id,
-  children,
-}: {
-  id: number;
-  children: (listeners: any, attributes?: any) => any;
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style: React.CSSProperties = {
-    transform: transform
-      ? CSS.Transform.toString({
-          ...transform,
-          x: Math.round(transform.x),
-          y: Math.round(transform.y),
-        })
-      : undefined,
-    transition: isDragging ? undefined : transition || undefined,
-    opacity: isDragging ? 0.5 : 1,
-    willChange: isDragging ? "transform" : undefined,
-  };
-
-  return (
-    <div ref={setNodeRef} className="overflow-visible h-full" style={style}>
-      {children(listeners, attributes)}
-    </div>
-  );
-};
 
 export default function NodePage() {
   const [nodeList, setNodeList] = useState<Node[]>([]);
@@ -1619,7 +1405,7 @@ export default function NodePage() {
   );
 
   return (
-    <AnimatedPage className="px-3 lg:px-6 py-8">
+    <AnimatedPage>
       <div className="mb-6 space-y-3">
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <Button
@@ -1741,6 +1527,7 @@ export default function NodePage() {
                 {/* 视图切换按钮 */}
                 <Button
                   isIconOnly
+                  aria-label="切换列表或卡片视图"
                   className="text-default-600 hidden sm:flex"
                   size="sm"
                   variant="flat"
@@ -1861,10 +1648,10 @@ export default function NodePage() {
             className="overflow-x-auto min-w-full"
             classNames={{
               wrapper:
-                "bg-transparent p-0 shadow-none border-none overflow-auto rounded-2xl",
-              th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
+              th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
               td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-              tr: "hover:bg-white/10 dark:hover:bg-white/5 transition-colors",
+              tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
             }}
           >
             <TableHeader>
@@ -2144,7 +1931,7 @@ export default function NodePage() {
                                     )}
                                   </button>
                                   <div
-                                    className={`pointer-events-none invisible absolute z-[60] w-72 max-w-[min(18rem,calc(100vw-4rem))] rounded-xl border border-divider/80 bg-background/98 p-3 opacity-0 shadow-xl backdrop-blur transition-all duration-150 group-hover/info:visible group-hover/info:pointer-events-auto group-hover/info:opacity-100 group-focus-within/info:visible group-focus-within/info:pointer-events-auto group-focus-within/info:opacity-100 ${
+                                    className={`pointer-events-none invisible absolute z-[60] w-72 max-w-[min(18rem,calc(100vw-4rem))] rounded-xl border border-divider/80 bg-background/98 p-3 opacity-0 shadow-sm  transition-all duration-150 group-hover/info:visible group-hover/info:pointer-events-auto group-hover/info:opacity-100 group-focus-within/info:visible group-focus-within/info:pointer-events-auto group-focus-within/info:opacity-100 ${
                                       infoPlacement === "bottom"
                                         ? "right-0 top-[calc(100%+0.75rem)] translate-y-1 group-hover/info:translate-y-0 group-focus-within/info:translate-y-0"
                                         : "right-[calc(100%+0.75rem)] top-1/2 -translate-y-1/2 translate-x-1 group-hover/info:translate-x-0 group-focus-within/info:translate-x-0"
@@ -2359,7 +2146,7 @@ export default function NodePage() {
                                         )}
                                       </span>
                                     </div>
-                                    <div className="max-h-20 overflow-y-auto rounded bg-white/10 dark:bg-black/10 p-1.5 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1">
+                                    <div className="max-h-20 overflow-y-auto rounded bg-content1 p-1.5 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1">
                                       {remoteUsage.usedPorts.length > 0 ? (
                                         <div className="flex flex-wrap gap-1">
                                           {remoteUsage.usedPorts.map((port) => (
@@ -2395,7 +2182,7 @@ export default function NodePage() {
                                         remoteUsage.bindings.map((binding) => (
                                           <div
                                             key={binding.bindingId}
-                                            className="rounded border border-default-200 dark:border-default-100/30 bg-white/10 dark:bg-black/10 p-2"
+                                            className="rounded border border-default-200 dark:border-default-100/30 bg-content1 p-2"
                                           >
                                             <div className="flex items-center justify-between gap-2">
                                               <span
@@ -2522,7 +2309,7 @@ export default function NodePage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={dialogVisible}
         placement="center"
@@ -2987,10 +2774,10 @@ export default function NodePage() {
                         />
                       )}
                       <div
-                        className={`grid grid-cols-1 sm:grid-cols-3 gap-3 bg-content1/30 dark:bg-content1/20 p-3 rounded-md border border-divider ${protocolControlsDisabled ? "opacity-70" : ""}`}
+                        className={`grid grid-cols-1 sm:grid-cols-3 gap-3 bg-content1 bg-content1 p-3 rounded-md border border-divider ${protocolControlsDisabled ? "opacity-70" : ""}`}
                       >
                         {/* HTTP tile */}
-                        <div className="px-3 py-3 rounded-lg bg-content1/55 dark:bg-content1/35 border border-divider hover:border-primary-200 dark:hover:border-primary-500/30 transition-colors">
+                        <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-200 dark:hover:border-primary-500/30 transition-colors">
                           <div className="flex items-center gap-2 mb-2">
                             <svg
                               aria-hidden="true"
@@ -3031,7 +2818,7 @@ export default function NodePage() {
                         </div>
 
                         {/* TLS tile */}
-                        <div className="px-3 py-3 rounded-lg bg-content1/55 dark:bg-content1/35 border border-divider hover:border-primary-200 dark:hover:border-primary-500/30 transition-colors">
+                        <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-200 dark:hover:border-primary-500/30 transition-colors">
                           <div className="flex items-center gap-2 mb-2">
                             <svg
                               aria-hidden="true"
@@ -3075,7 +2862,7 @@ export default function NodePage() {
                         </div>
 
                         {/* SOCKS tile */}
-                        <div className="px-3 py-3 rounded-lg bg-content1/55 dark:bg-content1/35 border border-divider hover:border-primary-200 dark:hover:border-primary-500/30 transition-colors">
+                        <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-200 dark:hover:border-primary-500/30 transition-colors">
                           <div className="flex items-center gap-2 mb-2">
                             <svg
                               aria-hidden="true"
@@ -3154,7 +2941,7 @@ export default function NodePage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={rollbackModalOpen}
         placement="center"
@@ -3195,7 +2982,7 @@ export default function NodePage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={deleteModalOpen}
         placement="center"
@@ -3238,7 +3025,7 @@ export default function NodePage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={installSelectorOpen}
         placement="center"
@@ -3291,7 +3078,7 @@ export default function NodePage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={installCommandModal}
         placement="center"
@@ -3348,7 +3135,7 @@ export default function NodePage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={upgradeModalOpen}
         placement="center"
@@ -3454,7 +3241,7 @@ export default function NodePage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={batchDeleteModalOpen}
         placement="center"
@@ -3496,7 +3283,7 @@ export default function NodePage() {
 
       <Modal
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={isFilterModalOpen}
         placement="center"

@@ -5,7 +5,6 @@ import type {
 } from "@/api/types";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import toast from "react-hot-toast";
 import {
   DndContext,
   KeyboardSensor,
@@ -25,28 +24,46 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { LayoutGrid, List } from "lucide-react";
 
+import {
+  ChainTunnel,
+  Tunnel,
+  getTunnelDiagnosisTarget,
+  Node,
+  TunnelForm,
+  getTunnelForwardMode,
+  createTypedTunnelFormDefaults,
+  BatchProgressState,
+  BatchResultModalState,
+  TunnelDeleteAction,
+  EMPTY_BATCH_RESULT_MODAL_STATE,
+  DEFAULT_TUNNEL_DELETE_ACTION,
+  TUNNEL_ORDER_KEY,
+  renderBestExitState,
+  mapTunnelApiItems,
+} from "@/pages/tunnel/presentation";
+import toast from "@/lib/notifications";
 import { SearchBar } from "@/components/search-bar";
 import { AnimatedPage } from "@/components/animated-page";
 import { BatchActionResultModal } from "@/components/batch-action-result-modal";
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
-import { Button } from "@/shadcn-bridge/heroui/button";
-import { Input, Textarea } from "@/shadcn-bridge/heroui/input";
-import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input, Textarea } from "@/components/ui/input";
+import { Select, SelectItem } from "@/components/ui/select";
 import {
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-} from "@/shadcn-bridge/heroui/modal";
-import { Chip } from "@/shadcn-bridge/heroui/chip";
-import { Spinner } from "@/shadcn-bridge/heroui/spinner";
-import { Divider } from "@/shadcn-bridge/heroui/divider";
-import { Alert } from "@/shadcn-bridge/heroui/alert";
-import { Checkbox } from "@/shadcn-bridge/heroui/checkbox";
-import { Progress } from "@/shadcn-bridge/heroui/progress";
-import { Radio, RadioGroup } from "@/shadcn-bridge/heroui/radio";
-import { Accordion, AccordionItem } from "@/shadcn-bridge/heroui/accordion";
+} from "@/components/ui/modal";
+import { Chip } from "@/components/ui/chip";
+import { Spinner } from "@/components/ui/spinner";
+import { Divider } from "@/components/ui/divider";
+import { Alert } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Radio, RadioGroup } from "@/components/ui/radio";
+import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import {
   Table,
   TableHeader,
@@ -54,7 +71,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
-} from "@/shadcn-bridge/heroui/table";
+} from "@/components/ui/table";
 import {
   createTunnel,
   batchDeleteTunnelsWithForwards,
@@ -76,7 +93,6 @@ import {
 } from "@/pages/tunnel/diagnosis";
 import { diagnoseTunnelStream } from "@/api/diagnosis-stream";
 import {
-  createTunnelFormDefaults,
   getTunnelFlowDisplay,
   getTunnelTypeDisplay,
   validateTunnelForm,
@@ -88,262 +104,6 @@ import {
   extractBatchFailures,
   extractApiErrorMessage,
 } from "@/api/error-message";
-
-interface ChainTunnel {
-  nodeId: number;
-  protocol?: string; // 'tls' | 'wss' | 'tcp' | 'mtls' | 'mwss' | 'mtcp' | 'kcp' - 转发链协议
-  strategy?: string; // 'fifo' | 'round' | 'rand' | 'best' - 仅转发链/多出口需要
-  chainType?: number; // 1: 入口, 2: 转发链, 3: 出口
-  inx?: number; // 转发链序号
-  connectIp?: string; // 连接IP（多IP节点指定连接地址）
-}
-
-interface BestExitStateItem {
-  ownerNodeId: number;
-  ownerNodeName: string;
-  ownerRole: "entry" | "chain" | string;
-  exitNodeId?: number;
-  exitNodeName: string;
-  updatedAt?: number;
-  reason?: string;
-}
-
-interface BestExitState {
-  enabled: boolean;
-  summary: string;
-  status: "applied" | "waiting" | string;
-  updatedAt?: number;
-  reason?: string;
-  items: BestExitStateItem[];
-}
-
-interface Tunnel {
-  id: number;
-  inx?: number;
-  name: string;
-  type: number; // 1: 端口转发, 2: 隧道转发
-  forwardMode?: "agent" | "nftables";
-  inNodeId: ChainTunnel[]; // 入口节点列表
-  outNodeId?: ChainTunnel[]; // 出口节点列表
-  chainNodes?: ChainTunnel[][]; // 转发链节点列表，二维数组
-  inIp: string;
-  outIp?: string;
-  protocol?: string;
-  flow: number; // 1: 单向, 2: 双向
-  trafficRatio: number;
-  ipPreference?: string;
-  probeTargetHost?: string;
-  probeTargetPort?: number;
-  bestExitState?: BestExitState;
-  status: number;
-  createdTime: string;
-}
-
-const DEFAULT_PROBE_TARGET_HOST = "www.bing.com";
-const DEFAULT_PROBE_TARGET_PORT = 443;
-
-const getTunnelDiagnosisTarget = (tunnel: Tunnel) => ({
-  targetIp: tunnel.probeTargetHost || DEFAULT_PROBE_TARGET_HOST,
-  targetPort: tunnel.probeTargetPort || DEFAULT_PROBE_TARGET_PORT,
-});
-
-interface Node {
-  id: number;
-  name: string;
-  status: number; // 1: 在线, 0: 离线
-  forwardMode?: "agent" | "nftables";
-  serverIp?: string;
-  serverIpV4?: string;
-  serverIpV6?: string;
-  extraIPs?: string;
-}
-
-interface TunnelForm {
-  id?: number;
-  name: string;
-  type: number;
-  forwardMode?: "agent" | "nftables";
-  inNodeId: ChainTunnel[];
-  outNodeId?: ChainTunnel[];
-  chainNodes?: ChainTunnel[][]; // 转发链节点列表，二维数组，外层是跳数，内层是该跳的节点
-  flow: number;
-  trafficRatio: number;
-  inIp: string; // 入口IP
-  ipPreference: string;
-  probeTargetHost?: string;
-  probeTargetPort?: number;
-  status: number;
-}
-
-type TunnelForwardMode = NonNullable<TunnelForm["forwardMode"]>;
-
-const getTunnelForwardMode = (
-  inNodeId: ChainTunnel[],
-  nodes: Node[],
-): TunnelForwardMode =>
-  inNodeId.some((item) => {
-    const node = nodes.find((candidate) => candidate.id === item.nodeId);
-
-    return node?.forwardMode === "nftables";
-  })
-    ? "nftables"
-    : "agent";
-
-const createTypedTunnelFormDefaults = (): TunnelForm =>
-  createTunnelFormDefaults() as TunnelForm;
-
-interface BatchProgressState {
-  active: boolean;
-  label: string;
-  percent: number;
-}
-
-interface BatchResultModalState {
-  failures: BatchOperationFailure[];
-  open: boolean;
-  summary: string;
-  title: string;
-}
-
-type TunnelDeleteAction = "replace" | "delete_forwards";
-
-const EMPTY_BATCH_RESULT_MODAL_STATE: BatchResultModalState = {
-  failures: [],
-  open: false,
-  summary: "",
-  title: "",
-};
-
-const DEFAULT_TUNNEL_DELETE_ACTION: TunnelDeleteAction = "replace";
-
-const TUNNEL_ORDER_KEY = "tunnel-order";
-
-const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
-  !!value && typeof value === "object" && !Array.isArray(value);
-
-const toSafeString = (value: unknown): string => {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-
-  return "";
-};
-
-const toSafeNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value !== "string" || !value.trim()) return undefined;
-
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
-
-const normalizeBestExitStateItem = (
-  value: unknown,
-): BestExitStateItem | undefined => {
-  if (!isObjectRecord(value)) return undefined;
-
-  const ownerNodeId = toSafeNumber(value.ownerNodeId);
-
-  if (ownerNodeId === undefined) return undefined;
-
-  const exitNodeId = toSafeNumber(value.exitNodeId);
-  const updatedAt = toSafeNumber(value.updatedAt);
-  const reason = toSafeString(value.reason);
-
-  return {
-    ownerNodeId,
-    ownerNodeName: toSafeString(value.ownerNodeName),
-    ownerRole: toSafeString(value.ownerRole),
-    ...(exitNodeId !== undefined ? { exitNodeId } : {}),
-    exitNodeName: toSafeString(value.exitNodeName),
-    ...(updatedAt !== undefined ? { updatedAt } : {}),
-    ...(reason ? { reason } : {}),
-  };
-};
-
-const normalizeBestExitState = (value: unknown): BestExitState | undefined => {
-  if (!isObjectRecord(value) || value.enabled !== true) return undefined;
-
-  const updatedAt = toSafeNumber(value.updatedAt);
-  const reason = toSafeString(value.reason);
-  const items = Array.isArray(value.items)
-    ? value.items.flatMap((item) => {
-        const normalized = normalizeBestExitStateItem(item);
-
-        return normalized ? [normalized] : [];
-      })
-    : [];
-
-  return {
-    enabled: true,
-    summary: toSafeString(value.summary),
-    status: toSafeString(value.status),
-    ...(updatedAt !== undefined ? { updatedAt } : {}),
-    ...(reason ? { reason } : {}),
-    items,
-  };
-};
-
-const bestExitOwnerRoleText = (role?: string) => {
-  if (role === "chain") return "中转";
-
-  return "入口";
-};
-
-const bestExitDetailTitle = (state?: BestExitState) => {
-  if (!state?.items?.length) return undefined;
-
-  return state.items
-    .map(
-      (item) =>
-        `${bestExitOwnerRoleText(item.ownerRole)} ${item.ownerNodeName || item.ownerNodeId} -> ${item.exitNodeName || "等待探测"}`,
-    )
-    .join("\n");
-};
-
-const renderBestExitState = (state?: BestExitState) => {
-  if (!state?.enabled) return null;
-
-  const isWaiting = state.status === "waiting";
-  const summaryText = state.summary || "等待探测";
-  const displaySummary =
-    isWaiting && !summaryText.includes("等待")
-      ? `等待探测 · ${summaryText}`
-      : summaryText;
-  const className = isWaiting
-    ? "border-warning-200/70 bg-warning-50/50 text-warning-700 dark:border-warning-300/20 dark:bg-warning-900/20 dark:text-warning-300"
-    : "border-success-200/60 bg-success-50/40 text-success-700 dark:border-success-300/20 dark:bg-success-900/20 dark:text-success-300";
-
-  return (
-    <span
-      className={`inline-flex max-w-full items-center rounded border px-1.5 py-0.5 text-[11px] leading-4 ${className}`}
-      title={bestExitDetailTitle(state)}
-    >
-      <span className="min-w-0 truncate">最优出口：{displaySummary}</span>
-    </span>
-  );
-};
-
-const mapTunnelApiItems = (items: any[]): Tunnel[] => {
-  return (items || []).map((tunnel) => {
-    const { bestExitState: rawBestExitState, ...tunnelFields } = tunnel;
-    const bestExitState = normalizeBestExitState(rawBestExitState);
-
-    return {
-      ...tunnelFields,
-      ...(bestExitState ? { bestExitState } : {}),
-      inx: tunnel.inx ?? 0,
-      inNodeId: Array.isArray(tunnel.inNodeId) ? tunnel.inNodeId : [],
-      outNodeId: Array.isArray(tunnel.outNodeId) ? tunnel.outNodeId : [],
-      chainNodes: Array.isArray(tunnel.chainNodes) ? tunnel.chainNodes : [],
-      inIp: tunnel.inIp || "",
-      flow: tunnel.flow ?? 1,
-      trafficRatio: tunnel.trafficRatio ?? 1,
-      status: typeof tunnel.status === "number" ? tunnel.status : 0,
-      createdTime: tunnel.createdTime || "",
-    };
-  });
-};
 
 export default function TunnelPage() {
   const [loading, setLoading] = useState(true);
@@ -1657,7 +1417,7 @@ export default function TunnelPage() {
   }
 
   return (
-    <AnimatedPage className="px-3 lg:px-6 py-8">
+    <AnimatedPage>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-6 gap-3">
         <div className="flex-1 max-w-sm flex items-center gap-2">
           <SearchBar
@@ -1734,6 +1494,7 @@ export default function TunnelPage() {
                 </Button>
                 <Button
                   isIconOnly
+                  aria-label="切换列表或卡片视图"
                   size="sm"
                   variant="flat"
                   onPress={() =>
@@ -1780,16 +1541,16 @@ export default function TunnelPage() {
       {/* 隧道卡片网格 */}
       {tunnels.length > 0 ? (
         viewMode === "list" ? (
-          <Card className="bg-white/20 dark:bg-zinc-900/20 backdrop-blur-3xl border border-white/80 dark:border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.1)]">
+          <Card className="bg-content1 border border-divider shadow-sm">
             <Table
               aria-label="隧道列表"
               className="overflow-x-auto min-w-full"
               classNames={{
                 wrapper:
-                  "bg-transparent p-0 shadow-none border-none overflow-auto rounded-[24px]",
-                th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                  "bg-transparent p-0 shadow-none border-none overflow-auto rounded-xl",
+                th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
                 td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                tr: "hover:bg-white/10 dark:hover:bg-white/5 transition-colors",
+                tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
               }}
             >
               <TableHeader>
@@ -1958,7 +1719,7 @@ export default function TunnelPage() {
                       {(listeners) => (
                         <Card
                           key={tunnel.id}
-                          className="group overflow-hidden bg-white/20 dark:bg-zinc-900/20 backdrop-blur-3xl border border-white/80 dark:border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.1)]"
+                          className="group overflow-hidden bg-content1 border border-divider shadow-sm"
                         >
                           <CardHeader className="pb-2 md:pb-2">
                             <div className="flex justify-between items-start w-full">
@@ -2008,7 +1769,7 @@ export default function TunnelPage() {
                               <div className="pt-2 border-t border-divider">
                                 <div className="flex items-center justify-center gap-2 text-xs">
                                   {/* 入口节点 */}
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-primary-50/30 dark:bg-primary-100/20 backdrop-blur-md rounded border border-primary-200/50 dark:border-primary-300/20">
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-primary-50/30 dark:bg-primary-100/20 rounded border border-primary-200/50 dark:border-primary-300/20">
                                     <svg
                                       aria-hidden="true"
                                       className="w-3 h-3 text-primary-600"
@@ -2043,7 +1804,7 @@ export default function TunnelPage() {
                                   </svg>
 
                                   {/* 转发链 */}
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-secondary-50/30 dark:bg-secondary-100/20 backdrop-blur-md rounded border border-secondary-200/50 dark:border-secondary-300/20">
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-secondary-50/30 dark:bg-secondary-100/20 rounded border border-secondary-200/50 dark:border-secondary-300/20">
                                     <svg
                                       aria-hidden="true"
                                       className="w-3 h-3 text-secondary-600"
@@ -2081,7 +1842,7 @@ export default function TunnelPage() {
                                   </svg>
 
                                   {/* 出口节点 */}
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-success-50/30 dark:bg-success-100/20 backdrop-blur-md rounded border border-success-200/50 dark:border-success-300/20">
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-success-50/30 dark:bg-success-100/20 rounded border border-success-200/50 dark:border-success-300/20">
                                     <svg
                                       aria-hidden="true"
                                       className="w-3 h-3 text-success-600"
@@ -2113,7 +1874,7 @@ export default function TunnelPage() {
                               <div
                                 className={`grid gap-2 ${tunnel.type === 2 && tunnel.ipPreference ? "grid-cols-3" : "grid-cols-2"}`}
                               >
-                                <div className="text-center p-1.5 bg-white/5 dark:bg-black/5 backdrop-blur-3xl rounded-lg border border-divider">
+                                <div className="text-center p-1.5 bg-content1 rounded-lg border border-divider">
                                   <div className="text-xs text-default-500">
                                     流量计算
                                   </div>
@@ -2121,7 +1882,7 @@ export default function TunnelPage() {
                                     {getTunnelFlowDisplay(tunnel.flow)}
                                   </div>
                                 </div>
-                                <div className="text-center p-1.5 bg-white/5 dark:bg-black/5 backdrop-blur-3xl rounded-lg border border-divider">
+                                <div className="text-center p-1.5 bg-content1 rounded-lg border border-divider">
                                   <div className="text-xs text-default-500">
                                     流量倍率
                                   </div>
@@ -2130,7 +1891,7 @@ export default function TunnelPage() {
                                   </div>
                                 </div>
                                 {tunnel.type === 2 && tunnel.ipPreference && (
-                                  <div className="text-center p-1.5 bg-white/5 dark:bg-black/5 backdrop-blur-3xl rounded-lg border border-divider">
+                                  <div className="text-center p-1.5 bg-content1 rounded-lg border border-divider">
                                     <div className="text-xs text-default-500">
                                       连接偏好
                                     </div>
@@ -2228,8 +1989,8 @@ export default function TunnelPage() {
         )
       ) : (
         /* 空状态 */
-        <Card className="bg-white/20 dark:bg-zinc-900/20 backdrop-blur-3xl border border-white/80 dark:border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.1)]">
-          <CardBody className="text-center py-20 flex flex-col items-center justify-center min-h-[240px]">
+        <Card className="bg-content1 border border-divider shadow-sm">
+          <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
             <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
               暂无隧道配置
             </h3>
@@ -2244,7 +2005,7 @@ export default function TunnelPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={modalOpen}
         placement="center"
@@ -3284,7 +3045,7 @@ export default function TunnelPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={deleteModalOpen}
         placement="center"
@@ -3470,7 +3231,7 @@ export default function TunnelPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden [&>div]:bg-content1 [&>div]:dark:bg-content1",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden [&>div]:bg-content1 [&>div]:dark:bg-content1",
         }}
         isOpen={diagnosisModalOpen}
         placement="center"
@@ -4055,7 +3816,7 @@ export default function TunnelPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={batchDeleteModalOpen}
         onOpenChange={handleBatchDeleteModalOpenChange}
@@ -4085,7 +3846,7 @@ export default function TunnelPage() {
                       variant="flat"
                     />
 
-                    <div className="max-h-64 space-y-3 overflow-y-auto scrollbar-hide rounded-xl border border-divider bg-content2/40 p-3 sm:max-h-72 sm:p-4">
+                    <div className="max-h-64 space-y-3 overflow-y-auto rounded-xl border border-divider bg-content2/40 p-3 sm:max-h-72 sm:p-4">
                       {batchDeleteDependentItems.map((item) => (
                         <div
                           key={item.tunnelId}
@@ -4110,7 +3871,7 @@ export default function TunnelPage() {
                               {item.sampleForwards.map((forward) => (
                                 <div
                                   key={forward.id}
-                                  className="rounded-md bg-content1/70 px-2.5 py-2 sm:px-3"
+                                  className="rounded-md bg-content1 px-2.5 py-2 sm:px-3"
                                 >
                                   <div className="flex items-center justify-between gap-3">
                                     <span className="truncate text-xs font-medium text-foreground">

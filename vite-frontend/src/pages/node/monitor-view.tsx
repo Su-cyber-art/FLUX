@@ -31,8 +31,8 @@ import {
   ArrowDown,
   Eye,
 } from "lucide-react";
-import toast from "react-hot-toast";
 
+import toast from "@/lib/notifications";
 import { formatTraffic } from "@/utils/traffic";
 import {
   DistroIcon,
@@ -50,17 +50,17 @@ import {
   deleteServiceMonitor,
   runServiceMonitor,
 } from "@/api";
-import { Button } from "@/shadcn-bridge/heroui/button";
+import { Button } from "@/components/ui/button";
 import {
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-} from "@/shadcn-bridge/heroui/modal";
-import { Input } from "@/shadcn-bridge/heroui/input";
-import { Switch } from "@/shadcn-bridge/heroui/switch";
-import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
+} from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectItem } from "@/components/ui/select";
 import {
   Table,
   TableHeader,
@@ -68,16 +68,16 @@ import {
   TableBody,
   TableRow,
   TableCell,
-} from "@/shadcn-bridge/heroui/table";
-import { Chip } from "@/shadcn-bridge/heroui/chip";
+} from "@/components/ui/table";
+import { Chip } from "@/components/ui/chip";
 import {
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-} from "@/shadcn-bridge/heroui/dropdown";
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
-import { Progress } from "@/shadcn-bridge/heroui/progress";
+} from "@/components/ui/dropdown";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { useNodeRealtime } from "@/pages/node/use-node-realtime";
 
 interface MonitorViewProps {
@@ -184,7 +184,7 @@ function ServerCard({
 
   return (
     <Card
-      className="group relative hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(0,0,0,0.15)] transition-all duration-300 h-full flex flex-col cursor-pointer"
+      className="group relative hover:-translate-y-1 shadow-sm transition-all duration-300 h-full flex flex-col cursor-pointer"
       onClick={onPress}
     >
       {/* Dynamic top gradient bar based on status */}
@@ -1332,10 +1332,10 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                 className="overflow-x-auto min-w-full"
                 classNames={{
                   wrapper:
-                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-2xl",
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
+                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
                   td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-white/40 dark:hover:bg-white/10 transition-colors",
+                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
                 }}
               >
                 <TableHeader>
@@ -1518,6 +1518,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                           <div className="flex justify-center">
                             <Button
                               isIconOnly
+                              aria-label="查看节点详情"
                               size="sm"
                               variant="light"
                               onPress={() => {
@@ -1620,10 +1621,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                   color: "default" as const,
                 },
               ].map((item) => (
-                <Card
-                  key={item.label}
-                  className="hover:shadow-[0_15px_40px_rgba(0,0,0,0.15)] transition-shadow"
-                >
+                <Card key={item.label} className="shadow-sm transition-shadow">
                   <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
                     <span className="text-[11px] text-default-500 mb-1.5">
                       {item.label}
@@ -1796,7 +1794,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
 
                       {/* Active monitor info bar */}
                       {resolvedActiveMonitor && (
-                        <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-3xl border border-white/50 dark:border-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+                        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-content1 border border-divider shadow-sm">
                           <div className="flex items-center gap-3 min-w-0 flex-wrap">
                             <Chip color="primary" size="sm" variant="flat">
                               {resolvedActiveMonitor.type.toUpperCase()}
@@ -1826,7 +1824,12 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                           </div>
                           <Dropdown>
                             <DropdownTrigger>
-                              <Button isIconOnly size="sm" variant="light">
+                              <Button
+                                isIconOnly
+                                aria-label="监控操作"
+                                size="sm"
+                                variant="light"
+                              >
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
                             </DropdownTrigger>
@@ -2016,10 +2019,10 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                 className="min-w-[32rem]"
                 classNames={{
                   wrapper:
-                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-2xl",
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
+                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
                   td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-white/40 dark:hover:bg-white/10 transition-colors",
+                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
                 }}
               >
                 <TableHeader>

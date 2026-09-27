@@ -1,10 +1,11 @@
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { registerSW } from "virtual:pwa-register";
-import toast from "react-hot-toast";
 
 import App from "./App.tsx";
 import { Provider } from "./provider.tsx";
+
+import toast from "@/lib/notifications";
 import "@/styles/globals.css";
 
 const updateSW = registerSW({

@@ -1,0 +1,12 @@
+paneld
+cmd/paneld/paneld
+.env
+.env.*
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.log
+logs
+tmp
+.DS_Store

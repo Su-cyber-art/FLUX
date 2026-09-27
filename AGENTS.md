@@ -1,6 +1,6 @@
 # AGENTS
 
-FLVX — traffic forwarding panel: Go admin API + Vite/React UI + Go agent.
+FLUX — personally maintained fork of FLVX: Go admin API + Vite/React UI + Go agent.
 
 ## Structure
 
@@ -9,7 +9,7 @@ FLVX — traffic forwarding panel: Go admin API + Vite/React UI + Go agent.
 | `go-backend/` | Admin API (GORM + SQLite/PG, net/http) | `cmd/paneld/main.go` |
 | `go-gost/` | Forwarding agent (forked GOST) | `main.go` |
 | `go-gost/x/` | Protocol handlers/dialers/listeners (own module) | — |
-| `vite-frontend/` | React dashboard (shadcn bridge + Tailwind v4) | `src/App.tsx` |
+| `vite-frontend/` | React dashboard (Mantine + Tailwind v4) | `src/App.tsx` |
 
 `go-gost/go.mod` uses `replace github.com/go-gost/x => ./x`.
 
@@ -35,7 +35,7 @@ FLVX — traffic forwarding panel: Go admin API + Vite/React UI + Go agent.
 
 - **Auth**: raw JWT in `Authorization` header — **no `Bearer` prefix** (both frontend and backend).
 - **API envelope**: all responses `{code, msg, data, ts}` (code 0 = success).
-- **Frontend UI**: import from `src/shadcn-bridge/heroui/*`, never `@heroui/*` or `@nextui-org/*`.
+- **Frontend UI**: use Mantine (`@mantine/core`) and shared application components in `src/components/ui/*`. Never add `@heroui/*`, `@nextui-org/*`, or the retired shadcn bridge.
 - **Tailwind theme**: `globals.css` must import `tailwind-theme.pcss` or semantic classes break.
 - **Backend DB**: handlers use Repository methods, never `repo.DB()` directly.
 - **GORM models**: always define `TableName()` (GORM pluralizes by default).
@@ -58,5 +58,5 @@ FLVX — traffic forwarding panel: Go admin API + Vite/React UI + Go agent.
 ## Build quirks
 
 - `vite-frontend` uses `rolldown-vite` (Rust bundler), not standard Vite.
-- `vite.config.ts`: `minify: false`, `treeshake: false` (debugging mode).
+- `vite.config.ts`: production minification and tree-shaking enabled; route pages are lazy-loaded.
 - CI builds `go-gost` with `CGO_ENABLED=0` then compresses with UPX `--best --lzma`.

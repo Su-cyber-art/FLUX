@@ -1,42 +1,54 @@
-import { Spinner } from "@/shadcn-bridge/heroui/spinner";
+import { Loader, Stack, Text, ThemeIcon } from "@mantine/core";
+import { Inbox, CircleAlert } from "lucide-react";
 
-interface BaseStateProps {
+import { cn } from "@/lib/utils";
+interface StateProps {
   message: string;
   className?: string;
 }
-
-export const PageLoadingState = ({
-  message,
-  className = "h-64",
-}: BaseStateProps) => {
-  return (
-    <div className={`flex items-center justify-center ${className}`}>
-      <div className="flex items-center gap-3">
-        <Spinner size="sm" />
-        <span className="text-default-600">{message}</span>
-      </div>
-    </div>
-  );
-};
-
-export const PageEmptyState = ({
-  message,
-  className = "h-48",
-}: BaseStateProps) => {
-  return (
-    <div className={`flex items-center justify-center ${className}`}>
-      <span className="text-default-500">{message}</span>
-    </div>
-  );
-};
-
-export const PageErrorState = ({
-  message,
-  className = "h-48",
-}: BaseStateProps) => {
-  return (
-    <div className={`flex items-center justify-center ${className}`}>
-      <span className="text-danger">{message}</span>
-    </div>
-  );
-};
+export const PageLoadingState = ({ message, className }: StateProps) => (
+  <Stack
+    align="center"
+    aria-live="polite"
+    className={cn("min-h-48", className)}
+    gap="sm"
+    justify="center"
+    role="status"
+  >
+    <Loader size="sm" />
+    <Text c="dimmed" size="sm">
+      {message}
+    </Text>
+  </Stack>
+);
+export const PageEmptyState = ({ message, className }: StateProps) => (
+  <Stack
+    align="center"
+    className={cn("min-h-40", className)}
+    gap="sm"
+    justify="center"
+  >
+    <ThemeIcon color="gray" radius="xl" size={44} variant="light">
+      <Inbox size={22} />
+    </ThemeIcon>
+    <Text c="dimmed" size="sm">
+      {message}
+    </Text>
+  </Stack>
+);
+export const PageErrorState = ({ message, className }: StateProps) => (
+  <Stack
+    align="center"
+    className={cn("min-h-40", className)}
+    gap="sm"
+    justify="center"
+    role="alert"
+  >
+    <ThemeIcon color="red" radius="xl" size={44} variant="light">
+      <CircleAlert size={22} />
+    </ThemeIcon>
+    <Text c="red" size="sm">
+      {message}
+    </Text>
+  </Stack>
+);

@@ -1,90 +1,39 @@
 import * as React from "react";
+import { Paper } from "@mantine/core";
 
 import { cn } from "@/lib/utils";
 
-function Card({ className, style, ...props }: React.ComponentProps<"div">) {
+export function Card({
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<"div">) {
   return (
-    <div
-      className={cn(
-        "relative flex flex-col transition-all duration-300",
-        "rounded-[24px] text-card-foreground shadow-[0_12px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.4)]",
-        className,
-      )}
+    <Paper
+      withBorder
+      className={cn("app-card", className)}
       data-slot="card"
-      style={{
-        ...style,
-        background:
-          "linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0.05) 60%, rgba(255,255,255,0.2) 100%)",
-        boxShadow:
-          "inset 0 1px 1px rgba(255,255,255,0.8), inset 0 0 0 1px rgba(255,255,255,0.3), inset 0 -1px 1px rgba(0,0,0,0.1), 0 12px 40px rgba(0,0,0,0.12)",
-        backdropFilter: "blur(24px) saturate(180%)",
-        WebkitBackdropFilter: "blur(24px) saturate(180%)",
-      }}
+      radius="md"
       {...props}
     />
   );
 }
-
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+export function CardHeader({
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<"div">) {
   return (
     <div
-      className={cn("flex flex-col gap-1.5 p-6", className)}
+      className={cn("flex flex-col gap-1.5 p-5", className)}
       data-slot="card-header"
       {...props}
     />
   );
 }
-
-function CardTitle({
+export function CardBody({
   className,
-  children,
   ...props
-}: React.ComponentProps<"h3">) {
+}: React.ComponentPropsWithoutRef<"div">) {
   return (
-    <h3
-      className={cn(
-        "text-lg font-semibold leading-none tracking-tight",
-        className,
-      )}
-      data-slot="card-title"
-      {...props}
-    >
-      {children}
-    </h3>
+    <div className={cn("p-5", className)} data-slot="card-content" {...props} />
   );
 }
-
-function CardDescription({ className, ...props }: React.ComponentProps<"p">) {
-  return (
-    <p
-      className={cn("text-sm text-default-500", className)}
-      data-slot="card-description"
-      {...props}
-    />
-  );
-}
-
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div className={cn("p-6", className)} data-slot="card-content" {...props} />
-  );
-}
-
-function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("flex items-center p-6 pt-0", className)}
-      data-slot="card-footer"
-      {...props}
-    />
-  );
-}
-
-export {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-};

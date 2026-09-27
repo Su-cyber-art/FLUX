@@ -1,0 +1,12 @@
+# Merge after docker-compose-v4.yml or docker-compose-v6.yml to build this fork.
+services:
+  backend:
+    image: flux-backend:local
+    build:
+      context: ./go-backend
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env before starting FLUX}
+  frontend:
+    image: flux-frontend:local
+    build:
+      context: ./vite-frontend

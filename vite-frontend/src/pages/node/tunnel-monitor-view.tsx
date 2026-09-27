@@ -34,8 +34,8 @@ import {
   WifiOff,
   ArrowRight,
 } from "lucide-react";
-import toast from "react-hot-toast";
 
+import toast from "@/lib/notifications";
 import { formatTraffic } from "@/utils/traffic";
 import {
   getMonitorTunnels,
@@ -44,10 +44,10 @@ import {
   getMonitorTunnelQualityHistory,
   getConfigByName,
 } from "@/api";
-import { Button } from "@/shadcn-bridge/heroui/button";
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
-import { Chip } from "@/shadcn-bridge/heroui/chip";
-import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Select, SelectItem } from "@/components/ui/select";
 import {
   Table,
   TableHeader,
@@ -55,7 +55,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
-} from "@/shadcn-bridge/heroui/table";
+} from "@/components/ui/table";
 import {
   DEFAULT_TUNNEL_QUALITY_INTERVAL_SEC,
   parseTunnelQualityIntervalSeconds,
@@ -1209,7 +1209,7 @@ export function TunnelMonitorView({
 
         {/* Quality KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
+          <Card className="border border-divider/60 shadow-sm hover:shadow-sm transition-shadow bg-gradient-to-br from-background to-default-50/50">
             <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
               <span className="text-[11px] text-default-500 mb-1.5 flex items-center gap-1">
                 <Zap className="w-3 h-3" />
@@ -1221,7 +1221,7 @@ export function TunnelMonitorView({
               />
             </CardBody>
           </Card>
-          <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
+          <Card className="border border-divider/60 shadow-sm hover:shadow-sm transition-shadow bg-gradient-to-br from-background to-default-50/50">
             <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
               <span
                 className="text-[11px] text-default-500 mb-1.5 flex items-center gap-1"
@@ -1236,7 +1236,7 @@ export function TunnelMonitorView({
               />
             </CardBody>
           </Card>
-          <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
+          <Card className="border border-divider/60 shadow-sm hover:shadow-sm transition-shadow bg-gradient-to-br from-background to-default-50/50">
             <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
               <span className="text-[11px] text-default-500 mb-1.5">
                 入口 → 出口 丢包
@@ -1250,7 +1250,7 @@ export function TunnelMonitorView({
               </span>
             </CardBody>
           </Card>
-          <Card className="border border-divider/60 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-background to-default-50/50">
+          <Card className="border border-divider/60 shadow-sm hover:shadow-sm transition-shadow bg-gradient-to-br from-background to-default-50/50">
             <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
               <span
                 className="text-[11px] text-default-500 mb-1.5"
@@ -1384,7 +1384,7 @@ export function TunnelMonitorView({
             return (
               <Card
                 key={tunnel.id}
-                className="group relative overflow-hidden shadow-sm border border-divider dark:border-default-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 h-full flex flex-col cursor-pointer bg-background"
+                className="group relative overflow-hidden shadow-sm border border-divider dark:border-default-100 hover:-translate-y-1 hover:shadow-sm transition-all duration-300 h-full flex flex-col cursor-pointer bg-background"
                 onClick={() => setDetailTunnelId(tunnel.id)}
               >
                 <div
@@ -1487,10 +1487,10 @@ export function TunnelMonitorView({
             className="overflow-x-auto min-w-full"
             classNames={{
               wrapper:
-                "bg-transparent p-0 shadow-none border-none overflow-auto rounded-2xl",
-              th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
+              th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
               td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-              tr: "hover:bg-white/40 dark:hover:bg-white/10 transition-colors",
+              tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
             }}
           >
             <TableHeader>

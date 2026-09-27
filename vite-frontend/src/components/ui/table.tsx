@@ -1,111 +1,132 @@
 import * as React from "react";
+import { Table as MantineTable, Loader } from "@mantine/core";
 
 import { cn } from "@/lib/utils";
+interface TableClassNames {
+  th?: string;
+  td?: string;
+  tr?: string;
+  wrapper?: string;
+}
+const TableStyles = React.createContext<TableClassNames>({});
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+export interface TableProps extends React.ComponentProps<"table"> {
+  classNames?: TableClassNames;
+}
+export function Table({
+  children,
+  className,
+  classNames = {},
+  ...props
+}: TableProps) {
   return (
-    <div className="relative w-full overflow-auto" data-slot="table-wrapper">
-      <table
-        className={cn("w-full caption-bottom text-sm", className)}
-        data-slot="table"
-        {...props}
-      />
-    </div>
+    <TableStyles.Provider value={classNames}>
+      <div className={cn("app-table-scroll", classNames.wrapper)}>
+        <MantineTable
+          {...props}
+          highlightOnHover
+          className={cn("app-table", className)}
+          horizontalSpacing="md"
+          verticalSpacing="sm"
+        >
+          {children}
+        </MantineTable>
+      </div>
+    </TableStyles.Provider>
   );
 }
+export function TableHeader({
+  children,
+  ...props
+}: React.ComponentProps<"thead">) {
+  const hasRow = React.Children.toArray(children).some(
+    (child) => React.isValidElement(child) && child.type === TableRow,
+  );
 
-function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
-    <thead
-      className={cn("[&_tr]:border-b", className)}
-      data-slot="table-header"
-      {...props}
-    />
+    <MantineTable.Thead {...props}>
+      {hasRow ? children : <MantineTable.Tr>{children}</MantineTable.Tr>}
+    </MantineTable.Thead>
   );
 }
-
-function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
-  return (
-    <tbody
-      className={cn("[&_tr:last-child]:border-0", className)}
-      data-slot="table-body"
-      {...props}
-    />
-  );
+interface TableBodyProps<T>
+  extends Omit<React.ComponentProps<"tbody">, "children"> {
+  children?: React.ReactNode | ((item: T) => React.ReactNode);
+  items?: T[];
+  isLoading?: boolean;
+  loadingContent?: React.ReactNode;
+  emptyContent?: React.ReactNode;
 }
+export const TableBody = React.forwardRef<
+  HTMLTableSectionElement,
+  TableBodyProps<any>
+>(function TableBody(
+  { children, items, isLoading, loadingContent, emptyContent, ...props },
+  ref,
+) {
+  let rows: React.ReactNode;
 
-function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
+  if (isLoading)
+    rows = (
+      <MantineTable.Tr>
+        <MantineTable.Td colSpan={999}>
+          <div className="flex justify-center p-8">
+            {loadingContent ?? <Loader size="sm" />}
+          </div>
+        </MantineTable.Td>
+      </MantineTable.Tr>
+    );
+  else if (
+    (items && items.length === 0) ||
+    (!items &&
+      React.Children.count(typeof children === "function" ? null : children) ===
+        0)
+  )
+    rows = (
+      <MantineTable.Tr>
+        <MantineTable.Td colSpan={999}>
+          <div className="p-8 text-center text-default-500">
+            {emptyContent ?? "暂无数据"}
+          </div>
+        </MantineTable.Td>
+      </MantineTable.Tr>
+    );
+  else
+    rows =
+      typeof children === "function"
+        ? items?.map((item, index) => (
+            <React.Fragment key={item.id ?? index}>
+              {children(item)}
+            </React.Fragment>
+          ))
+        : children;
+
   return (
-    <tfoot
-      className={cn(
-        "border-t bg-default-50/70 font-medium [&>tr]:last:border-b-0",
-        className,
-      )}
-      data-slot="table-footer"
-      {...props}
-    />
+    <MantineTable.Tbody {...props} ref={ref}>
+      {rows}
+    </MantineTable.Tbody>
   );
-}
-
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
-  return (
-    <tr
-      className={cn(
-        "border-b transition-colors hover:bg-default-50/50",
-        className,
-      )}
-      data-slot="table-row"
-      {...props}
-    />
-  );
-}
-
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
-  return (
-    <th
-      className={cn(
-        "h-10 px-2 text-left align-middle font-medium text-default-600 [&:has([role=checkbox])]:pr-0",
-        className,
-      )}
-      data-slot="table-head"
-      {...props}
-    />
-  );
-}
-
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
-  return (
-    <td
-      className={cn(
-        "p-2 align-middle [&:has([role=checkbox])]:pr-0",
-        className,
-      )}
-      data-slot="table-cell"
-      {...props}
-    />
-  );
-}
-
-function TableCaption({
+});
+export function TableColumn({
   className,
   ...props
-}: React.ComponentProps<"caption">) {
-  return (
-    <caption
-      className={cn("mt-4 text-sm text-default-500", className)}
-      data-slot="table-caption"
-      {...props}
-    />
-  );
-}
+}: React.ComponentProps<"th">) {
+  const style = React.useContext(TableStyles);
 
-export {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-};
+  return <MantineTable.Th {...props} className={cn(style.th, className)} />;
+}
+export const TableRow = React.forwardRef<
+  HTMLTableRowElement,
+  React.ComponentProps<"tr">
+>(function TableRow({ className, ...props }, ref) {
+  const style = React.useContext(TableStyles);
+
+  return (
+    <MantineTable.Tr {...props} ref={ref} className={cn(style.tr, className)} />
+  );
+});
+export function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+  const style = React.useContext(TableStyles);
+
+  return <MantineTable.Td {...props} className={cn(style.td, className)} />;
+}

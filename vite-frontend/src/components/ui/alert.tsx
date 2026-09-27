@@ -1,70 +1,32 @@
 import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { Alert as MantineAlert } from "@mantine/core";
+import { Info } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-
-const alertVariants = cva(
-  "relative w-full rounded-lg border px-4 py-3 text-sm",
-  {
-    variants: {
-      variant: {
-        default: "border-default-200 bg-default-50/70 text-foreground",
-        destructive:
-          "border-danger-200 bg-danger-50 text-danger-700 dark:text-danger-300",
-        success:
-          "border-success-200 bg-success-50 text-success-700 dark:text-success-300",
-        warning:
-          "border-warning-200 bg-warning-50 text-warning-700 dark:text-warning-300",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  },
-);
-
-function Alert({
-  className,
-  variant,
-  ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
-  return (
-    <div
-      className={cn(alertVariants({ className, variant }))}
-      data-slot="alert"
-      role="alert"
-      {...props}
-    />
-  );
+import { uiColor, uiVariant, type SemanticColor } from "./shared";
+interface AlertProps
+  extends Omit<React.ComponentProps<"div">, "color" | "title"> {
+  color?: SemanticColor;
+  description?: React.ReactNode;
+  title?: React.ReactNode;
+  variant?: "solid" | "flat" | "faded" | "bordered";
 }
-
-function AlertTitle({
-  className,
+export function Alert({
   children,
+  color = "primary",
+  description,
+  title,
+  variant = "flat",
   ...props
-}: React.ComponentProps<"h5">) {
+}: AlertProps) {
   return (
-    <h5
-      className={cn("mb-1 font-medium leading-none tracking-tight", className)}
-      data-slot="alert-title"
+    <MantineAlert
       {...props}
+      color={uiColor(color)}
+      icon={<Info size={18} />}
+      title={title}
+      variant={uiVariant(variant)}
     >
-      {children}
-    </h5>
+      {description ?? children}
+    </MantineAlert>
   );
 }
-
-function AlertDescription({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("text-sm opacity-90", className)}
-      data-slot="alert-description"
-      {...props}
-    />
-  );
-}
-
-export { Alert, AlertDescription, AlertTitle };

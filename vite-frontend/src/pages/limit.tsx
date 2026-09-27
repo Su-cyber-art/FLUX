@@ -1,24 +1,24 @@
 import { useState, useEffect, useMemo } from "react";
-import toast from "react-hot-toast";
 import { LayoutGrid, List } from "lucide-react";
 
+import toast from "@/lib/notifications";
 import {
   AnimatedPage,
   StaggerList,
   StaggerItem,
 } from "@/components/animated-page";
 import { SearchBar } from "@/components/search-bar";
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
-import { Button } from "@/shadcn-bridge/heroui/button";
-import { Input } from "@/shadcn-bridge/heroui/input";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-} from "@/shadcn-bridge/heroui/modal";
-import { Chip } from "@/shadcn-bridge/heroui/chip";
+} from "@/components/ui/modal";
+import { Chip } from "@/components/ui/chip";
 import {
   Table,
   TableHeader,
@@ -26,7 +26,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
-} from "@/shadcn-bridge/heroui/table";
+} from "@/components/ui/table";
 import {
   createSpeedLimit,
   getSpeedLimitList,
@@ -231,7 +231,7 @@ export default function LimitPage() {
   }
 
   return (
-    <AnimatedPage className="px-3 lg:px-6 py-8">
+    <AnimatedPage>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-6 gap-3">
         <div className="flex-1 max-w-sm flex items-center gap-2">
           <SearchBar
@@ -247,6 +247,7 @@ export default function LimitPage() {
         <div className="flex items-center gap-2">
           <Button
             isIconOnly
+            aria-label="切换列表或卡片视图"
             size="sm"
             variant="flat"
             onPress={() => setViewMode(viewMode === "list" ? "grid" : "list")}
@@ -272,10 +273,10 @@ export default function LimitPage() {
               className="overflow-x-auto min-w-full"
               classNames={{
                 wrapper:
-                  "bg-transparent p-0 shadow-none border-none overflow-auto rounded-[24px]",
-                th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                  "bg-transparent p-0 shadow-none border-none overflow-auto rounded-xl",
+                th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
                 td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                tr: "hover:bg-white/40 dark:hover:bg-white/10 transition-colors",
+                tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
               }}
             >
               <TableHeader>
@@ -419,7 +420,7 @@ export default function LimitPage() {
       ) : (
         /* 空状态 */
         <Card className="shadow-sm bg-default-50/50">
-          <CardBody className="text-center py-20 flex flex-col items-center justify-center min-h-[240px]">
+          <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
             <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
               暂无限速规则
             </h3>
@@ -434,7 +435,7 @@ export default function LimitPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={modalOpen}
         placement="center"
@@ -512,7 +513,7 @@ export default function LimitPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={deleteModalOpen}
         placement="center"

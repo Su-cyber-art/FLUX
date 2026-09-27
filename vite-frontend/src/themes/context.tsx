@@ -1,208 +1,129 @@
-/**
- * Theme Context + Provider (React integration)
- * =============================================
- * Wraps the registry in a React context so that the entire component tree
- * re-renders when the active theme changes.
- */
-
-import type { ThemePackage, ComponentKey, LayoutKey, PageKey } from "./types";
-
-import React, {
+import {
   createContext,
   useContext,
   useEffect,
-  useSyncExternalStore,
-  useCallback,
   useMemo,
+  useState,
+  type ReactNode,
 } from "react";
+import { createTheme, MantineProvider } from "@mantine/core";
 
-import {
-  subscribe,
-  getActiveTheme,
-  getActiveThemeId,
-  getRegisteredThemes,
-  activateTheme,
-  deactivateTheme,
-  reapplyActiveTheme,
-  resolveComponent,
-  resolveLayout,
-  resolvePage,
-  getSavedMode,
-  saveMode,
-  getEffectiveMode,
-  registerTheme,
-  unregisterTheme,
-  type ThemeMode,
-} from "./registry";
-
-// ─── context value ───────────────────────────────────────────────────────────
-
-interface ThemeContextValue {
-  /** Currently active theme package (null = default). */
-  activeTheme: ThemePackage | null;
-  activeThemeId: string | null;
-  /** All registered themes. */
-  themes: ThemePackage[];
-  /** Current mode preference. */
+export type ThemeMode = "light" | "dark" | "system";
+export const ACCENTS = [
+  { value: "blue", label: "海蓝" },
+  { value: "teal", label: "青绿" },
+  { value: "violet", label: "紫罗兰" },
+] as const;
+export type Accent = (typeof ACCENTS)[number]["value"];
+interface ThemeState {
   mode: ThemeMode;
-  /** Resolved effective mode (never "system"). */
   effectiveMode: "light" | "dark";
-
-  /** Switch the active theme. */
-  switchTheme: (id: string) => void;
-  /** Reset to no custom theme (use defaults). */
-  resetTheme: () => void;
-  /** Change mode preference. */
+  accent: Accent;
   setMode: (mode: ThemeMode) => void;
-  /** Register a new theme at runtime. */
-  register: (pkg: ThemePackage) => void;
-  /** Unregister a theme by id. */
-  unregister: (id: string) => void;
-
-  /** Resolve a component (returns themed override or fallback). */
-  component: <P = any>(
-    key: ComponentKey,
-    fallback: React.ComponentType<P>,
-  ) => React.ComponentType<P>;
-  /** Resolve a layout. */
-  layout: (
-    key: LayoutKey,
-    fallback: React.ComponentType<{ children: React.ReactNode }>,
-  ) => React.ComponentType<{ children: React.ReactNode }>;
-  /** Resolve a page. */
-  page: <P = any>(
-    key: PageKey,
-    fallback: React.ComponentType<P>,
-  ) => React.ComponentType<P>;
+  setAccent: (accent: Accent) => void;
 }
+const ThemeContext = createContext<ThemeState | null>(null);
+const readMode = (): ThemeMode => {
+  const value = localStorage.getItem("flvx:theme");
 
-const ThemeContext = createContext<ThemeContextValue | null>(null);
+  return value === "light" || value === "dark" ? value : "system";
+};
+const readAccent = (): Accent => {
+  const value = localStorage.getItem("flvx:accent");
 
-// ─── snapshot for useSyncExternalStore ────────────────────────────────────────
-
-// We use a monotonic counter to create new snapshot references when the
-// registry notifies.
-let snapshotCounter = 0;
-
-function getSnapshot() {
-  return snapshotCounter;
-}
-const originalSubscribe = (onStoreChange: () => void) => {
-  const unsub = subscribe(() => {
-    snapshotCounter++;
-    onStoreChange();
-  });
-
-  return unsub;
+  return value === "teal" || value === "violet" ? value : "blue";
 };
 
-// ─── provider ────────────────────────────────────────────────────────────────
-
-interface ThemeProviderProps {
-  children: React.ReactNode;
-}
-
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  // Re-render whenever register changes
-  useSyncExternalStore(originalSubscribe, getSnapshot);
-
-  // Listen for system mode changes
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => reapplyActiveTheme();
-
-    mq.addEventListener("change", handler);
-
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  const switchTheme = useCallback((id: string) => activateTheme(id), []);
-  const resetTheme = useCallback(() => {
-    deactivateTheme();
-    reapplyActiveTheme();
-    localStorage.removeItem("flvx:active-theme");
-  }, []);
-  const setMode = useCallback((m: ThemeMode) => {
-    saveMode(m);
-    reapplyActiveTheme();
-  }, []);
-  const register = useCallback((pkg: ThemePackage) => registerTheme(pkg), []);
-  const unregister = useCallback((id: string) => unregisterTheme(id), []);
-
-  const value = useMemo<ThemeContextValue>(
-    () => ({
-      activeTheme: getActiveTheme(),
-      activeThemeId: getActiveThemeId(),
-      themes: getRegisteredThemes(),
-      mode: getSavedMode(),
-      effectiveMode: getEffectiveMode(),
-      switchTheme,
-      resetTheme,
-      setMode,
-      register,
-      unregister,
-      component: resolveComponent,
-      layout: resolveLayout,
-      page: resolvePage,
-    }),
-    [snapshotCounter, switchTheme, resetTheme, setMode, register, unregister],
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [mode, updateMode] = useState<ThemeMode>(readMode);
+  const [accent, updateAccent] = useState<Accent>(readAccent);
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
   );
+  const effectiveMode =
+    mode === "system" ? (systemDark ? "dark" : "light") : mode;
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncSystem = () => setSystemDark(media.matches);
+    const syncStorage = (event: StorageEvent) => {
+      if (event.key === "flvx:theme") updateMode(readMode());
+      if (event.key === "flvx:accent") updateAccent(readAccent());
+    };
+
+    media.addEventListener("change", syncSystem);
+    window.addEventListener("storage", syncStorage);
+
+    return () => {
+      media.removeEventListener("change", syncSystem);
+      window.removeEventListener("storage", syncStorage);
+    };
+  }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", effectiveMode === "dark");
+    document.documentElement.style.colorScheme = effectiveMode;
+  }, [effectiveMode]);
+  const theme = useMemo(
+    () =>
+      createTheme({
+        primaryColor: accent,
+        primaryShade: { light: 6, dark: 5 },
+        defaultRadius: "md",
+        fontFamily:
+          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+        fontFamilyMonospace: '"SFMono-Regular", Consolas, monospace',
+        headings: { fontFamily: "inherit", fontWeight: "650" },
+        colors: {
+          dark: [
+            "#cbd5e1",
+            "#a6b3c5",
+            "#8595aa",
+            "#526176",
+            "#354155",
+            "#263246",
+            "#1b2638",
+            "#151f2e",
+            "#101927",
+            "#0c1320",
+          ],
+        },
+        components: {
+          Button: { defaultProps: { radius: "md", size: "sm" } },
+          ActionIcon: { defaultProps: { radius: "md" } },
+          Input: { defaultProps: { radius: "md" } },
+          Menu: { defaultProps: { radius: "md" } },
+          Modal: { defaultProps: { radius: "lg" } },
+          Tooltip: { defaultProps: { withArrow: true } },
+        },
+      }),
+    [accent],
+  );
+  const value: ThemeState = {
+    mode,
+    effectiveMode,
+    accent,
+    setMode: (next) => {
+      localStorage.setItem("flvx:theme", next);
+      updateMode(next);
+    },
+    setAccent: (next) => {
+      localStorage.setItem("flvx:accent", next);
+      updateAccent(next);
+    },
+  };
 
   return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>
+      <MantineProvider forceColorScheme={effectiveMode} theme={theme}>
+        {children}
+      </MantineProvider>
+    </ThemeContext.Provider>
   );
-};
-
-// ─── hooks ───────────────────────────────────────────────────────────────────
-
-/** Access the full theme context. */
-export function useThemeContext(): ThemeContextValue {
-  const ctx = useContext(ThemeContext);
-
-  if (!ctx)
-    throw new Error("useThemeContext must be used within <ThemeProvider>");
-
-  return ctx;
 }
+export function useThemeContext() {
+  const context = useContext(ThemeContext);
 
-/**
- * Convenience: resolve a single themed component.
- *
- * ```tsx
- * import { useThemedComponent } from "@/themes/context";
- * import { Button as DefaultButton } from "@/shadcn-bridge/heroui/button";
- *
- * function MyPage() {
- *   const Button = useThemedComponent("Button", DefaultButton);
- *   return <Button color="primary">Click</Button>;
- * }
- * ```
- */
-export function useThemedComponent<P = any>(
-  key: ComponentKey,
-  fallback: React.ComponentType<P>,
-): React.ComponentType<P> {
-  const ctx = useThemeContext();
+  if (!context) throw new Error("ThemeProvider is required");
 
-  return ctx.component(key, fallback);
-}
-
-/** Convenience: resolve a themed layout. */
-export function useThemedLayout(
-  key: LayoutKey,
-  fallback: React.ComponentType<{ children: React.ReactNode }>,
-): React.ComponentType<{ children: React.ReactNode }> {
-  const ctx = useThemeContext();
-
-  return ctx.layout(key, fallback);
-}
-
-/** Convenience: resolve a themed page. */
-export function useThemedPage<P = any>(
-  key: PageKey,
-  fallback: React.ComponentType<P>,
-): React.ComponentType<P> {
-  const ctx = useThemeContext();
-
-  return ctx.page(key, fallback);
+  return context;
 }

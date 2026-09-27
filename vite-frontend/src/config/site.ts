@@ -27,7 +27,7 @@ const SENSITIVE_CONFIG_KEYS = new Set([
   "cloudflare_secret_key",
 ]);
 const GITHUB_REPO =
-  import.meta.env.VITE_GITHUB_REPO || "https://github.com/Sagit-chu/flux-panel";
+  import.meta.env.VITE_GITHUB_REPO || "https://github.com/Su-cyber-art/FLUX";
 
 const shouldPersistConfigKey = (key: string) => {
   return !SENSITIVE_CONFIG_KEYS.has(key.trim().toLowerCase());

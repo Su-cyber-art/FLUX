@@ -55,13 +55,14 @@ export default defineConfig({
   server: {
     port: 3000,
     host: "0.0.0.0",
+    proxy: {
+      "/api": { target: process.env.VITE_API_PROXY || "http://127.0.0.1:6365", changeOrigin: true },
+      "/system-info": { target: process.env.VITE_API_PROXY || "http://127.0.0.1:6365", ws: true, changeOrigin: true },
+    },
   },
   build: {
     outDir: "dist",
     sourcemap: false,
-    minify: false,
-    rollupOptions: {
-      treeshake: false,
-    },
+    minify: true,
   },
 });

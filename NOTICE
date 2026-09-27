@@ -17,3 +17,13 @@ Modifications and new components (backend, agents, frontend updates)
 are licensed under the GNU General Public License v3.0 (GPLv3).
 See the LICENSE file for the full GPLv3 text.
 -------------------------------------------------------------------------
+
+-------------------------------------------------------------------------
+FLUX personal fork (https://github.com/Su-cyber-art/FLUX)
+Copyright 2026 Su-cyber-art
+
+This fork is maintained by Su-cyber-art and is based on Sagit-chu/flvx.
+Changes in this distribution include the Mantine frontend migration,
+application layout and theme updates, and personal-project documentation.
+The upstream notices above and the repository license files are retained.
+-------------------------------------------------------------------------

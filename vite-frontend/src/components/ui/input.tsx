@@ -1,19 +1,93 @@
 import * as React from "react";
+import { TextInput, Textarea as MantineTextarea } from "@mantine/core";
+
+import { type FieldMetaProps } from "./shared";
 
 import { cn } from "@/lib/utils";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+type Slots = {
+  base?: string;
+  input?: string;
+  inputWrapper?: string;
+  label?: string;
+  description?: string;
+  errorMessage?: string;
+};
+export interface InputProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
+    FieldMetaProps {
+  classNames?: Slots;
+  startContent?: React.ReactNode;
+  endContent?: React.ReactNode;
+  isDisabled?: boolean;
+  size?: "sm" | "md" | "lg";
+  variant?: string;
+}
+export function Input({
+  classNames,
+  className,
+  errorMessage,
+  isInvalid,
+  isRequired,
+  isDisabled,
+  disabled,
+  variant: _variant,
+  startContent,
+  endContent,
+  size = "sm",
+  ...props
+}: InputProps) {
   return (
-    <input
-      className={cn(
-        "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-default-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-      data-slot="input"
-      type={type}
+    <TextInput
       {...props}
+      className={classNames?.base}
+      classNames={{
+        input: cn(classNames?.input, className),
+        label: classNames?.label,
+        description: classNames?.description,
+        error: classNames?.errorMessage,
+      }}
+      disabled={disabled || isDisabled}
+      error={isInvalid ? errorMessage || true : undefined}
+      leftSection={startContent}
+      required={isRequired || props.required}
+      rightSection={endContent}
+      size={size}
     />
   );
 }
-
-export { Input };
+export interface TextareaProps
+  extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "size">,
+    FieldMetaProps {
+  classNames?: Slots;
+  isDisabled?: boolean;
+  minRows?: number;
+  maxRows?: number;
+  size?: "sm" | "md" | "lg";
+  variant?: string;
+}
+export function Textarea({
+  classNames,
+  errorMessage,
+  isInvalid,
+  isRequired,
+  isDisabled,
+  disabled,
+  variant: _variant,
+  minRows = 3,
+  maxRows = 8,
+  ...props
+}: TextareaProps) {
+  return (
+    <MantineTextarea
+      {...props}
+      autosize
+      classNames={{ root: classNames?.base, input: classNames?.input }}
+      disabled={disabled || isDisabled}
+      error={isInvalid ? errorMessage || true : undefined}
+      maxRows={maxRows}
+      minRows={minRows}
+      required={isRequired || props.required}
+    />
+  );
+}

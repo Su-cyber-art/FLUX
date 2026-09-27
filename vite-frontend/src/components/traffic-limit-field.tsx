@@ -1,5 +1,5 @@
-import { Input } from "@/shadcn-bridge/heroui/input";
-import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
+import { Input } from "@/components/ui/input";
+import { Select, SelectItem } from "@/components/ui/select";
 import {
   parseTrafficInput,
   TRAFFIC_UNIT_MIB,

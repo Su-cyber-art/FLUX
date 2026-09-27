@@ -1,16 +1,30 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import toast from "react-hot-toast";
 import { parseDate } from "@internationalized/date";
 import { LayoutGrid, List } from "lucide-react";
 
+import { SearchBar } from "@/components/search-bar";
+import {
+  formatFlow,
+  formatQuotaLimit,
+  trafficInputFor,
+  formatDate,
+  getExpireStatus,
+  getUserStatus,
+  calculateUserTotalUsedFlow,
+  calculateTunnelUsedFlow,
+  USER_SEARCH_DEBOUNCE_MS,
+  normalizeUserItem,
+  normalizeUserTunnelItem,
+} from "@/pages/user/presentation";
+import toast from "@/lib/notifications";
 import {
   AnimatedPage,
   StaggerList,
   StaggerItem,
 } from "@/components/animated-page";
-import { Button } from "@/shadcn-bridge/heroui/button";
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
-import { Input } from "@/shadcn-bridge/heroui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableHeader,
@@ -18,7 +32,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
-} from "@/shadcn-bridge/heroui/table";
+} from "@/components/ui/table";
 import {
   Modal,
   ModalContent,
@@ -26,15 +40,15 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-} from "@/shadcn-bridge/heroui/modal";
-import { Chip } from "@/shadcn-bridge/heroui/chip";
-import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
-import { RadioGroup, Radio } from "@/shadcn-bridge/heroui/radio";
-import { Checkbox } from "@/shadcn-bridge/heroui/checkbox";
-import { Switch } from "@/shadcn-bridge/heroui/switch";
-import { DatePicker } from "@/shadcn-bridge/heroui/date-picker";
-import { Spinner } from "@/shadcn-bridge/heroui/spinner";
-import { Progress } from "@/shadcn-bridge/heroui/progress";
+} from "@/components/ui/modal";
+import { Chip } from "@/components/ui/chip";
+import { Select, SelectItem } from "@/components/ui/select";
+import { RadioGroup, Radio } from "@/components/ui/radio";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Spinner } from "@/components/ui/spinner";
+import { Progress } from "@/components/ui/progress";
 import {
   User,
   UserForm,
@@ -64,132 +78,17 @@ import {
   assignMonitorPermission,
   removeMonitorPermission,
 } from "@/api";
-import {
-  EditIcon,
-  DeleteIcon,
-  SettingsIcon,
-  SearchIcon,
-} from "@/components/icons";
+import { EditIcon, DeleteIcon, SettingsIcon } from "@/components/icons";
 import { PageLoadingState } from "@/components/page-state";
 import { TrafficLimitField } from "@/components/traffic-limit-field";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { removeItemsById, replaceItemById } from "@/utils/list-state";
 import {
-  formatTraffic,
   formatFlowLimit,
   flowLimitBytes,
-  flowLimitMiB,
   parseTrafficInput,
-  preferredTrafficUnit,
-  TRAFFIC_UNIT_MIB,
   type TrafficUnit,
 } from "@/utils/traffic";
-
-// 工具函数
-const formatFlow = formatTraffic;
-
-const formatQuotaLimit = (value?: number): string => {
-  const limit = Number(value ?? 0);
-
-  if (!Number.isFinite(limit) || limit <= 0) {
-    return "不限";
-  }
-
-  return formatTraffic(limit * 1024 ** 3);
-};
-
-const trafficInputFor = (flowGB: number, flowMiB?: number) => {
-  const mib = flowLimitMiB(flowGB, flowMiB);
-  const unit = preferredTrafficUnit(mib);
-
-  return { value: String(mib / TRAFFIC_UNIT_MIB[unit]), unit };
-};
-
-const formatDate = (timestamp: number): string => {
-  return new Date(timestamp).toLocaleString();
-};
-
-const getExpireStatus = (expTime: number) => {
-  const now = Date.now();
-
-  if (expTime < now) {
-    return { color: "danger" as const, text: "已过期" };
-  }
-  const diffDays = Math.ceil((expTime - now) / (1000 * 60 * 60 * 24));
-
-  if (diffDays <= 7) {
-    return { color: "warning" as const, text: `${diffDays}天后过期` };
-  }
-
-  return { color: "success" as const, text: "正常" };
-};
-
-// 获取用户状态（根据status字段）
-const getUserStatus = (user: User) => {
-  if (user.status === 1) {
-    return { color: "success" as const, text: "正常" };
-  } else {
-    return { color: "danger" as const, text: "禁用" };
-  }
-};
-
-const calculateUserTotalUsedFlow = (user: User): number => {
-  return (user.inFlow || 0) + (user.outFlow || 0);
-};
-
-const calculateTunnelUsedFlow = (tunnel: UserTunnel): number => {
-  const inFlow = tunnel.inFlow || 0;
-  const outFlow = tunnel.outFlow || 0;
-
-  // 后端已按计费类型处理流量，前端直接使用入站+出站总和
-  return inFlow + outFlow;
-};
-
-const USER_SEARCH_DEBOUNCE_MS = 250;
-
-const normalizeUserItem = (item: Partial<User>): User => {
-  return {
-    id: Number(item.id ?? 0),
-    name: item.name,
-    user: String(item.user ?? ""),
-    status: Number(item.status ?? 0),
-    flow: Number(item.flow ?? 0),
-    flowMiB: Number(item.flowMiB ?? 0),
-    num: Number(item.num ?? 0),
-    expTime: item.expTime,
-    flowResetTime: item.flowResetTime ?? 0,
-    createdTime: item.createdTime,
-    inFlow: Number(item.inFlow ?? 0),
-    outFlow: Number(item.outFlow ?? 0),
-    dailyQuotaGB: Number(item.dailyQuotaGB ?? 0),
-    monthlyQuotaGB: Number(item.monthlyQuotaGB ?? 0),
-    dailyUsedBytes: Number(item.dailyUsedBytes ?? 0),
-    monthlyUsedBytes: Number(item.monthlyUsedBytes ?? 0),
-    disabledByQuota: Number(item.disabledByQuota ?? 0),
-    quotaDisabledAt: Number(item.quotaDisabledAt ?? 0),
-    maxConn: item.maxConn != null ? Number(item.maxConn) : undefined,
-  };
-};
-
-const normalizeUserTunnelItem = (item: Partial<UserTunnel>): UserTunnel => {
-  return {
-    id: Number(item.id ?? 0),
-    userId: Number(item.userId ?? 0),
-    tunnelId: Number(item.tunnelId ?? 0),
-    tunnelName: String(item.tunnelName ?? ""),
-    status: Number(item.status ?? 0),
-    flow: Number(item.flow ?? 0),
-    flowMiB: Number(item.flowMiB ?? 0),
-    num: Number(item.num ?? 0),
-    expTime: Number(item.expTime ?? 0),
-    flowResetTime: Number(item.flowResetTime ?? 0),
-    speedId: item.speedId ?? null,
-    speedLimitName: item.speedLimitName,
-    inFlow: Number(item.inFlow ?? 0),
-    outFlow: Number(item.outFlow ?? 0),
-    tunnelFlow: item.tunnelFlow,
-  };
-};
 
 export default function UserPage() {
   // 状态管理
@@ -1031,70 +930,25 @@ export default function UserPage() {
   };
 
   return (
-    <AnimatedPage className="px-3 lg:px-6 py-8">
+    <AnimatedPage>
       {/* 页面头部 */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-6 gap-3">
         <div className="flex-1 max-w-sm flex items-center gap-2">
-          {!isSearchVisible ? (
-            <Button
-              isIconOnly
-              aria-label="搜索"
-              className="text-default-600"
-              color="default"
-              size="sm"
-              variant="flat"
-              onPress={() => setIsSearchVisible(true)}
-            >
-              <SearchIcon className="w-4 h-4" />
-            </Button>
-          ) : (
-            <div className="flex w-full items-center gap-2 animate-appearance-in">
-              <Input
-                classNames={{
-                  base: "bg-default-100",
-                  input: "bg-transparent",
-                  inputWrapper:
-                    "bg-default-100 border-2 border-default-200 hover:border-default-300 data-[hover=true]:border-default-300",
-                }}
-                placeholder="搜索用户名"
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
-              <Button
-                isIconOnly
-                aria-label="关闭搜索"
-                className="text-default-600 shrink-0"
-                color="default"
-                size="sm"
-                variant="light"
-                onPress={() => {
-                  setIsSearchVisible(false);
-                  setSearchKeyword("");
-                }}
-              >
-                <svg
-                  aria-hidden="true"
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M6 18L18 6M6 6l12 12"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                  />
-                </svg>
-              </Button>
-            </div>
-          )}
+          <SearchBar
+            isVisible={isSearchVisible}
+            placeholder="搜索用户名"
+            value={searchKeyword}
+            onChange={setSearchKeyword}
+            onClose={() => setIsSearchVisible(false)}
+            onOpen={() => setIsSearchVisible(true)}
+            onSubmit={handleSearch}
+          />
         </div>
 
         <div className="flex items-center gap-2">
           <Button
             isIconOnly
+            aria-label="切换列表或卡片视图"
             size="sm"
             variant="flat"
             onPress={() => setViewMode(viewMode === "list" ? "grid" : "list")}
@@ -1116,7 +970,7 @@ export default function UserPage() {
         <PageLoadingState message="正在加载..." />
       ) : users.length === 0 ? (
         <Card className="shadow-sm border border-gray-200 dark:border-gray-700 bg-default-50/50">
-          <CardBody className="text-center py-20 flex flex-col items-center justify-center min-h-[240px]">
+          <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
             <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
               暂无用户数据
             </h3>
@@ -1132,10 +986,10 @@ export default function UserPage() {
             className="overflow-x-auto min-w-full"
             classNames={{
               wrapper:
-                "bg-transparent p-0 shadow-none border-none overflow-auto rounded-2xl",
-              th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
+              th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
               td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-              tr: "hover:bg-white/40 dark:hover:bg-white/10 transition-colors",
+              tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
             }}
           >
             <TableHeader>
@@ -1161,7 +1015,7 @@ export default function UserPage() {
                         <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded-full bg-primary text-white font-bold text-sm relative">
                           {(user.name || user.user).slice(0, 2).toUpperCase()}
                           <span
-                            className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white dark:border-zinc-900 rounded-full ${userStatus.color === "success" ? "bg-success" : "bg-danger"}`}
+                            className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-divider dark:border-zinc-900 rounded-full ${userStatus.color === "success" ? "bg-success" : "bg-danger"}`}
                           />
                         </div>
                         <div className="flex flex-col">
@@ -1321,7 +1175,7 @@ export default function UserPage() {
                         <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded-full bg-primary text-white font-bold text-sm relative">
                           {(user.name || user.user).slice(0, 2).toUpperCase()}
                           <span
-                            className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white dark:border-zinc-900 rounded-full ${userStatus.color === "success" ? "bg-success" : "bg-danger"}`}
+                            className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-divider dark:border-zinc-900 rounded-full ${userStatus.color === "success" ? "bg-success" : "bg-danger"}`}
                           />
                         </div>
                         <div className="flex flex-col min-w-0">
@@ -1521,7 +1375,7 @@ export default function UserPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
         }}
         isOpen={isUserModalOpen}
         placement="center"
@@ -1826,7 +1680,7 @@ export default function UserPage() {
                     流量限制、规则数量、到期时间、流量重置时间将自动继承用户设置
                   </div>
 
-                  <div className="grid gap-2 max-h-72 overflow-y-auto pr-1 scrollbar-hide">
+                  <div className="grid gap-2 max-h-72 overflow-y-auto pr-1">
                     {tunnels.map((tunnel) => {
                       const isAssigned = isTunnelAssigned(tunnel.id);
                       const isSelected = batchTunnelSelections.has(tunnel.id);
@@ -1974,9 +1828,9 @@ export default function UserPage() {
                 <Table
                   aria-label="用户隧道权限列表"
                   classNames={{
-                    th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                    th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
                     td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                    tr: "hover:bg-white/40 dark:hover:bg-white/10 transition-colors",
+                    tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
                   }}
                 >
                   <TableHeader>
@@ -2112,7 +1966,7 @@ export default function UserPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
         }}
         isDismissable={false}
         isOpen={isEditTunnelModalOpen}
@@ -2286,7 +2140,7 @@ export default function UserPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
         }}
         isOpen={isDeleteModalOpen}
         placement="center"
@@ -2332,7 +2186,7 @@ export default function UserPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
         }}
         isOpen={isDeleteTunnelModalOpen}
         placement="center"
@@ -2380,7 +2234,7 @@ export default function UserPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
         }}
         isOpen={isResetFlowModalOpen}
         placement="center"
@@ -2472,7 +2326,7 @@ export default function UserPage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
         }}
         isOpen={isResetTunnelFlowModalOpen}
         placement="center"

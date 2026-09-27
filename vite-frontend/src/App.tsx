@@ -1,101 +1,45 @@
-import {
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-  Navigate,
-} from "react-router-dom";
-import { useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
+import { lazy, Suspense, useEffect } from "react";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
-import IndexPage from "@/pages/index";
-import ChangePasswordPage from "@/pages/change-password";
-import DashboardPage from "@/pages/dashboard";
-import MonitorPage from "@/pages/monitor";
-import ForwardPage from "@/pages/forward";
-import TunnelPage from "@/pages/tunnel";
-import NodePage from "@/pages/node";
-import UserPage from "@/pages/user";
-import GroupPage from "@/pages/group";
-import ProfilePage from "@/pages/profile";
-import LimitPage from "@/pages/limit";
-import ConfigPage from "@/pages/config";
-import PanelSharingPage from "@/pages/panel-sharing";
-import AdminLayout from "@/layouts/admin";
-import H5Layout from "@/layouts/h5";
-import H5SimpleLayout from "@/layouts/h5-simple";
+import ApplicationLayout from "@/layouts/app-shell";
+import { PageLoadingState } from "@/components/page-state";
+import { PageErrorBoundary } from "@/components/page-error-boundary";
 import { isLoggedIn } from "@/utils/auth";
 import { siteConfig, updateSiteConfig } from "@/config/site";
-import { useH5Mode } from "@/hooks/useH5Mode";
-import { SESSION_UPDATED_EVENT } from "@/utils/session";
+import { useSession } from "@/hooks/use-session";
 import { useThemeContext } from "@/themes/context";
 
-const ProtectedRoute = ({
-  children,
-  useSimpleLayout = false,
-  skipLayout = false,
-}: {
-  children: React.ReactNode;
-  useSimpleLayout?: boolean;
-  skipLayout?: boolean;
-}) => {
-  const isH5 = useH5Mode();
-  const authenticated = isLoggedIn();
+const IndexPage = lazy(() => import("@/pages/index"));
+const ChangePasswordPage = lazy(() => import("@/pages/change-password"));
+const DashboardPage = lazy(() => import("@/pages/dashboard"));
+const MonitorPage = lazy(() => import("@/pages/monitor"));
+const ForwardPage = lazy(() => import("@/pages/forward"));
+const TunnelPage = lazy(() => import("@/pages/tunnel"));
+const NodePage = lazy(() => import("@/pages/node"));
+const UserPage = lazy(() => import("@/pages/user"));
+const GroupPage = lazy(() => import("@/pages/group"));
+const ProfilePage = lazy(() => import("@/pages/profile"));
+const LimitPage = lazy(() => import("@/pages/limit"));
+const ConfigPage = lazy(() => import("@/pages/config"));
+const PanelSharingPage = lazy(() => import("@/pages/panel-sharing"));
 
-  if (!authenticated) {
-    return <Navigate replace to="/" />;
-  }
-
-  // 如果跳过布局，直接返回子组件
-  if (skipLayout) {
-    return <>{children}</>;
-  }
-
-  // 根据模式和页面类型选择布局
-  const Layout =
-    isH5 && useSimpleLayout ? H5SimpleLayout : isH5 ? H5Layout : AdminLayout;
-
-  return <Layout>{children}</Layout>;
-};
-
-// 登录页面路由组件 - 已登录则重定向到dashboard
-const LoginRoute = () => {
-  const authenticated = isLoggedIn();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (authenticated) {
-      // 使用 React Router 导航，避免无限跳转
-      navigate("/dashboard", { replace: true });
-    }
-  }, [authenticated, navigate]);
-
-  if (authenticated) {
-    return <Navigate replace to="/dashboard" />;
-  }
-
-  return <IndexPage />;
-};
-
-function App() {
+function RequireSession() {
+  useSession();
   const location = useLocation();
-  const navigate = useNavigate();
+
+  return isLoggedIn() ? (
+    <Outlet />
+  ) : (
+    <Navigate replace state={{ from: location.pathname }} to="/" />
+  );
+}
+function LoginRoute() {
+  useSession();
+
+  return isLoggedIn() ? <Navigate replace to="/dashboard" /> : <IndexPage />;
+}
+function App() {
   const { effectiveMode } = useThemeContext();
-
-  // 全局登录状态监听，当检测到未登录且不在首页时，跳转到首页
-  useEffect(() => {
-    const handleSessionUpdate = () => {
-      if (!isLoggedIn() && location.pathname !== "/") {
-        navigate("/", { replace: true });
-      }
-    };
-
-    window.addEventListener(SESSION_UPDATED_EVENT, handleSessionUpdate);
-
-    return () => {
-      window.removeEventListener(SESSION_UPDATED_EVENT, handleSessionUpdate);
-    };
-  }, [location.pathname, navigate]);
 
   // 处理自定义背景图片
   useEffect(() => {
@@ -174,108 +118,35 @@ function App() {
   }, []);
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes key={location.pathname} location={location}>
-        <Route element={<LoginRoute />} path="/" />
-        <Route
-          element={
-            <ProtectedRoute skipLayout={true}>
-              <ChangePasswordPage />
-            </ProtectedRoute>
-          }
-          path="/change-password"
-        />
-        <Route
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-          path="/dashboard"
-        />
-        <Route
-          element={
-            <ProtectedRoute>
-              <MonitorPage />
-            </ProtectedRoute>
-          }
-          path="/monitor"
-        />
-        <Route
-          element={
-            <ProtectedRoute>
-              <ForwardPage />
-            </ProtectedRoute>
-          }
-          path="/forward"
-        />
-        <Route
-          element={
-            <ProtectedRoute>
-              <TunnelPage />
-            </ProtectedRoute>
-          }
-          path="/tunnel"
-        />
-        <Route
-          element={
-            <ProtectedRoute>
-              <NodePage />
-            </ProtectedRoute>
-          }
-          path="/node"
-        />
-        <Route
-          element={
-            <ProtectedRoute useSimpleLayout={true}>
-              <UserPage />
-            </ProtectedRoute>
-          }
-          path="/user"
-        />
-        <Route
-          element={
-            <ProtectedRoute useSimpleLayout={true}>
-              <GroupPage />
-            </ProtectedRoute>
-          }
-          path="/group"
-        />
-        <Route
-          element={
-            <ProtectedRoute>
-              <ProfilePage />
-            </ProtectedRoute>
-          }
-          path="/profile"
-        />
-        <Route
-          element={
-            <ProtectedRoute useSimpleLayout={true}>
-              <LimitPage />
-            </ProtectedRoute>
-          }
-          path="/limit"
-        />
-        <Route
-          element={
-            <ProtectedRoute>
-              <ConfigPage />
-            </ProtectedRoute>
-          }
-          path="/config"
-        />
-        <Route
-          element={
-            <ProtectedRoute useSimpleLayout={true}>
-              <PanelSharingPage />
-            </ProtectedRoute>
-          }
-          path="/panel-sharing"
-        />
-      </Routes>
-    </AnimatePresence>
+    <PageErrorBoundary>
+      <Suspense fallback={<PageLoadingState message="正在加载…" />}>
+        <Routes>
+          <Route element={<LoginRoute />} path="/" />
+          <Route element={<RequireSession />}>
+            <Route element={<ChangePasswordPage />} path="/change-password" />
+            <Route element={<ApplicationLayout />}>
+              <Route element={<DashboardPage />} path="/dashboard" />
+              <Route element={<MonitorPage />} path="/monitor" />
+              <Route element={<ForwardPage />} path="/forward" />
+              <Route element={<TunnelPage />} path="/tunnel" />
+              <Route element={<NodePage />} path="/node" />
+              <Route element={<UserPage />} path="/user" />
+              <Route element={<GroupPage />} path="/group" />
+              <Route element={<ProfilePage />} path="/profile" />
+              <Route element={<LimitPage />} path="/limit" />
+              <Route element={<ConfigPage />} path="/config" />
+              <Route element={<PanelSharingPage />} path="/panel-sharing" />
+            </Route>
+          </Route>
+          <Route
+            element={
+              <Navigate replace to={isLoggedIn() ? "/dashboard" : "/"} />
+            }
+            path="*"
+          />
+        </Routes>
+      </Suspense>
+    </PageErrorBoundary>
   );
 }
-
 export default App;

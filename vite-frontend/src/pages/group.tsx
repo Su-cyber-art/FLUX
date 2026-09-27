@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import toast from "react-hot-toast";
 
+import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
 import { PageLoadingState } from "@/components/page-state";
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
-import { Button } from "@/shadcn-bridge/heroui/button";
-import { Input } from "@/shadcn-bridge/heroui/input";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Modal,
   ModalBody,
@@ -13,8 +13,8 @@ import {
   ModalFooter,
   ModalHeader,
   useDisclosure,
-} from "@/shadcn-bridge/heroui/modal";
-import { Select, SelectItem } from "@/shadcn-bridge/heroui/select";
+} from "@/components/ui/modal";
+import { Select, SelectItem } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,8 +22,8 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-} from "@/shadcn-bridge/heroui/table";
-import { Chip } from "@/shadcn-bridge/heroui/chip";
+} from "@/components/ui/table";
+import { Chip } from "@/components/ui/chip";
 import {
   assignGroupPermission,
   assignTunnelsToGroup,
@@ -457,7 +457,7 @@ export default function GroupPage() {
 
   if (!isAdmin) {
     return (
-      <div className="px-3 lg:px-6 py-8">
+      <div>
         <Card>
           <CardBody>
             <p className="text-danger">
@@ -470,7 +470,7 @@ export default function GroupPage() {
   }
 
   return (
-    <AnimatedPage className="px-3 lg:px-6 py-8 space-y-6">
+    <AnimatedPage className="space-y-6">
       {loading ? (
         <PageLoadingState message="正在加载..." />
       ) : (
@@ -492,10 +492,10 @@ export default function GroupPage() {
                 aria-label="隧道分组列表"
                 classNames={{
                   wrapper:
-                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-2xl",
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
+                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
                   td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-white/40 dark:hover:bg-white/10 transition-colors",
+                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
                 }}
               >
                 <TableHeader>
@@ -573,10 +573,10 @@ export default function GroupPage() {
                 aria-label="用户分组列表"
                 classNames={{
                   wrapper:
-                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-2xl",
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
+                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
                   td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-white/40 dark:hover:bg-white/10 transition-colors",
+                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
                 }}
               >
                 <TableHeader>
@@ -686,10 +686,10 @@ export default function GroupPage() {
                 aria-label="分组权限列表"
                 classNames={{
                   wrapper:
-                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-2xl",
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-white/20 dark:border-white/10 py-3 uppercase tracking-wider first:rounded-tl-[24px] last:rounded-tr-[24px]",
+                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
+                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
                   td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-white/40 dark:hover:bg-white/10 transition-colors",
+                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
                 }}
               >
                 <TableHeader>
@@ -730,7 +730,7 @@ export default function GroupPage() {
           <Modal
             backdrop="blur"
             classNames={{
-              base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+              base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
             }}
             isOpen={tunnelGroupModalOpen}
             onOpenChange={onTunnelGroupModalChange}
@@ -778,7 +778,7 @@ export default function GroupPage() {
           <Modal
             backdrop="blur"
             classNames={{
-              base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+              base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
             }}
             isOpen={userGroupModalOpen}
             onOpenChange={onUserGroupModalChange}
@@ -826,7 +826,7 @@ export default function GroupPage() {
           <Modal
             backdrop="blur"
             classNames={{
-              base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+              base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
             }}
             isOpen={tunnelAssignModalOpen}
             onOpenChange={onTunnelAssignModalChange}
@@ -877,7 +877,7 @@ export default function GroupPage() {
           <Modal
             backdrop="blur"
             classNames={{
-              base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+              base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
             }}
             isOpen={userAssignModalOpen}
             onOpenChange={onUserAssignModalChange}

@@ -1,144 +1,85 @@
-# 安装部署指南
+# 部署当前分支
 
-本文档介绍如何部署 FLVX 面板端及节点端。
+FLUX 的 Mantine 前端需要从本仓库源码构建。默认的 `docker-compose-v4.yml` / `docker-compose-v6.yml` 保留了上游发布模板；合并 `compose.source.yml` 后，前后端会使用本地构建的镜像。
 
-## 一、面板端部署
+## Docker Compose 源码部署
 
-面板端负责管理用户、节点和转发规则。
-
-### 1. 环境要求
-- 操作系统：Linux (推荐 Debian 10+ / Ubuntu 20.04+)
-- 必须安装 Docker 和 Docker Compose
-
-### 2. 一键安装脚本
-
-使用以下命令即可快速安装面板：
+准备 Docker、Docker Compose v2 和 Git：
 
 ```bash
-curl -L https://raw.githubusercontent.com/Sagit-chu/flux-panel/main/panel_install.sh -o panel_install.sh && chmod +x panel_install.sh && ./panel_install.sh
+git clone https://github.com/Su-cyber-art/FLUX.git
+cd FLUX
+cp .env.example .env
 ```
 
-**安装过程中会提示输入以下信息：**
-- **前端端口**: 默认为 `6366`
-- **后端端口**: 默认为 `6365`
-
-脚本会自动检测系统是否支持 IPv6，并自动配置 Docker 的 IPv6 支持。
-
-### 3. 访问面板
-
-安装完成后，访问：
-`http://<服务器IP>:<前端端口>` (默认: `http://<服务器IP>:6366`)
-
-**默认管理员账号：**
-- 用户名: `admin_user`
-- 密码: `admin_user`
-
-> ⚠️ **注意**: 首次登录后，请务必在“个人中心”或“设置”中修改默认密码！
-
-### 4. 维护命令
-
-再次运行 `./panel_install.sh` 脚本可以看到管理菜单：
-1. 安装面板
-2. 更新面板
-3. 卸载面板
-4. 迁移到 PostgreSQL
-5. 退出
-
----
-
-## 二、节点端部署
-
-节点端运行在实际进行流量转发的服务器上，需要连接到面板端进行管理。
-
-### 1. 获取接入密钥
-1. 登录面板端。
-2. 进入 **节点管理 (Node)** 页面。
-3. 点击 **添加节点**。
-4. 获取该节点的 **接入密钥 (Secret)**。
-
-### 2. 一键安装脚本
-
-在节点服务器上运行：
+编辑 `.env`，设置 `JWT_SECRET`。可用 `openssl rand -hex 32` 生成随机值。默认前端端口为 `6366`，API 端口为 `6365`。
 
 ```bash
-curl -L https://raw.githubusercontent.com/Sagit-chu/flux-panel/main/install.sh -o install.sh && chmod +x install.sh && ./install.sh
+docker compose -f docker-compose-v4.yml -f compose.source.yml config --quiet
+docker compose -f docker-compose-v4.yml -f compose.source.yml up -d --build backend frontend
 ```
 
-Alpine Linux 最小化安装若未包含 `curl`，可使用系统自带的 `wget` 下载：
+访问 `http://服务器地址:6366`。首次登录使用 `admin_user` / `admin_user`，并按提示修改账号信息。
+
+有 IPv6 网络需求时，将命令中的 `docker-compose-v4.yml` 换为 `docker-compose-v6.yml`；宿主机和 Docker 网络也需具备 IPv6 连通性。
+
+## 查看与更新
 
 ```bash
-wget -O install.sh https://raw.githubusercontent.com/Sagit-chu/flux-panel/main/install.sh && chmod +x install.sh && ./install.sh
+docker compose -f docker-compose-v4.yml -f compose.source.yml ps
+docker compose -f docker-compose-v4.yml -f compose.source.yml logs --tail=100 backend frontend
 ```
 
-脚本会在 Alpine 上自动安装 Bash、`curl` 和 CA 证书，并使用 OpenRC 注册、启动和管理 `flux_agent` 服务；其他受支持的 Linux 发行版继续使用 systemd。
-
-**安装过程中会提示输入：**
-- **服务器地址**: 面板端的通信地址（通常是 `http://<面板IP>:<后端端口>`，例如 `http://1.2.3.4:6365`）。
-- **密钥**: 刚才在面板中获取的节点密钥。
-
-或者直接使用带参数的命令（适用于自动化部署）：
+更新源码后使用同一组 Compose 文件重新构建：
 
 ```bash
-# 替换 <面板地址> 和 <密钥>
-./install.sh -a "http://1.2.3.4:6365" -s "your_node_secret"
+git pull --ff-only
+docker compose -f docker-compose-v4.yml -f compose.source.yml up -d --build backend frontend
 ```
 
-### 3. 验证安装
-安装完成后，服务会自动启动。
-- systemd 查看状态: `systemctl status flux_agent`
-- Alpine/OpenRC 查看状态: `rc-service flux_agent status`
-- 回到面板 **节点管理** 页面，该节点状态应显示为 **在线**。
+源码构建部署使用上述更新方式。面板内的一键升级和安装脚本依赖匹配的发布产物，以 [本仓库 Releases](https://github.com/Su-cyber-art/FLUX/releases) 实际提供的资源为准。
 
----
+## 数据与数据库
 
-## 三、Caddy 反向代理（可选）
+SQLite 数据保存在 `sqlite_data` 卷中的 `gost.db`。停止或重新构建容器会保留该卷。PostgreSQL 配置及备份方法见 [数据库指南](postgresql.md)。
 
-如果需要通过域名访问面板并自动获取 HTTPS 证书，可以使用 Caddy 作为反向代理。
+`.env` 包含运行密钥，不提交到 Git。共享 Compose 模板中的后端挂载了 Docker socket，用于面板升级功能；部署配置应与实际需要一致。
 
-### 1. 安装 Caddy
+## 节点代理
+
+先在面板中添加节点，再准备代理所需的面板地址和节点密钥。
+
+从当前源码构建代理：
 
 ```bash
-# Debian / Ubuntu
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-curl -1sLf 'https://dl.cloudflare.com/content/v1/e2qwFJ2fRP2b2q/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudflare.com/content/v1/e2qwFJ2fRP2b2q/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update
-sudo apt install caddy
+cd go-gost
+go build -o gost .
 ```
 
-其他系统请参考 [Caddy 官方安装文档](https://caddyserver.com/docs/install)。
+在代理运行目录创建 `config.json`：
 
-### 2. 配置 Caddyfile
-
-编辑 Caddy 配置文件：
-
-```bash
-sudo nano /etc/caddy/Caddyfile
-```
-
-#### 面板域名配置
-
-将 `panel.example.com` 替换为你自己的域名：
-
-```caddyfile
-panel.example.com {
-    reverse_proxy localhost:6366
+```json
+{
+  "addr": "https://panel.example.com",
+  "secret": "替换为面板生成的节点密钥",
+  "http": 0,
+  "tls": 0,
+  "socks": 0
 }
 ```
 
-Caddy 会自动为域名申请和续期 HTTPS 证书，无需额外配置。
+运行 `./gost`，回到面板检查节点在线状态。运行用户需要有权使用对应的监听端口与网络能力。需要 systemd/OpenRC 托管时，使用匹配发布版本的安装资源或自行配置服务。
 
-### 3. 重启 Caddy
+仓库根目录的 `install.sh`、`panel_install.sh` 是继承的发布模板，不能仅将其下载地址改成个人仓库就视为已经发布了本分支。
 
-```bash
-sudo systemctl restart caddy
+## 反向代理
+
+前端 Nginx 已转发 API、流式诊断与 WebSocket。可将域名反向代理到前端端口，例如 Caddy：
+
+```caddyfile
+panel.example.com {
+    reverse_proxy 127.0.0.1:6366
+}
 ```
 
-### 4. 注意事项
-
-- 确保域名已正确解析到服务器 IP。
-- 确保服务器防火墙放行了 **80** 和 **443** 端口（Caddy 自动申请证书需要）。
-- 使用 Caddy 反向代理后，可以在 `.env` 中将前端端口改为仅监听本地，避免直接暴露：
-  ```
-  FRONTEND_PORT=127.0.0.1:6366
-  ```
+使用反向代理时，可按部署需要将 `.env` 中的前端绑定改为 `FRONTEND_PORT=127.0.0.1:6366`。

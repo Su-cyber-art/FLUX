@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-import { Card, CardBody } from "@/shadcn-bridge/heroui/card";
-import { Button } from "@/shadcn-bridge/heroui/button";
+import { toast } from "@/lib/notifications";
+import { Card, CardBody } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Modal,
   ModalContent,
@@ -11,8 +11,8 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-} from "@/shadcn-bridge/heroui/modal";
-import { Input } from "@/shadcn-bridge/heroui/input";
+} from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
 import { isWebViewFunc } from "@/utils/panel";
 import { siteConfig } from "@/config/site";
 import { VersionFooter } from "@/components/version-footer";
@@ -198,7 +198,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="px-3 lg:px-6 py-8 flex flex-col h-full">
+    <div className="flex flex-col h-full">
       <div className="space-y-6 flex-1">
         {/* 用户信息卡片 */}
         <Card>
@@ -249,7 +249,7 @@ export default function ProfilePage() {
                 adminMenuItems.map((item) => (
                   <button
                     key={item.path}
-                    className="flex flex-col items-center p-3 rounded-2xl bg-gray-50 dark:bg-default-100 hover:bg-gray-100 dark:hover:bg-default-200 transition-colors duration-200"
+                    className="flex flex-col items-center p-3 rounded-lg bg-gray-50 dark:bg-default-100 hover:bg-gray-100 dark:hover:bg-default-200 transition-colors duration-200"
                     onClick={() => navigate(item.path)}
                   >
                     <div
@@ -265,7 +265,7 @@ export default function ProfilePage() {
 
               {/* 修改密码 */}
               <button
-                className="flex flex-col items-center p-3 rounded-2xl bg-gray-50 dark:bg-default-100 hover:bg-gray-100 dark:hover:bg-default-200 transition-colors duration-200"
+                className="flex flex-col items-center p-3 rounded-lg bg-gray-50 dark:bg-default-100 hover:bg-gray-100 dark:hover:bg-default-200 transition-colors duration-200"
                 onClick={onOpen}
               >
                 <div className="w-10 h-10 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-2">
@@ -288,7 +288,7 @@ export default function ProfilePage() {
 
               {/* 退出登录 */}
               <button
-                className="flex flex-col items-center p-3 rounded-2xl bg-gray-50 dark:bg-default-100 hover:bg-gray-100 dark:hover:bg-default-200 transition-colors duration-200"
+                className="flex flex-col items-center p-3 rounded-lg bg-gray-50 dark:bg-default-100 hover:bg-gray-100 dark:hover:bg-default-200 transition-colors duration-200"
                 onClick={handleLogout}
               >
                 <div className="w-10 h-10 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-2">
@@ -327,7 +327,7 @@ export default function ProfilePage() {
       <Modal
         backdrop="blur"
         classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-2xl overflow-hidden",
+          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
         }}
         isOpen={isOpen}
         placement="center"

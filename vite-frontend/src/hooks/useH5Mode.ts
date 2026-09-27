@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { DEFAULT_MOBILE_BREAKPOINT } from "@/hooks/useMobileBreakpoint";
 
 const detectH5Mode = (): boolean => {
-  const isMobile = window.innerWidth <= DEFAULT_MOBILE_BREAKPOINT;
+  const isMobile = window.innerWidth < DEFAULT_MOBILE_BREAKPOINT;
   const isMobileBrowser =
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent,

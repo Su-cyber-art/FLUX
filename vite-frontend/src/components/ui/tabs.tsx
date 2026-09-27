@@ -1,64 +1,63 @@
 import * as React from "react";
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { Tabs as MantineTabs } from "@mantine/core";
+export interface TabProps {
+  children: React.ReactNode;
+  title: React.ReactNode;
+}
+export function Tab(_props: TabProps) {
+  return null;
+}
+export interface TabsProps {
+  "aria-label"?: string;
+  children: React.ReactNode;
+  disableCursorAnimation?: boolean;
+  onSelectionChange?: (key: React.Key) => void;
+  selectedKey?: React.Key;
+}
+export function Tabs({
+  children,
+  selectedKey,
+  onSelectionChange,
+  "aria-label": label,
+}: TabsProps) {
+  const tabs: {
+    value: string;
+    title: React.ReactNode;
+    content: React.ReactNode;
+  }[] = [];
 
-import { cn } from "@/lib/utils";
+  React.Children.forEach(children, (child, index) => {
+    if (React.isValidElement<TabProps>(child) && child.type === Tab)
+      tabs.push({
+        value: String(child.key ?? index),
+        title: child.props.title,
+        content: child.props.children,
+      });
+  });
+  const [internal, setInternal] = React.useState<string | null>(
+    tabs[0]?.value ?? null,
+  );
 
-function Tabs({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (
-    <TabsPrimitive.Root
-      className={cn("flex flex-col gap-2", className)}
-      data-slot="tabs"
-      {...props}
-    />
+    <MantineTabs
+      value={selectedKey === undefined ? internal : String(selectedKey)}
+      onChange={(value) => {
+        setInternal(value);
+        if (value !== null) onSelectionChange?.(value);
+      }}
+    >
+      <MantineTabs.List aria-label={label}>
+        {tabs.map((tab) => (
+          <MantineTabs.Tab key={tab.value} value={tab.value}>
+            {tab.title}
+          </MantineTabs.Tab>
+        ))}
+      </MantineTabs.List>
+      {tabs.map((tab) => (
+        <MantineTabs.Panel key={tab.value} pt="lg" value={tab.value}>
+          {tab.content}
+        </MantineTabs.Panel>
+      ))}
+    </MantineTabs>
   );
 }
-
-function TabsList({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
-  return (
-    <TabsPrimitive.List
-      className={cn(
-        "inline-flex h-9 items-center justify-center rounded-lg bg-default-100 p-1 text-default-500",
-        className,
-      )}
-      data-slot="tabs-list"
-      {...props}
-    />
-  );
-}
-
-function TabsTrigger({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
-  return (
-    <TabsPrimitive.Trigger
-      className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm dark:data-[state=active]:bg-default-50",
-        className,
-      )}
-      data-slot="tabs-trigger"
-      {...props}
-    />
-  );
-}
-
-function TabsContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
-  return (
-    <TabsPrimitive.Content
-      className={cn("outline-none", className)}
-      data-slot="tabs-content"
-      {...props}
-    />
-  );
-}
-
-export { Tabs, TabsContent, TabsList, TabsTrigger };

@@ -1,17 +1,16 @@
 import type { BatchOperationFailure } from "@/api/types";
 
-import toast from "react-hot-toast";
-
-import { Button } from "@/shadcn-bridge/heroui/button";
-import { Chip } from "@/shadcn-bridge/heroui/chip";
+import toast from "@/lib/notifications";
+import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import {
   Modal,
   ModalBody,
   ModalContent,
   ModalFooter,
   ModalHeader,
-} from "@/shadcn-bridge/heroui/modal";
-import { Alert } from "@/shadcn-bridge/heroui/alert";
+} from "@/components/ui/modal";
+import { Alert } from "@/components/ui/alert";
 
 interface BatchActionResultModalProps {
   failures: BatchOperationFailure[];

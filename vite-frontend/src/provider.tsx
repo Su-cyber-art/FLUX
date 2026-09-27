@@ -1,51 +1,18 @@
-import * as React from "react";
-import { useHref, useNavigate } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
-import { I18nProvider } from "@react-aria/i18n";
+import type { ReactNode } from "react";
 
-import { HeroUIProvider } from "@/shadcn-bridge/heroui/system";
-import { ThemeProvider } from "@/components/theme-provider";
+import { Notifications } from "@mantine/notifications";
+import { DatesProvider } from "@mantine/dates";
 
-export interface ProvidersProps {
-  children: React.ReactNode;
-}
+import "dayjs/locale/zh-cn";
+import { ThemeProvider } from "@/themes/context";
 
-export function Provider({ children }: ProvidersProps) {
-  const navigate = useNavigate();
-
+export function Provider({ children }: { children: ReactNode }) {
   return (
-    <I18nProvider locale="zh-CN">
-      <HeroUIProvider navigate={navigate} useHref={useHref}>
-        <ThemeProvider>
-          {children}
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              duration: 2000,
-              className: "dark:bg-gray-800 dark:text-white",
-              style: {
-                background: "var(--toaster-bg, #ffffff)",
-                color: "var(--toaster-color, #000000)",
-                border: "1px solid var(--toaster-border, #e5e7eb)",
-              },
-              success: {
-                duration: 2000,
-                style: {
-                  background: "#10b981",
-                  color: "#ffffff",
-                },
-              },
-              error: {
-                duration: 2000,
-                style: {
-                  background: "#ef4444",
-                  color: "#ffffff",
-                },
-              },
-            }}
-          />
-        </ThemeProvider>
-      </HeroUIProvider>
-    </I18nProvider>
+    <ThemeProvider>
+      <DatesProvider settings={{ locale: "zh-cn", firstDayOfWeek: 1 }}>
+        {children}
+        <Notifications limit={4} position="top-right" zIndex={600} />
+      </DatesProvider>
+    </ThemeProvider>
   );
 }

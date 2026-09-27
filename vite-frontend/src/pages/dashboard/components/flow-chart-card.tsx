@@ -7,7 +7,7 @@ import {
   YAxis,
 } from "recharts";
 
-import { Card, CardBody, CardHeader } from "@/shadcn-bridge/heroui/card";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageEmptyState } from "@/components/page-state";
 
 interface FlowChartPoint {
@@ -39,7 +39,7 @@ export const FlowChartCard = ({
             <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
             <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
           </svg>
-          <h2 className="text-lg lg:text-xl font-semibold text-foreground">
+          <h2 className="text-base font-semibold text-foreground">
             24小时流量统计
           </h2>
         </div>
@@ -98,7 +98,7 @@ export const FlowChartCard = ({
                         : 0;
 
                       return (
-                        <div className="bg-white/20 dark:bg-black/20 backdrop-blur-3xl border border-white/50 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.1)] p-4">
+                        <div className="bg-content1 border border-divider rounded-lg shadow-sm p-4">
                           <p className="font-medium text-foreground">{`时间: ${label ?? ""}`}</p>
                           <p className="text-primary font-semibold mt-1">{`流量: ${formatFlow(flowValue)}`}</p>
                         </div>
@@ -109,7 +109,7 @@ export const FlowChartCard = ({
                   }}
                   cursor={{ fill: "rgba(0, 122, 255, 0.05)" }}
                 />
-                <Line dataKey="flow" stroke="#007aff" type="monotone" />
+                <Line dataKey="flow" stroke="var(--primary)" type="monotone" />
               </LineChart>
             </ResponsiveContainer>
           </div>

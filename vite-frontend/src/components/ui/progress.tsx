@@ -1,36 +1,51 @@
 import * as React from "react";
-import * as ProgressPrimitive from "@radix-ui/react-progress";
+import { Progress as MantineProgress, Group, Text } from "@mantine/core";
 
-import { cn } from "@/lib/utils";
-
-function Progress({
+import { uiColor, type SemanticColor } from "./shared";
+export interface ProgressProps {
+  "aria-label"?: string;
+  className?: string;
+  color?: SemanticColor;
+  label?: React.ReactNode;
+  showValueLabel?: boolean;
+  size?: "sm" | "md" | "lg";
+  value?: number;
+}
+export function Progress({
+  value = 0,
+  label,
+  showValueLabel,
   className,
-  value,
-  indicatorClassName,
+  color = "primary",
+  size = "sm",
   ...props
-}: React.ComponentProps<typeof ProgressPrimitive.Root> & {
-  indicatorClassName?: string;
-}) {
+}: ProgressProps) {
+  const percent = Math.max(
+    0,
+    Math.min(100, Number.isFinite(value) ? value : 0),
+  );
+
   return (
-    <ProgressPrimitive.Root
-      className={cn(
-        "relative h-2 w-full overflow-hidden rounded-full bg-default-200",
-        className,
+    <div className={className}>
+      {(label || showValueLabel) && (
+        <Group justify="space-between" mb={4}>
+          <Text c="dimmed" size="xs">
+            {label}
+          </Text>
+          {showValueLabel && (
+            <Text c="dimmed" size="xs">
+              {Math.round(percent)}%
+            </Text>
+          )}
+        </Group>
       )}
-      data-slot="progress"
-      value={value}
-      {...props}
-    >
-      <ProgressPrimitive.Indicator
-        className={cn(
-          "h-full w-full flex-1 bg-primary transition-all",
-          indicatorClassName,
-        )}
-        data-slot="progress-indicator"
-        style={{ transform: `translateX(-${100 - (value ?? 0)}%)` }}
+      <MantineProgress
+        {...props}
+        color={uiColor(color)}
+        radius="xl"
+        size={size}
+        value={percent}
       />
-    </ProgressPrimitive.Root>
+    </div>
   );
 }
-
-export { Progress };

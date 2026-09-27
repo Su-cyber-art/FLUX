@@ -1,40 +1,42 @@
-# 常见问题 (FAQ)
+# 常见问题
 
-### Q1: 安装脚本提示 "Docker command not found"？
-**A**: 请确保您的系统已安装 Docker 和 Docker Compose。
-- Ubuntu/Debian 安装 Docker: `curl -fsSL https://get.docker.com | bash`
+## 为什么克隆后仍能看到 FLVX 名称？
 
-### Q2: 面板无法访问 (Connection Refused)？
-**A**:
-1. 检查防火墙是否放行了前端端口（默认 `6366`）。
-2. 检查容器是否正常运行: `docker ps`。
-3. 查看容器日志: `docker logs flux-panel-backend` 或 `docker logs vite-frontend`。
+FLUX 基于 FLVX 开发，部分界面默认名称、目录、环境变量和协议标识继续保留，以兼容既有实现。个人维护范围和上游来源见仓库 README 与 NOTICE。
 
-### Q3: 节点显示离线？
-**A**:
-1. 检查节点服务器与面板服务器之间的网络连通性。
-2. 确认在节点端安装时输入的 **面板地址** 和 **密钥** 是否正确。
-3. 检查节点端服务状态: `systemctl status flux_agent`。
-4. 查看节点端日志: `journalctl -u flux_agent -f`。
+## 为什么运行旧安装脚本后没有 Mantine 界面？
 
-### Q4: 只有 TCP 能通，UDP 不通？
-**A**: 请检查服务器防火墙和安全组（AWS/阿里云/腾讯云等）是否同时放行了对应端口的 **TCP 和 UDP** 协议。
+根目录脚本和原有 Compose 文件继承自上游发布流程，可能使用上游镜像。部署本分支请按 [源码部署](install.md) 合并 `compose.source.yml`，或使用本仓库实际发布的匹配资源。
 
-### Q5: IPv6 无法使用？
-**A**: 面板安装脚本会自动尝试配置 Docker 的 IPv6。如果失败，请手动检查 `/etc/docker/daemon.json` 配置，确保 `ipv6: true` 且分配了正确的 `fixed-cidr-v6` 子网。
+## 本地页面正常，但接口失败？
 
-### Q6: 如何切换到 PostgreSQL？
-**A**: 在 `.env` 文件中设置 `DB_TYPE=postgres`，并让 `DATABASE_URL` 与 `POSTGRES_*` 保持一致，然后执行 `docker compose up -d` 重启服务即可。使用安装脚本部署时，`POSTGRES_PASSWORD` 会自动随机生成并写入 `.env`。详见 [PostgreSQL 数据库指南](./postgresql.md)。
+先确认 Go API 正在运行。默认开发代理目标是 `http://127.0.0.1:6365`；使用其他地址时设置 `VITE_API_PROXY`。设置 `VITE_API_BASE` 时不要重复添加 `/api/v1`。
 
-### Q7: 从 SQLite 迁移到 PostgreSQL 后数据丢失？
-**A**:
-1. 确认迁移前已备份 SQLite 文件（`gost.db.bak`）。
-2. 确认 `pgloader` 命令执行成功，检查其输出是否有报错。
-3. 确认 `.env` 中 `DATABASE_URL` 的密码与 `POSTGRES_PASSWORD` 一致。
-4. 详细迁移步骤参考 [PostgreSQL 数据库指南 - 从 SQLite 迁移](./postgresql.md)。
+## 面板无法访问？
 
-### Q8: PostgreSQL 容器启动失败？
-**A**:
-1. 检查 `POSTGRES_PASSWORD` 是否已设置（不能为空）。
-2. 查看容器日志：`docker logs flux-panel-postgres`。
-3. 如果是首次启动后修改了密码，需要删除旧的数据卷重新初始化：`docker volume rm postgres_data`。
+检查 `.env` 中的端口、容器健康状态、监听地址及反向代理。源码部署可运行：
+
+```bash
+docker compose -f docker-compose-v4.yml -f compose.source.yml ps
+docker compose -f docker-compose-v4.yml -f compose.source.yml logs --tail=100 backend frontend
+```
+
+## 节点一直离线？
+
+核对代理 `config.json` 中的面板地址和节点密钥、代理进程日志，以及节点到面板的网络连通性。通过域名连接时，代理还需正确转发 `/system-info` WebSocket 和流量上报接口。
+
+## TCP 正常，UDP 或 IPv6 不通？
+
+分别检查目标服务、节点防火墙/安全组、宿主机路由和 Docker 网络是否支持对应协议。界面配置成功不代表网络路径已经放行。
+
+## 看不到监控或管理页面？
+
+节点、隧道、用户及系统配置等功能需要管理员权限。普通用户的监控访问需要单独授权；授权后重新聚焦窗口或切换页面会刷新导航权限。
+
+## PostgreSQL 修改密码后连接失败？
+
+`POSTGRES_PASSWORD` 的初始化值不会自动修改已有数据卷中的数据库角色密码。应同步数据库实际凭据和 `DATABASE_URL`，不要通过删除已有数据卷解决认证问题。详见 [数据库指南](postgresql.md)。
+
+## 为什么版本检查没有可用更新？
+
+仓库标签、GitHub Release 和容器镜像是不同的发布资源。版本查询以相应仓库实际发布的内容为准，个人分支在发布产物准备好之前可继续从源码构建更新。

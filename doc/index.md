@@ -1,39 +1,21 @@
-# FLVX 官方文档
+# FLUX 文档
 
-**FLVX** 是一个基于 [go-gost/gost](https://github.com/go-gost/gost) 和 [go-gost/x](https://github.com/go-gost/x) 开发的高性能流量转发管理系统。
+FLUX 是 [Su-cyber-art](https://github.com/Su-cyber-art) 个人维护的流量转发管理面板，基于 [FLVX](https://github.com/Sagit-chu/flvx) 继续开发。当前前端使用 Mantine，后端与代理采用 Go / GOST。
 
-> 📞 **联系我们**: [Telegram群组](https://t.me/flvxpanel)
+## 从这里开始
 
-## 核心特性
+| 需求 | 文档 |
+| --- | --- |
+| 了解项目、来源与当前状态 | [仓库说明](https://github.com/Su-cyber-art/FLUX#readme) |
+| 在本地运行、构建与修改代码 | [开发指南](development.md) |
+| 部署当前个人分支 | [源码部署](install.md) |
+| 添加节点、隧道、规则与用户 | [使用指南](usage.md) |
+| 使用 PostgreSQL、备份与迁移 | [数据库指南](postgresql.md) |
+| 接入 API 操作技能 | [AI Skill 接入](ai-skill.md) |
+| 处理常见问题 | [FAQ](faq.md) |
 
-- **多协议支持**: 完美支持 TCP 和 UDP 协议转发。
-- **灵活转发**: 支持 **端口转发** 与 **隧道转发** 两种模式。
-- **流量控制**: 支持按 **隧道账号级别** 管理流量转发数量，用于用户/隧道配额控制。
-- **限速管理**: 可针对 **指定用户的指定隧道进行限速** 设置。
-- **计费策略**: 支持配置 **单向或双向流量计费方式**，灵活适配不同计费模型。
-- **策略配置**: 提供灵活的转发策略配置，适用于多种网络场景。
+## 版本与发布
 
-## 快速开始
+这些文档以当前仓库源码为准。前端重构已通过构建与静态检查，真实节点和完整业务交互验证仍在完善。发行资源以 [FLUX Releases](https://github.com/Su-cyber-art/FLUX/releases) 为准，问题反馈使用 [FLUX Issues](https://github.com/Su-cyber-art/FLUX/issues)。
 
-- [安装部署](./install.md)
-- [使用指南](./usage.md)
-- [PostgreSQL 数据库指南](./postgresql.md)
-- [AI Skill 接入](./ai-skill.md) - 让大模型直接操作面板
-- [常见问题](./faq.md)
-
-## 免责声明
-
-本项目仅供个人学习与研究使用，基于开源项目进行二次开发。  
-使用本项目所带来的任何风险均由使用者自行承担。本项目为开源的流量转发工具，仅限合法、合规用途。  
-**禁止将本项目用于任何违法或未经授权的行为，包括但不限于网络攻击、数据窃取、非法访问等。**
-
-## 捐赠支持
-
-如果您觉得本项目对您有帮助，欢迎请作者喝杯咖啡！
-
-| 网络       | 地址                                                                 |
-|------------|----------------------------------------------------------------------|
-| BNB(BEP20) | `0xa608708fdc6279a2433fd4b82f0b72b8cbe97ed5`                          |
-| TRC20      | `TM8VYdU3s3gSX5PC8swjAJrAzZFCHKqG2k`                                  |
-| Aptos      | `0x49427bfcba1006a346447430689b2307ac156316bb34850d1d3029ff9d118da5`  |
-| Polygon    | `0xa608708fdc6279a2433fd4b82f0b72b8cbe97ed5`                          |
+源码保留了部分 FLVX 名称、配置键和 API 标识，以兼容既有面板数据及代理协议。历史设计记录不一定代表当前部署方式。
