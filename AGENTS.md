@@ -40,11 +40,11 @@ FLUX — personally maintained fork of FLVX: Go admin API + Vite/React UI + Go a
 - **Backend DB**: handlers use Repository methods, never `repo.DB()` directly.
 - **GORM models**: always define `TableName()` (GORM pluralizes by default).
 - **GORM tags**: no `type:jsonb` or `type:serial` (SQLite incompatible).
-- **Go versions**: `go.mod` says 1.25.0 for all three modules; CI builds with 1.23.
+- **Go versions**: `go.mod` says 1.25.0 for all three modules; CI builds with 1.25.x.
 
 ## Anti-patterns
 
-- Don't edit `install.sh` or `panel_install.sh` locally (CI overwrites on release).
+- Don't edit `install.sh` or `panel_install.sh` locally. Release customization belongs in `scripts/prepare-release.py` and `scripts/release-image-loader.sh`; CI renders fork-specific scripts from the templates.
 - Don't edit `go-gost/x/internal/util/grpc/proto/*.pb.go` (generated).
 - Don't add frontend tests (no Vitest/Jest configured).
 - Don't reintroduce `@heroui/*` or `@nextui-org/*` packages.
@@ -59,4 +59,4 @@ FLUX — personally maintained fork of FLVX: Go admin API + Vite/React UI + Go a
 
 - `vite-frontend` uses `rolldown-vite` (Rust bundler), not standard Vite.
 - `vite.config.ts`: production minification and tree-shaking enabled; route pages are lazy-loaded.
-- CI builds `go-gost` with `CGO_ENABLED=0` then compresses with UPX `--best --lzma`.
+- Release CI builds native Linux amd64/arm64 images and agents, runs container smoke checks, and publishes checksummed binaries, Docker image archives, and generated installers.

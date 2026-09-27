@@ -8,8 +8,9 @@ FLUX 是 [Su-cyber-art](https://github.com/Su-cyber-art) 个人维护的流量�
 | --- | --- |
 | 了解项目、来源与当前状态 | [仓库说明](https://github.com/Su-cyber-art/FLUX#readme) |
 | 在本地运行、构建与修改代码 | [开发指南](development.md) |
-| 部署当前个人分支 | [源码部署](install.md) |
+| 部署当前个人分支 | [安装部署](install.md) |
 | 添加节点、隧道、规则与用户 | [使用指南](usage.md) |
+| 构建并发布新版本 | [发布指南](releases.md) |
 | 使用 PostgreSQL、备份与迁移 | [数据库指南](postgresql.md) |
 | 接入 API 操作技能 | [AI Skill 接入](ai-skill.md) |
 | 处理常见问题 | [FAQ](faq.md) |

@@ -4,7 +4,7 @@
 
 这个版本使用 **React + Mantine** 控制台、**Go** 管理 API 和 **GOST** 转发代理。当前主要改动是全站前端重构、响应式布局、统一主题与项目文档；后端和转发能力延续上游实现。
 
-[使用文档](doc/index.md) · [开发指南](doc/development.md) · [源码部署](doc/install.md) · [问题反馈](https://github.com/Su-cyber-art/FLUX/issues)
+[使用文档](doc/index.md) · [开发指南](doc/development.md) · [安装部署](doc/install.md) · [问题反馈](https://github.com/Su-cyber-art/FLUX/issues)
 
 ## 功能
 
@@ -22,6 +22,26 @@
 
 生产构建、TypeScript、lint，以及本地 API / WebSocket 连通检查已通过。完整业务页面的浏览器交互回归和真实节点联调仍需进一步验证。具体实现见 [Mantine 迁移记录](vite-frontend/docs/mantine-migration-2026-09-28.md)。
 
+## 一键部署
+
+面板端（Linux，需安装 Bash、Docker 和 Docker Compose）：
+
+```bash
+curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/panel_install.sh -o panel_install.sh && bash panel_install.sh
+```
+
+选择安装，按提示设置端口和数据库。访问默认前端端口 `6366`，首次使用 `admin_user` / `admin_user` 登录并修改账号信息。
+
+节点端：
+
+```bash
+curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/install.sh -o install.sh && sh install.sh
+```
+
+支持 Linux amd64 / arm64。脚本与镜像来自本仓库的 [最新 Release](https://github.com/Su-cyber-art/FLUX/releases/latest)；镜像仓库不可用时，面板脚本会自动下载并校验 Release 镜像包，无需登录镜像仓库。
+
+指定版本、更新、Alpine 节点和源码部署见 [安装部署](doc/install.md)。维护者发版方式见 [发布指南](doc/releases.md)。
+
 ## 开始使用
 
 ```bash
@@ -30,7 +50,8 @@ cd FLUX
 ```
 
 - **本地开发**：准备 Go 1.25+、Node.js 20.19+ 和 pnpm 10.28.1，按 [开发指南](doc/development.md) 启动 API 与前端。
-- **部署当前版本**：按 [源码部署](doc/install.md) 构建本仓库的镜像。源码构建覆盖文件确保使用此分支的前端。
+- **部署发布版本**：使用上面的一键脚本，或下载指定 Release 的镜像包。
+- **从源码部署**：合并 `compose.source.yml` 构建当前代码，详见安装文档。
 - **发布产物**：以 [本仓库 Releases](https://github.com/Su-cyber-art/FLUX/releases) 实际提供的资源为准。仓库继承的标签不代表这个个人版本已发布对应镜像。
 
 首次初始化的管理员账号和密码均为 `admin_user`，首次登录会引导修改账号信息。

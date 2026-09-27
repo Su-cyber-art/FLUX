@@ -1,8 +1,57 @@
-# 部署当前分支
+# 安装部署
 
-FLUX 的 Mantine 前端需要从本仓库源码构建。默认的 `docker-compose-v4.yml` / `docker-compose-v6.yml` 保留了上游发布模板；合并 `compose.source.yml` 后，前后端会使用本地构建的镜像。
 
-## Docker Compose 源码部署
+## 一键安装发布版本
+
+面板端要求 Linux、Bash、Docker 和 Docker Compose。建议在用于面板部署的空目录中执行：
+
+```bash
+curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/panel_install.sh -o panel_install.sh && bash panel_install.sh
+```
+
+选择 `1` 安装，输入端口并选择 SQLite 或 PostgreSQL。脚本生成运行密钥和配置，下载当前发布版本并启动容器。
+
+节点端：
+
+```bash
+curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/install.sh -o install.sh && sh install.sh
+```
+
+Alpine 缺少 curl 时可用 wget 下载节点脚本：
+
+```bash
+wget -O install.sh https://github.com/Su-cyber-art/FLUX/releases/latest/download/install.sh && sh install.sh
+```
+
+代理安装后核对面板地址和节点密钥，查看节点是否在线。支持 Linux amd64 与 arm64。
+
+## 指定版本与更新
+
+将 `latest/download` 换成 `download/3.1.0` 即可获取固定版本的安装脚本：
+
+```bash
+curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/download/3.1.0/panel_install.sh -o panel_install.sh && bash panel_install.sh
+```
+
+更新时重新运行面板安装命令，选择 `2`。更新流程会验证配置、备份数据、准备镜像再重建服务；启动失败时按脚本结果检查回滚状态。首次安装不会覆盖当前目录中已有的 `.env` 或 `docker-compose.yml`。
+
+## 镜像与校验
+
+默认优先使用现有镜像或尝试从 GHCR 拉取；拉取失败后自动下载本版本的公开 Release 镜像包。镜像包会按 `SHA256SUMS` 校验后加载，不需要 GitHub 或 registry 凭据。
+
+也可以在已下载脚本的目录强制使用镜像包：
+
+```bash
+FLUX_IMAGE_SOURCE=archive bash panel_install.sh
+```
+
+`FLUX_IMAGE_SOURCE=registry` 表示仅使用镜像仓库。Release 同时提供独立代理二进制、校验文件和 IPv4 / IPv6 Compose 配置。
+
+## 从源码部署
+
+需要部署尚未发版的当前代码时，可从源码构建。默认的 `docker-compose-v4.yml` / `docker-compose-v6.yml` 保留了上游发布模板；合并 `compose.source.yml` 后，前后端会使用本地构建的镜像。
+
+### 构建与启动
 
 准备 Docker、Docker Compose v2 和 Git：
 
@@ -23,7 +72,7 @@ docker compose -f docker-compose-v4.yml -f compose.source.yml up -d --build back
 
 有 IPv6 网络需求时，将命令中的 `docker-compose-v4.yml` 换为 `docker-compose-v6.yml`；宿主机和 Docker 网络也需具备 IPv6 连通性。
 
-## 查看与更新
+### 查看与更新源码部署
 
 ```bash
 docker compose -f docker-compose-v4.yml -f compose.source.yml ps
@@ -45,7 +94,7 @@ SQLite 数据保存在 `sqlite_data` 卷中的 `gost.db`。停止或重新构建
 
 `.env` 包含运行密钥，不提交到 Git。共享 Compose 模板中的后端挂载了 Docker socket，用于面板升级功能；部署配置应与实际需要一致。
 
-## 节点代理
+## 从源码构建节点代理
 
 先在面板中添加节点，再准备代理所需的面板地址和节点密钥。
 
@@ -70,7 +119,7 @@ go build -o gost .
 
 运行 `./gost`，回到面板检查节点在线状态。运行用户需要有权使用对应的监听端口与网络能力。需要 systemd/OpenRC 托管时，使用匹配发布版本的安装资源或自行配置服务。
 
-仓库根目录的 `install.sh`、`panel_install.sh` 是继承的发布模板，不能仅将其下载地址改成个人仓库就视为已经发布了本分支。
+仓库根目录的 `install.sh`、`panel_install.sh` 是发布模板。正式安装使用 Release 附件；发布流程会注入本仓库地址、版本、镜像来源和校验逻辑。
 
 ## 反向代理
 
