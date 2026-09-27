@@ -218,7 +218,8 @@ jobs:
           fi
       - name: Verify uploaded asset sizes and digests
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$FLUX_RELEASE_VERSION" > "$RUNNER_TEMP/release.json"
+          release_id=$(gh release view "$FLUX_RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --json databaseId --jq .databaseId)
+          gh api "repos/$GITHUB_REPOSITORY/releases/$release_id" > "$RUNNER_TEMP/release.json"
           python3 - <<'PYCODE'
           import hashlib, json, os
           from pathlib import Path
