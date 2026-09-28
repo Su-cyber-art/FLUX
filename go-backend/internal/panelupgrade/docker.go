@@ -282,14 +282,22 @@ func (d *Docker) WaitHealthy(ctx context.Context, p Deployment, timeout time.Dur
 		front, frontErr := d.Inspect(ctx, p.Frontend)
 		if err == nil && frontErr == nil && backend.State.Running && front.State.Running {
 			probeCtx, stop := context.WithTimeout(ctx, 5*time.Second)
-			out, probeErr := d.output(probeCtx, "exec", p.Frontend, "wget", "-q", "-T", "3", "-O", "-", "http://127.0.0.1/flow/test")
+			out, probeErr := d.output(probeCtx, "exec", p.Backend, "wget", "-q", "-T", "3", "-O", "-", "http://127.0.0.1:6365/flow/test")
 			stop()
 			if probeErr == nil && strings.TrimSpace(string(out)) == "test" {
 				pageCtx, pageCancel := context.WithTimeout(ctx, 5*time.Second)
 				page, pageErr := d.output(pageCtx, "exec", p.Frontend, "wget", "-q", "-T", "3", "-O", "-", "http://127.0.0.1/")
 				pageCancel()
 				if pageErr == nil && strings.Contains(string(page), `id="root"`) {
-					return nil
+					apiCtx, apiCancel := context.WithTimeout(ctx, 5*time.Second)
+					apiBody, apiErr := d.output(apiCtx, "exec", p.Frontend, "wget", "-q", "-T", "3", "-O", "-", "--post-data", "{}", "--header", "Content-Type: application/json", "http://127.0.0.1/api/v1/captcha/check")
+					apiCancel()
+					var result struct {
+						Code *int `json:"code"`
+					}
+					if apiErr == nil && json.Unmarshal(apiBody, &result) == nil && result.Code != nil && *result.Code == 0 {
+						return nil
+					}
 				}
 			}
 		}

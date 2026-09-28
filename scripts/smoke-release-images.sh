@@ -16,7 +16,7 @@ docker run -d --name flux-release-ui --network flux-release-smoke -p 127.0.0.1::
 port=$(docker inspect --format '{{(index (index .NetworkSettings.Ports "80/tcp") 0).HostPort}}' flux-release-ui)
 ready=false
 for attempt in $(seq 1 60); do
-  if curl -fsS "http://127.0.0.1:$port/flow/test" >/dev/null; then
+  if [[ "$(curl -fsS "http://127.0.0.1:$port/flow/test" 2>/dev/null || true)" == test ]]; then
     ready=true
     break
   fi

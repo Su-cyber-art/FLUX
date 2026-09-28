@@ -94,7 +94,9 @@ volumes:
 			c.State.Running = running
 			return json.NewEncoder(out).Encode([]Container{c})
 		case "exec":
-			if args[len(args)-1] == "http://127.0.0.1/" {
+			if strings.HasSuffix(args[len(args)-1], "/captcha/check") {
+				io.WriteString(out, `{"code":0,"data":0}`)
+			} else if args[len(args)-1] == "http://127.0.0.1/" {
 				io.WriteString(out, `<div id="root"></div>`)
 			} else {
 				io.WriteString(out, "test")
@@ -253,5 +255,32 @@ func TestVersionSelectionAvoidsDowngrades(t *testing.T) {
 		if ValidateTarget(value) == nil {
 			t.Fatalf("unsafe target accepted: %q", value)
 		}
+	}
+}
+
+func TestHealthRejectsSPAHTMLAndAPIErrors(t *testing.T) {
+	for _, body := range []string{`<div id="root"></div>`, `{}`, `{"code":-1,"msg":"database unavailable"}`} {
+		t.Run(body, func(t *testing.T) {
+			docker := &Docker{Run: func(ctx context.Context, input io.Reader, output io.Writer, args ...string) error {
+				if args[0] == "inspect" {
+					c := Container{}
+					c.State.Running = true
+					return json.NewEncoder(output).Encode([]Container{c})
+				}
+				url := args[len(args)-1]
+				switch {
+				case strings.HasSuffix(url, "/flow/test"):
+					io.WriteString(output, "test")
+				case strings.HasSuffix(url, "/captcha/check"):
+					io.WriteString(output, body)
+				default:
+					io.WriteString(output, `<div id="root"></div>`)
+				}
+				return nil
+			}}
+			if err := docker.WaitHealthy(context.Background(), Deployment{Backend: "api", Frontend: "ui"}, 10*time.Millisecond); err == nil {
+				t.Fatal("HTTP 200 with an invalid API response was considered healthy")
+			}
+		})
 	}
 }
