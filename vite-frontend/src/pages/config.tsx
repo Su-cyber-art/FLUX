@@ -39,6 +39,8 @@ import {
   type AnnouncementData,
 } from "@/api";
 import { ThemeSettings } from "@/components/theme-settings";
+import { SystemUpgradeProgress } from "@/components/system-upgrade-progress";
+import { useSystemUpgrade } from "@/hooks/use-system-upgrade";
 import { isAdmin } from "@/utils/auth";
 import { getCachedConfigs, configCache, updateSiteConfig } from "@/config/site";
 import {
@@ -335,6 +337,14 @@ export default function ConfigPage() {
     useState<SystemUpgradeVersionApiData | null>(null);
   const [systemUpgradeChecking, setSystemUpgradeChecking] = useState(false);
   const [systemUpgradeExecuting, setSystemUpgradeExecuting] = useState(false);
+  const upgrade = useSystemUpgrade(isAdmin());
+  const [upgradeProgressOpen, setUpgradeProgressOpen] = useState(false);
+  const systemUpgradeInProgress =
+    systemUpgradeExecuting || upgrade.job?.status === "running";
+
+  useEffect(() => {
+    if (upgrade.job?.status === "running") setUpgradeProgressOpen(true);
+  }, [upgrade.job?.id, upgrade.job?.status]);
   const [systemUpgradeLoading, setSystemUpgradeLoading] = useState(true);
   const [systemUpgradeModalOpen, setSystemUpgradeModalOpen] = useState(false);
   const [systemUpgradeReleases, setSystemUpgradeReleases] = useState<
@@ -361,7 +371,7 @@ export default function ConfigPage() {
   const canTriggerSystemUpgrade = Boolean(
     !systemUpgradeLoading &&
       !systemUpgradeChecking &&
-      !systemUpgradeExecuting &&
+      !systemUpgradeInProgress &&
       systemUpgradeInfo?.capability.capable !== false,
   );
   const canOpenSystemUpgradeModal = Boolean(
@@ -369,7 +379,7 @@ export default function ConfigPage() {
       systemUpgradeHasConfirmedUpdate &&
       !systemUpgradeLoading &&
       !systemUpgradeChecking &&
-      !systemUpgradeExecuting,
+      !systemUpgradeInProgress,
   );
 
   useEffect(() => {
@@ -554,6 +564,11 @@ export default function ConfigPage() {
   };
 
   const handleOpenSystemUpgradeModal = async () => {
+    if (upgrade.job?.status === "running") {
+      setUpgradeProgressOpen(true);
+
+      return;
+    }
     if (!canOpenSystemUpgradeModal) {
       const checked = await handleCheckSystemUpgrade();
 
@@ -577,7 +592,14 @@ export default function ConfigPage() {
 
         setSystemUpgradeModalOpen(false);
         setSystemUpgradeSelectedVersion("");
-        toast.success(data.message || "升级已触发，请稍后刷新页面");
+        if (data.job) {
+          upgrade.track(data.job);
+          setUpgradeProgressOpen(true);
+        } else {
+          toast.success(
+            "升级请求已提交，当前后端尚不支持进度查询，请稍后检查版本",
+          );
+        }
       } else {
         toast.error(response.msg || "面板升级失败");
       }
@@ -1696,7 +1718,7 @@ export default function ConfigPage() {
                     isDisabled={
                       !systemUpgradeReleasesMatchChannel ||
                       systemUpgradeReleases.length === 0 ||
-                      systemUpgradeExecuting
+                      systemUpgradeInProgress
                     }
                     placeholder={
                       systemUpgradeReleasesMatchChannel &&
@@ -1737,6 +1759,7 @@ export default function ConfigPage() {
 
             <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:justify-end">
               <Button
+                isDisabled={systemUpgradeInProgress}
                 isLoading={systemUpgradeChecking}
                 variant="flat"
                 onPress={handleCheckSystemUpgrade}
@@ -1745,12 +1768,26 @@ export default function ConfigPage() {
               </Button>
               <Button
                 color="primary"
-                isDisabled={!canTriggerSystemUpgrade}
+                isDisabled={
+                  systemUpgradeExecuting ||
+                  (!canTriggerSystemUpgrade &&
+                    upgrade.job?.status !== "running")
+                }
                 isLoading={systemUpgradeExecuting}
                 onPress={handleOpenSystemUpgradeModal}
               >
-                立即升级
+                {upgrade.job?.status === "running"
+                  ? "查看升级进度"
+                  : "立即升级"}
               </Button>
+              {upgrade.job && upgrade.job.status !== "running" && (
+                <Button
+                  variant="light"
+                  onPress={() => setUpgradeProgressOpen(true)}
+                >
+                  查看上次升级结果
+                </Button>
+              )}
             </div>
           </div>
 
@@ -2012,21 +2049,19 @@ export default function ConfigPage() {
               <ModalBody>
                 <div className="space-y-3 text-sm text-default-700 dark:text-default-300">
                   <p>
-                    升级过程需要访问 Docker
-                    Socket，并会在短时间内中断当前面板服务。
+                    将从 {systemUpgradeInfo?.currentVersion || "当前版本"}{" "}
+                    升级至{" "}
+                    {systemUpgradeSelectedVersion ||
+                      systemUpgradeInfo?.latestVersion ||
+                      "最新版本"}
+                    。
                   </p>
                   <p>
-                    请确认已经允许面板管理容器与宿主机 Docker
-                    交互，并且可以接受升级期间的临时不可用。
+                    下载并校验镜像后，将自动备份配置与数据库，再切换服务。健康检查失败会自动恢复原版本和备份数据。
                   </p>
-                  <div className="space-y-2 rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-warning-800 dark:border-warning-900/40 dark:bg-warning-950/30 dark:text-warning-200">
-                    <p className="text-xs font-medium">升级前请确认</p>
-                    <ul className="list-disc space-y-1 pl-4 text-xs">
-                      <li>Docker Socket 可用且挂载权限正常。</li>
-                      <li>当前面板允许短暂停止和重启。</li>
-                      <li>已选择正确的更新通道与目标版本。</li>
-                    </ul>
-                  </div>
+                  <p>
+                    切换期间面板会短暂离线，恢复后继续显示进度。关闭页面不会中断升级。
+                  </p>
                 </div>
               </ModalBody>
               <ModalFooter>
@@ -2050,6 +2085,13 @@ export default function ConfigPage() {
           )}
         </ModalContent>
       </Modal>
+
+      <SystemUpgradeProgress
+        job={upgrade.job}
+        opened={upgradeProgressOpen}
+        reconnecting={upgrade.reconnecting}
+        onClose={() => setUpgradeProgressOpen(false)}
+      />
 
       {hasChanges && (
         <div className="fixed bottom-5 right-5 z-40">

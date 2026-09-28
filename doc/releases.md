@@ -6,15 +6,18 @@
 
 - 提交代码与对应的 `docs/releases/<版本>.md` 变更说明。
 - 运行 `bash test-install-scripts-proxy.sh`、`bash test-release-artifacts.sh` 和 `bash test-docker-bootstrap.sh`。
+- 运行 `bash test-upgrade-guard.sh`，验证终端与网页升级的互斥。
 - 确认 GitHub Actions 可运行，工作流可写入本仓库的 Release 和 Packages。
 
 ## 手动触发
 
 ```bash
-gh workflow run docker-build.yml --repo Su-cyber-art/FLUX --ref main -f version=3.1.2
+gh workflow run docker-build.yml --repo Su-cyber-art/FLUX --ref main -f version=3.2.0
 ```
 
 工作流固定使用触发时的提交构建，全部检查完成后创建标签与 Release。无需提前创建空 Release，也无需设置额外的发布 PAT。
+
+只构建和验证、不发布 Release 或镜像标签时，增加 `-f publish=false`。自升级的真实 Docker 检查会覆盖 SQLite 和 PostgreSQL：成功替换正在运行的面板、进度跨重启保留、拒绝校验错误的下载，以及新版本不可用时恢复原镜像和数据库。
 
 也可推送一个未发布的数字版本标签触发流程。已发布版本不能直接覆盖，需要递增版本。
 

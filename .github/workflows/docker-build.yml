@@ -1,5 +1,5 @@
 name: Release FLUX
-run-name: Release FLUX ${{ inputs.version || github.ref_name }}
+run-name: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish && 'Verify' || 'Release' }} FLUX ${{ inputs.version || github.ref_name }}
 
 on:
   push:
@@ -10,6 +10,11 @@ on:
         description: 'Release version, for example 3.1.0 (no v prefix)'
         required: true
         type: string
+      publish:
+        description: Publish Release and registry tags after verification
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -63,6 +68,7 @@ jobs:
           bash test-install-scripts-proxy.sh
           bash test-release-artifacts.sh
           bash test-docker-bootstrap.sh
+          bash test-upgrade-guard.sh
 
   docker-bootstrap:
     name: Official Docker installation on clean Linux
@@ -168,12 +174,18 @@ jobs:
         run: |
           docker save "$FLUX_IMAGE_PREFIX/backend:$FLUX_RELEASE_VERSION" | gzip > artifacts/flux-backend-linux-${{ matrix.arch }}.tar.gz
           docker save "$FLUX_IMAGE_PREFIX/frontend:$FLUX_RELEASE_VERSION" | gzip > artifacts/flux-frontend-linux-${{ matrix.arch }}.tar.gz
+      - name: Verify self-upgrade, progress and rollback with SQLite and PostgreSQL
+        run: |
+          (cd go-backend && CGO_ENABLED=0 go test -c -o ../artifacts/panel-upgrade.test ./internal/panelupgrade)
+          sudo env FLUX_UPGRADE_INTEGRATION_IMAGE_PREFIX="$FLUX_IMAGE_PREFIX" FLUX_RELEASE_VERSION="$FLUX_RELEASE_VERSION" FLUX_UPGRADE_ARCH="${{ matrix.arch }}" FLUX_UPGRADE_ARCHIVES="$PWD/artifacts" artifacts/panel-upgrade.test -test.run '^TestPanelUpgradeDocker$' -test.v -test.timeout 10m
+          rm artifacts/panel-upgrade.test
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish architecture image tags
+        if: github.event_name != 'workflow_dispatch' || inputs.publish
         run: |
           for component in backend frontend; do
             docker tag "$FLUX_IMAGE_PREFIX/$component:$FLUX_RELEASE_VERSION" "$FLUX_IMAGE_PREFIX/$component:$FLUX_RELEASE_VERSION-${{ matrix.arch }}"
@@ -189,6 +201,7 @@ jobs:
 
   publish:
     name: Verify and publish release
+    if: github.event_name != 'workflow_dispatch' || inputs.publish
     needs: [prepare, docker-bootstrap, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 20

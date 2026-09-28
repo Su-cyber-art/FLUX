@@ -36,6 +36,8 @@ def prepare(repository: str, version: str, output: Path, require_artifacts: bool
                 raise ValueError("Panel installer entry point has changed")
             helper = (ROOT / "scripts/release-image-loader.sh").read_text()
             helper += "\n" + (ROOT / "scripts/release-docker-bootstrap.sh").read_text()
+            helper += "\n" + (ROOT / "scripts/release-upgrade-guard.sh").read_text()
+            source = replace_once(r'^update_panel\(\) \{$', 'flux_template_update_panel() {', source)
             source = source.replace(marker, f'FLUX_IMAGE_PREFIX="{image_prefix}"\n\n{helper}\n{marker}')
             source = replace_once(
                 r'^  get_config_params$',

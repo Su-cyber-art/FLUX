@@ -12,9 +12,17 @@ import (
 
 	"go-backend/internal/app"
 	"go-backend/internal/config"
+	"go-backend/internal/panelupgrade"
 )
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "upgrade-worker" {
+		if err := panelupgrade.RunFile(os.Args[2]); err != nil {
+			log.Printf("panel upgrade: %v", err)
+			os.Exit(1)
+		}
+		return
+	}
 	cfg := config.FromEnv()
 	if cfg.JWTSecret == "" {
 		log.Println("warning: JWT_SECRET is empty")
@@ -43,7 +51,7 @@ func main() {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	if err := a.Shutdown(ctx); err != nil {
 		log.Fatalf("shutdown failed: %v", err)

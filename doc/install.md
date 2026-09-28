@@ -35,6 +35,24 @@ curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/download/3.1.2/panel_in
 
 更新时重新运行面板安装命令，选择 `2`。更新流程会验证配置、备份数据、准备镜像再重建服务；启动失败时按脚本结果检查回滚状态。首次安装不会覆盖当前目录中已有的 `.env` 或 `docker-compose.yml`。
 
+## 面板内自升级（3.2.0 起）
+
+从 3.1.x 首次更新时，请在原部署目录下载最新安装脚本，并选择 `2` 更新：
+
+```bash
+curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/panel_install.sh -o panel_install.sh && sudo bash panel_install.sh
+```
+
+之后可在“系统设置 → 面板升级”检查版本并开始升级。进度窗口会显示实际下载大小和百分比、配置及数据库备份、服务重启与健康检查。关闭窗口或刷新页面不会取消任务，设置页会重新读取最近的进度。
+
+切换期间面板会短暂不可用，页面会等待重新连接。只有前端页面和后端健康接口恢复可用后，任务才会显示升级完成。健康检查失败时，会恢复原镜像和对应的数据库备份；下载或校验失败不会停止现有服务。
+
+支持使用官方镜像、默认容器运行用户和单个 `docker-compose.yml` 的部署。部署目录与 Docker socket 需要可写挂载；SQLite 数据需挂载在 `/app/data`，PostgreSQL 自动备份使用同一 Compose 项目的 `postgres` 容器。源码、多配置文件、自定义运行用户或外部 PostgreSQL 部署会显示不可升级原因，请继续使用相应的部署流程更新。
+
+每次任务的状态、计划和备份保存在部署目录的 `.flux-upgrade/<任务编号>/`。进度窗口会给出具体备份位置。若自动恢复也失败，请保留该目录，依据 `plan.json` 中的原镜像、`backup/` 中的 Compose、环境文件和数据库快照恢复服务；确认恢复完成后再移除 `.flux-upgrade/maintenance` 标记。
+
+终端更新和网页升级共用锁，已有任务执行时，另一种方式会明确停止。健康检查默认等待 180 秒，安装环境可通过后端环境变量 `PANEL_UPGRADE_HEALTH_TIMEOUT` 调整为 10–300 秒。
+
 ## 删除节点
 
 建议面板和 agent 均升级至 3.1.2 或更高版本后，再在节点页面删除本地节点。请先删除或迁移该节点关联的隧道、转发和节点共享，避免遗留其他节点上的链路资源。

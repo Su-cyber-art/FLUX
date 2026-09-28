@@ -551,12 +551,35 @@ export interface SystemUpgradeCheckApiData extends SystemUpgradeVersionApiData {
 }
 
 export interface SystemUpgradeRunApiData {
+  job: SystemUpgradeJob;
   version: string;
   channel: "stable" | "dev";
   composeAsset: string;
   helperContainer: string;
   backendImageId: string;
   message: string;
+}
+
+export interface SystemUpgradeJob {
+  id: string;
+  fromVersion: string;
+  version: string;
+  status:
+    | "running"
+    | "succeeded"
+    | "failed"
+    | "rolled_back"
+    | "rollback_failed";
+  stage: string;
+  message: string;
+  downloaded: number;
+  total: number;
+  startedAt: number;
+  updatedAt: number;
+  finishedAt?: number;
+  error?: string;
+  backupPath?: string;
+  events: { time: number; message: string }[];
 }
 
 export interface MonitorNodeApiItem {
