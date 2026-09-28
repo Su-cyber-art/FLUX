@@ -4619,6 +4619,7 @@ func (h *Handler) deleteNodeByID(id int64) error {
 		_, _ = h.wsServer.SendCommand(id, "FinalizeNodeDeletion", nil, 5*time.Second)
 		h.wsServer.DisconnectNode(id)
 	}
+	h.wsServer.NotifyNodeDeleted(id)
 	return nil
 }
 

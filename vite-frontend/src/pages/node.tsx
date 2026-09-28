@@ -358,7 +358,17 @@ export default function NodePage() {
 
     if (Number.isNaN(nodeId)) return;
 
-    if (type === "status") {
+    if (type === "node_deleted") {
+      clearOfflineTimer(nodeId);
+      setNodeList((prev) => prev.filter((node) => node.id !== nodeId));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+
+        next.delete(nodeId);
+
+        return next;
+      });
+    } else if (type === "status") {
       if (messageData === 1) {
         clearOfflineTimer(nodeId);
         setNodeList((prev) =>
