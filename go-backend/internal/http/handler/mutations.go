@@ -732,10 +732,16 @@ func (h *Handler) nodeBatchDelete(w http.ResponseWriter, r *http.Request) {
 	if ids == nil {
 		return
 	}
+	result := batchOperationResult{}
 	for _, id := range ids {
-		_ = h.deleteNodeByID(id)
+		if err := h.deleteNodeByID(id); err != nil {
+			result.FailCount++
+			result.Failures = appendBatchFailure(result.Failures, id, "", err)
+		} else {
+			result.SuccessCount++
+		}
 	}
-	response.WriteJSON(w, response.OKEmpty())
+	response.WriteJSON(w, response.OK(result))
 }
 
 func (h *Handler) nodeCheckStatus(w http.ResponseWriter, r *http.Request) {
@@ -4569,7 +4575,51 @@ func (h *Handler) replaceTunnelChainsTx(tx *gorm.DB, tunnelID int64, req map[str
 }
 
 func (h *Handler) deleteNodeByID(id int64) error {
-	return h.repo.DeleteNodeCascade(id)
+	h.nodeDeletionMu.Lock()
+	defer h.nodeDeletionMu.Unlock()
+	node, err := h.repo.GetNodeByID(id)
+	if err != nil {
+		return err
+	}
+	if node == nil {
+		return errors.New("节点不存在")
+	}
+	if err := h.repo.BeginNodeDeletion(id); err != nil {
+		return err
+	}
+	if h.metrics != nil {
+		h.metrics.RetireNode(id)
+	}
+	if node.DeleteState != 2 {
+		switch {
+		case node.IsRemote == 1:
+			// An imported node is owned by the provider. Bindings must have been
+			// released above; never uninstall another panel's shared agent.
+		case node.ForwardMode == "nftables":
+			if err := h.clearNftablesNode(id); err != nil {
+				return fmt.Errorf("节点保留，nftables 清理失败：%w", err)
+			}
+		default:
+			result, err := h.wsServer.SendCommand(id, "RetireNode", nil, 30*time.Second)
+			if err != nil {
+				return fmt.Errorf("节点待删除，尚未确认 agent 清理：%w；离线节点上线后会自动重试，旧版 agent 请先升级", err)
+			}
+			if result.Type != "RetireNodeResponse" || result.Data["cleaned"] != true {
+				return errors.New("agent 未确认彻底清理，节点已保留，请升级 agent 后重试")
+			}
+		}
+		if err := h.repo.MarkNodeCleanupComplete(id); err != nil {
+			return err
+		}
+	}
+	if err := h.repo.DeleteNodeCascade(id); err != nil {
+		return err
+	}
+	if node.IsRemote != 1 && node.ForwardMode != "nftables" {
+		_, _ = h.wsServer.SendCommand(id, "FinalizeNodeDeletion", nil, 5*time.Second)
+		h.wsServer.DisconnectNode(id)
+	}
+	return nil
 }
 
 func (h *Handler) deleteTunnelByID(id int64) error {

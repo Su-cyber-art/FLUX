@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -20,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-gost/x/config"
@@ -179,6 +181,10 @@ type WebSocketReporter struct {
 	tcpPingSem        chan struct{}     // 限制诊断探测并发，避免离线目标耗尽连接
 	readCommandSem    chan struct{}     // 限制只读命令并发，避免诊断请求耗尽资源
 	mutationQueue     chan CommandMessage
+	retiring          atomic.Bool
+	retired           atomic.Bool
+	retireNode        func() error
+	finishRetirement  func()
 }
 
 var wsDial = func(dialer *websocket.Dialer, rawURL string) (*websocket.Conn, *http.Response, error) {
@@ -344,6 +350,9 @@ func (w *WebSocketReporter) connect() error {
 
 	conn, usedURL, err := dialWebSocketWithFallback(dialer, candidates)
 	if err != nil {
+		if w.retired.Load() && errors.Is(err, errEnrollmentRevoked) && w.finishRetirement != nil {
+			go w.finishRetirement()
+		}
 		return err
 	}
 
@@ -447,6 +456,8 @@ func detectWebSocketScheme(rawURL string) string {
 	return ""
 }
 
+var errEnrollmentRevoked = errors.New("节点注册已撤销")
+
 func dialWebSocketWithFallback(dialer *websocket.Dialer, candidates []string) (*websocket.Conn, string, error) {
 	if len(candidates) == 0 {
 		return nil, "", fmt.Errorf("WebSocket候选地址为空")
@@ -462,6 +473,9 @@ func dialWebSocketWithFallback(dialer *websocket.Dialer, candidates []string) (*
 			return conn, targetURL, nil
 		}
 		errMsg := formatWebSocketDialError(err, resp)
+		if resp != nil && resp.StatusCode == http.StatusForbidden {
+			return nil, "", fmt.Errorf("%w: %s", errEnrollmentRevoked, errMsg)
+		}
 		errs = append(errs, fmt.Sprintf("%s => %s", sanitizeWebSocketURL(targetURL), errMsg))
 		if i < len(candidates)-1 {
 			fmt.Printf(
@@ -878,7 +892,7 @@ func isMutationCommand(commandType string) bool {
 		"addchains", "updatechains", "deletechains",
 		"addlimiters", "updatelimiters", "deletelimiters",
 		"addclimiters", "updateclimiters", "deleteclimiters",
-		"setprotocol", "upgradeagent", "rollbackagent", "reload":
+		"setprotocol", "upgradeagent", "rollbackagent", "reload", "retirenode", "finalizenodedeletion":
 		return true
 	default:
 		return false
@@ -887,6 +901,10 @@ func isMutationCommand(commandType string) bool {
 
 // routeCommand 路由命令到对应的处理函数
 func (w *WebSocketReporter) routeCommand(cmd CommandMessage) {
+	if w.retiring.Load() && cmd.Type != "RetireNode" && cmd.Type != "FinalizeNodeDeletion" {
+		w.sendCommandFailure(cmd, "节点正在删除，拒绝恢复运行配置")
+		return
+	}
 	jsonBytes, errs := json.Marshal(cmd)
 	if errs != nil {
 		fmt.Println("Error marshaling JSON:", errs)
@@ -993,6 +1011,23 @@ func (w *WebSocketReporter) routeCommand(cmd CommandMessage) {
 		response.Type = "RollbackAgentResponse"
 		// needSaveConfig = false (默认值)
 
+	case "RetireNode":
+		response.Type = "RetireNodeResponse"
+		if w.retireNode == nil {
+			err = errors.New("此 agent 未配置卸载处理，请使用官方安装脚本重新安装")
+		} else if !w.retired.Load() {
+			w.retiring.Store(true)
+			err = w.retireNode()
+			if err == nil {
+				w.retired.Store(true)
+			}
+		}
+		response.Data = map[string]bool{"cleaned": w.retired.Load()}
+	case "FinalizeNodeDeletion":
+		response.Type = "FinalizeNodeDeletionResponse"
+		if !w.retired.Load() {
+			err = errors.New("节点尚未完成清理")
+		}
 	default:
 		err = fmt.Errorf("未知命令类型: %s", cmd.Type)
 		response.Type = "UnknownCommandResponse"
@@ -1008,6 +1043,9 @@ func (w *WebSocketReporter) routeCommand(cmd CommandMessage) {
 	}
 
 	w.sendResponse(response)
+	if cmd.Type == "FinalizeNodeDeletion" && err == nil && w.finishRetirement != nil {
+		w.finishRetirement()
+	}
 }
 
 // Service 命令处理函数
@@ -1772,6 +1810,13 @@ func getConnectionInfo() ConnectionInfo {
 
 // StartWebSocketReporterWithConfig 使用配置字段启动WebSocket报告器
 func StartWebSocketReporterWithConfig(addr string, secret string, http int, tls int, socks int, version string) *WebSocketReporter {
+	reporter := NewWebSocketReporterWithConfig(addr, secret, http, tls, socks, version)
+	reporter.Start()
+	return reporter
+}
+
+// Configure before Start so no command can race initial runtime loading.
+func NewWebSocketReporterWithConfig(addr string, secret string, http int, tls int, socks int, version string) *WebSocketReporter {
 
 	// 构建初始 WebSocket URL
 	candidates := buildWebSocketCandidates(addr, secret, version, http, tls, socks, "")
@@ -1787,8 +1832,11 @@ func StartWebSocketReporterWithConfig(addr string, secret string, http int, tls 
 	reporter.http = http
 	reporter.tls = tls
 	reporter.socks = socks
-	reporter.Start()
 	return reporter
+}
+
+func (w *WebSocketReporter) SetRetirementHandlers(cleanup func() error, finish func()) {
+	w.retireNode, w.finishRetirement = cleanup, finish
 }
 
 var configPersistPath string

@@ -33,3 +33,20 @@ curl -fsS "http://127.0.0.1:$port/api/v1/user/login" \
   -d '{"username":"admin_user","password":"admin_user"}' \
   | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["code"] == 0 and r["data"]["token"] and r["data"]["requirePasswordChange"]'
 echo "Container health, frontend HTML and API login smoke checks passed"
+python3 - "$port" <<'PY'
+import json, sys, urllib.request
+base = f'http://127.0.0.1:{sys.argv[1]}/api/v1'
+def post(path, payload, token=''):
+    req = urllib.request.Request(base + path, data=json.dumps(payload).encode(), headers={'Content-Type': 'application/json', 'Authorization': token})
+    with urllib.request.urlopen(req, timeout=15) as response:
+        return json.load(response)
+first = post('/user/login', {'username': 'admin_user', 'password': 'admin_user'})
+token = first['data']['token']
+changed = post('/user/updatePassword', {'newUsername': 'admin_user', 'currentPassword': 'admin_user', 'newPassword': 'release-smoke-password', 'confirmPassword': 'release-smoke-password'}, token)
+assert changed['code'] == 0, changed
+assert post('/tunnel/user/tunnel', {}, token)['code'] == 401
+second = post('/user/login', {'username': 'admin_user', 'password': 'release-smoke-password'})
+assert second['code'] == 0 and second['data']['requirePasswordChange'] is False, second
+assert post('/tunnel/user/tunnel', {}, second['data']['token'])['code'] == 0
+print('First-login onboarding and subsequent session checks passed in release containers')
+PY

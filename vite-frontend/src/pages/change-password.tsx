@@ -13,12 +13,14 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { ShieldCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { updatePassword } from "@/api";
 import { toast } from "@/lib/notifications";
 import DefaultLayout from "@/layouts/default";
 import { safeLogout } from "@/utils/logout";
 export default function ChangePasswordPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const form = useForm({
     initialValues: {
@@ -34,7 +36,11 @@ export default function ChangePasswordPage() {
           : null,
       currentPassword: (value: string) => (value ? null : "请输入当前密码"),
       newPassword: (value: string) =>
-        value.length < 6 || value.length > 20 ? "密码长度需为 6–20 位" : null,
+        value === "admin_user"
+          ? "新密码不能使用默认密码"
+          : value.length < 6 || value.length > 20
+            ? "密码长度需为 6–20 位"
+            : null,
       confirmPassword: (value: string, values: { newPassword: string }) =>
         value === values.newPassword ? null : "两次输入的密码不一致",
     },
@@ -51,6 +57,7 @@ export default function ChangePasswordPage() {
       }
       toast.success("账号信息已更新，请重新登录");
       safeLogout();
+      navigate("/", { replace: true, state: null });
     } catch {
       toast.error("修改失败，请稍后重试");
     } finally {

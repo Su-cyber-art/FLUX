@@ -26,6 +26,7 @@ export interface Node {
   udpListenAddr?: string;
   extraIPs?: string;
   version?: string;
+  deleteState?: number;
   http?: number; // 0 关 1 开
   tls?: number; // 0 关 1 开
   socks?: number; // 0 关 1 开

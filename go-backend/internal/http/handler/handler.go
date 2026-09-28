@@ -39,8 +39,9 @@ type Handler struct {
 	healthCheck     *health.Checker
 	nftablesManager nftablesRuntimeManager
 
-	captchaMu     sync.Mutex
-	captchaTokens map[string]int64
+	captchaMu      sync.Mutex
+	nodeDeletionMu sync.Mutex
+	captchaTokens  map[string]int64
 
 	jobsMu              sync.Mutex
 	jobsCancel          context.CancelFunc
@@ -340,6 +341,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	req.Username = strings.TrimSpace(req.Username)
 	user, err := h.repo.GetUserByUsername(req.Username)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
@@ -371,13 +373,16 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if issueAt.UnixMilli() <= user.PasswordChangedAt {
+		issueAt = time.UnixMilli(user.PasswordChangedAt + 1)
+	}
 	token, err := auth.GenerateTokenAt(user.ID, user.User, user.RoleID, h.jwtSecret, issueAt)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
 	}
 
-	requirePasswordChange := req.Username == "admin_user" || req.Password == "admin_user"
+	requirePasswordChange := req.Password == "admin_user"
 	response.WriteJSON(w, response.OK(map[string]interface{}{
 		"token":                 token,
 		"name":                  user.User,
@@ -1305,7 +1310,8 @@ func (h *Handler) updatePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(req.NewUsername) == "" {
+	req.NewUsername = strings.TrimSpace(req.NewUsername)
+	if req.NewUsername == "" {
 		response.WriteJSON(w, response.ErrDefault("新用户名不能为空"))
 		return
 	}
@@ -1323,6 +1329,10 @@ func (h *Handler) updatePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.NewPassword != req.ConfirmPassword {
 		response.WriteJSON(w, response.ErrDefault("新密码和确认密码不匹配"))
+		return
+	}
+	if req.NewPassword == "admin_user" {
+		response.WriteJSON(w, response.ErrDefault("新密码不能使用默认密码"))
 		return
 	}
 

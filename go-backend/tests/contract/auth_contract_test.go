@@ -172,3 +172,65 @@ func assertCodeMsg(t *testing.T, rec *httptest.ResponseRecorder, expectedCode in
 		t.Fatalf("expected (%d,%q), got (%d,%q)", expectedCode, expectedMsg, out.Code, out.Msg)
 	}
 }
+
+// Exercise the same API sequence as onboarding, including the second login.
+func TestFirstLoginPasswordChangeCompletes(t *testing.T) {
+	for _, username := range []string{"admin_user", "new-admin"} {
+		t.Run(username, func(t *testing.T) {
+			router, _ := setupContractRouter(t, "contract-jwt-secret")
+			first := postAuthRequest(t, router, "", "/api/v1/user/login", `{"username":"admin_user","password":"admin_user"}`)
+			if first.Code != 0 || !valueAsBool(first.Data.(map[string]interface{})["requirePasswordChange"]) {
+				t.Fatalf("expected initial setup: %+v", first)
+			}
+			oldToken := first.Data.(map[string]interface{})["token"].(string)
+			payload, _ := json.Marshal(map[string]string{"newUsername": " " + username + " ", "currentPassword": "admin_user", "newPassword": "Personal-pass-123", "confirmPassword": "Personal-pass-123"})
+			changed := postAuthRequest(t, router, oldToken, "/api/v1/user/updatePassword", string(payload))
+			if changed.Code != 0 {
+				t.Fatalf("change password: %+v", changed)
+			}
+			stale := postAuthRequest(t, router, oldToken, "/api/v1/tunnel/user/tunnel", `{}`)
+			if stale.Code != 401 {
+				t.Fatalf("old session must be revoked: %+v", stale)
+			}
+			payload, _ = json.Marshal(map[string]string{"username": username, "password": "Personal-pass-123"})
+			for i := 0; i < 2; i++ {
+				login := postAuthRequest(t, router, "", "/api/v1/user/login", string(payload))
+				if login.Code != 0 {
+					t.Fatalf("second login: %+v", login)
+				}
+				data := login.Data.(map[string]interface{})
+				if valueAsBool(data["requirePasswordChange"]) {
+					t.Fatal("completed setup must not repeat")
+				}
+				check := postAuthRequest(t, router, data["token"].(string), "/api/v1/tunnel/user/tunnel", `{}`)
+				if check.Code != 0 {
+					t.Fatalf("new session rejected: %+v", check)
+				}
+			}
+		})
+	}
+}
+
+func TestPasswordChangeRejectsDefaultPassword(t *testing.T) {
+	router, _ := setupContractRouter(t, "contract-jwt-secret")
+	first := postAuthRequest(t, router, "", "/api/v1/user/login", `{"username":"admin_user","password":"admin_user"}`)
+	token := first.Data.(map[string]interface{})["token"].(string)
+	changed := postAuthRequest(t, router, token, "/api/v1/user/updatePassword", `{"newUsername":"renamed-admin","currentPassword":"admin_user","newPassword":"admin_user","confirmPassword":"admin_user"}`)
+	if changed.Code == 0 {
+		t.Fatal("default password must not complete setup")
+	}
+}
+
+func postAuthRequest(t *testing.T, router http.Handler, token, path, payload string) response.R {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, path, bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", token)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	var out response.R
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	return out
+}

@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/go-gost/core/logger"
+	"github.com/go-gost/gost/internal/retirement"
 	xlogger "github.com/go-gost/x/logger"
 	"github.com/go-gost/x/service"
 	"github.com/go-gost/x/socket"
@@ -125,11 +126,17 @@ func main() {
 
 	distro := socket.DetectDistro()
 	fullVersion := fmt.Sprintf("%s (%s/%s)", version, distro, runtime.GOARCH)
-	wsReporter := socket.StartWebSocketReporterWithConfig(config.Addr, config.Secret, config.Http, config.Tls, config.Socks, fullVersion)
+	wsReporter := socket.NewWebSocketReporterWithConfig(config.Addr, config.Secret, config.Http, config.Tls, config.Socks, fullVersion)
 	defer wsReporter.Stop()
 	service.SetHTTPReportURL(config.Addr, config.Secret)
 
-	p := &program{}
+	p := &program{onStart: wsReporter.Start}
+	wsReporter.SetRetirementHandlers(func() error {
+		return retirement.Uninstall(p.retire)
+	}, func() {
+		wsReporter.Stop()
+		os.Exit(0)
+	})
 	if err := svc.Run(p); err != nil {
 		logger.Default().Fatal(err)
 	}

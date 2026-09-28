@@ -18,15 +18,20 @@ import (
 	xservice "github.com/go-gost/x/service"
 	"github.com/go-gost/x/socket"
 	"github.com/judwhite/go-svc"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
 
 type program struct {
+	runtimeMu    sync.Mutex
+	retiring     bool
+	onStart      func()
 	srvApi       service.Service
 	srvMetrics   service.Service
 	srvProfiling *http.Server
@@ -49,9 +54,17 @@ func (p *program) Init(env svc.Environment) error {
 }
 
 func (p *program) Start() error {
-	cfg, err := parser.Parse()
-	if err != nil {
-		return err
+	p.runtimeMu.Lock()
+	defer p.runtimeMu.Unlock()
+	cfg := &config.Config{}
+	if _, err := os.Stat(".retiring"); err == nil {
+		p.retiring = true
+	} else {
+		var err error
+		cfg, err = parser.Parse()
+		if err != nil {
+			return err
+		}
 	}
 
 	if outputFormat != "" {
@@ -69,7 +82,9 @@ func (p *program) Start() error {
 
 	// Enable config persistence after initial load so runtime mutations
 	// (AddService, UpdateService, DeleteService, etc.) are saved to disk.
-	socket.EnableConfigPersist()
+	if !p.retiring {
+		socket.EnableConfigPersist()
+	}
 
 	if err := p.run(cfg); err != nil {
 		return err
@@ -88,7 +103,22 @@ func (p *program) Start() error {
 		}
 	}()
 
+	if p.onStart != nil {
+		p.onStart()
+	}
 	return nil
+}
+
+func (p *program) retire() error {
+	p.runtimeMu.Lock()
+	defer p.runtimeMu.Unlock()
+	p.retiring = true
+	config.DisablePersist()
+	if err := p.stopRuntime(); err != nil {
+		return err
+	}
+	config.Set(&config.Config{})
+	return loader.Load(&config.Config{})
 }
 
 func (p *program) run(cfg *config.Config) error {
@@ -180,29 +210,41 @@ func (p *program) run(cfg *config.Config) error {
 }
 
 func (p *program) Stop() error {
+	p.runtimeMu.Lock()
+	defer p.runtimeMu.Unlock()
+	return p.stopRuntime()
+}
+
+func (p *program) stopRuntime() error {
+	var failures []error
+	closed := func(err error) {
+		if err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, http.ErrServerClosed) {
+			failures = append(failures, err)
+		}
+	}
 	if p.cancel != nil {
 		p.cancel()
 	}
 
 	for name, srv := range registry.ServiceRegistry().GetAll() {
-		srv.Close()
+		closed(srv.Close())
 		logger.Default().Debugf("service %s shutdown", name)
 	}
 
 	if p.srvApi != nil {
-		p.srvApi.Close()
+		closed(p.srvApi.Close())
 		logger.Default().Debug("service @api shutdown")
 	}
 	if p.srvMetrics != nil {
-		p.srvMetrics.Close()
+		closed(p.srvMetrics.Close())
 		logger.Default().Debug("service @metrics shutdown")
 	}
 	if p.srvProfiling != nil {
-		p.srvProfiling.Close()
+		closed(p.srvProfiling.Close())
 		logger.Default().Debug("service @profiling shutdown")
 	}
 
-	return nil
+	return errors.Join(failures...)
 }
 
 func (p *program) reload(ctx context.Context) {
@@ -225,6 +267,11 @@ func (p *program) reload(ctx context.Context) {
 }
 
 func (p *program) reloadConfig() error {
+	p.runtimeMu.Lock()
+	defer p.runtimeMu.Unlock()
+	if p.retiring {
+		return errors.New("节点正在删除")
+	}
 	cfg, err := parser.Parse()
 	if err != nil {
 		return err

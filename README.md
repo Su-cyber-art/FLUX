@@ -24,13 +24,13 @@
 
 ## 一键部署
 
-面板端（Linux，需安装 Bash、Docker 和 Docker Compose）：
+面板端（Linux，需要 Bash；缺少 Docker 时会询问是否使用官方脚本安装）：
 
 ```bash
-curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/panel_install.sh -o panel_install.sh && bash panel_install.sh
+curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/panel_install.sh -o panel_install.sh && sudo bash panel_install.sh
 ```
 
-选择安装，按提示设置端口和数据库。访问默认前端端口 `6366`，首次使用 `admin_user` / `admin_user` 登录并修改账号信息。
+选择安装，按提示安装 Docker、设置端口和数据库。Docker 安装后会验证引擎、Compose 和 `hello-world`，通过后才部署面板。访问默认前端端口 `6366`，首次使用 `admin_user` / `admin_user` 登录并修改账号信息。
 
 节点端：
 

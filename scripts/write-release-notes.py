@@ -16,10 +16,10 @@ notes = intro + f'''
 
 ## 一键安装
 
-面板端（Linux，需 Docker 和 Docker Compose）：
+面板端（Linux；缺少 Docker 时会交互确认并调用官方安装脚本）：
 
 ```bash
-curl -fsSL {base}/panel_install.sh -o panel_install.sh && bash panel_install.sh
+curl -fsSL {base}/panel_install.sh -o panel_install.sh && sudo bash panel_install.sh
 ```
 
 节点端：

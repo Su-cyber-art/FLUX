@@ -62,6 +62,19 @@ jobs:
         run: |
           bash test-install-scripts-proxy.sh
           bash test-release-artifacts.sh
+          bash test-docker-bootstrap.sh
+
+  docker-bootstrap:
+    name: Official Docker installation on clean Linux
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+      - name: Install and verify Docker using the generated panel script
+        run: sudo env GITHUB_ACTIONS=true bash scripts/test-docker-bootstrap-linux.sh
 
   build:
     name: Build and smoke test ${{ matrix.arch }}
@@ -102,6 +115,21 @@ jobs:
           mkdir -p ../artifacts
           CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -trimpath -ldflags="-s -w -X main.version=$FLUX_RELEASE_VERSION" -o ../artifacts/gost-${{ matrix.arch }} .
           ../artifacts/gost-${{ matrix.arch }} -V | grep -F "gost $FLUX_RELEASE_VERSION "
+      - name: Agent unit and protocol tests
+        run: |
+          (cd go-gost && go test ./internal/retirement)
+          (cd go-gost/x && go test ./socket ./config)
+      - name: Verify real agent removal on systemd and OpenRC
+        run: |
+          (cd go-backend && CGO_ENABLED=0 go test -c -o ../artifacts/node-deletion.test ./internal/http/handler)
+          sudo env FLUX_AGENT_INTEGRATION_BINARY="$PWD/artifacts/gost-${{ matrix.arch }}" artifacts/node-deletion.test -test.run '^TestAgentRemovalIntegration$' -test.v -test.timeout 90s
+          docker run --rm -v "$PWD/artifacts:/artifacts:ro" -e FLUX_AGENT_INTEGRATION_BINARY=/artifacts/gost-${{ matrix.arch }} -e FLUX_AGENT_SERVICE_MANAGER=openrc alpine:3.22 sh -ec '
+            apk add --no-cache openrc ca-certificates
+            mkdir -p /run/openrc
+            touch /run/openrc/softlevel
+            /artifacts/node-deletion.test -test.run "^TestAgentRemovalIntegration$" -test.v -test.timeout 90s
+          '
+          rm artifacts/node-deletion.test
       - uses: docker/setup-buildx-action@v3
       - name: Set frontend release metadata
         run: |
@@ -161,7 +189,7 @@ jobs:
 
   publish:
     name: Verify and publish release
-    needs: [prepare, build]
+    needs: [prepare, docker-bootstrap, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:

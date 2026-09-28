@@ -91,6 +91,7 @@ type Node struct {
 	Inx                     int            `gorm:"not null;default:0"`
 	IsRemote                int            `gorm:"column:is_remote;default:0"`
 	ForwardMode             string         `gorm:"column:forward_mode;type:varchar(20);not null;default:'agent'"`
+	DeleteState             int            `gorm:"column:delete_state;not null;default:0"` // 1: cleanup requested, 2: cleanup acknowledged
 	RemoteURL               sql.NullString `gorm:"column:remote_url;type:text"`
 	RemoteToken             sql.NullString `gorm:"column:remote_token;type:text"`
 	RemoteConfig            sql.NullString `gorm:"column:remote_config;type:text"`

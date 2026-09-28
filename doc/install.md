@@ -3,13 +3,13 @@
 
 ## 一键安装发布版本
 
-面板端要求 Linux、Bash、Docker 和 Docker Compose。建议在用于面板部署的空目录中执行：
+面板端要求 Linux 和 Bash。缺少 Docker 时，会询问是否通过 [Docker 官方安装脚本](https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script) 安装；拒绝安装或验证失败会停止部署。建议在用于面板部署的空目录中以 root 或 sudo 执行：
 
 ```bash
-curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/panel_install.sh -o panel_install.sh && bash panel_install.sh
+curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/panel_install.sh -o panel_install.sh && sudo bash panel_install.sh
 ```
 
-选择 `1` 安装，输入端口并选择 SQLite 或 PostgreSQL。脚本生成运行密钥和配置，下载当前发布版本并启动容器。
+选择 `1` 安装。缺少 Docker 时输入 `y` 同意安装，脚本从 `https://get.docker.com` 下载并执行官方脚本，再检查引擎、Compose 和 `hello-world` 容器。已有 Docker 不会被自动升级，缺少 Compose 或无法访问引擎时会提示修复。验证通过后设置端口和数据库，脚本生成运行密钥和配置，下载当前发布版本并启动容器。
 
 节点端：
 
@@ -27,13 +27,21 @@ wget -O install.sh https://github.com/Su-cyber-art/FLUX/releases/latest/download
 
 ## 指定版本与更新
 
-将 `latest/download` 换成 `download/3.1.0` 即可获取固定版本的安装脚本：
+将 `latest/download` 换成 `download/3.1.1` 即可获取固定版本的安装脚本：
 
 ```bash
-curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/download/3.1.0/panel_install.sh -o panel_install.sh && bash panel_install.sh
+curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/download/3.1.1/panel_install.sh -o panel_install.sh && sudo bash panel_install.sh
 ```
 
 更新时重新运行面板安装命令，选择 `2`。更新流程会验证配置、备份数据、准备镜像再重建服务；启动失败时按脚本结果检查回滚状态。首次安装不会覆盖当前目录中已有的 `.env` 或 `docker-compose.yml`。
+
+## 删除节点
+
+面板和 agent 均升级至 3.1.1 或更高版本后，可在节点页面删除本地节点。请先删除或迁移该节点关联的隧道、转发和节点共享，避免遗留其他节点上的链路资源。
+
+删除会停止监听、清空运行配置，移除安装目录（含接入密钥、转发配置和升级备份），禁用并移除 systemd / OpenRC 服务，最后撤销面板中的节点身份。支持官方安装目录 `/etc/flux_agent`，以及可确认归属的旧版 `/etc/gost` 安装；自定义目录会明确报错，需先按官方脚本安装。远程共享节点只移除本面板的接入，不能卸载提供方面板的 agent。nftables 节点会先通过 SSH 清理本项目的转发规则，再删除 SSH 凭据。
+
+离线或清理失败的节点会保留为“待清理”，不会显示已完成删除。清理请求保存在数据库中，面板重启后仍有效；agent 重新上线会自动重试。旧版 agent 不支持卸载指令时，先升级该节点再重试。批量删除会分别显示成功数量与每个失败原因。
 
 ## 镜像与校验
 

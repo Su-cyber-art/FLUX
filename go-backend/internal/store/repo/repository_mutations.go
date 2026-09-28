@@ -381,6 +381,21 @@ func (r *Repository) DeleteNodeCascade(nodeID int64) error {
 		return errors.New("repository not initialized")
 	}
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		var node model.Node
+		if err := tx.First(&node, nodeID).Error; err != nil {
+			return err
+		}
+		if node.DeleteState != 2 {
+			return errors.New("节点尚未确认清理完成")
+		}
+		for _, table := range []interface{}{
+			&model.NodeSSHConfig{}, &model.NftRuleBinding{}, &model.NftCounterState{},
+			&model.NodeMetric{}, &model.TunnelMetric{}, &model.ServiceMonitorResult{}, &model.ServiceMonitor{},
+		} {
+			if err := tx.Where("node_id = ?", nodeID).Delete(table).Error; err != nil {
+				return err
+			}
+		}
 		if err := tx.Where("node_id = ?", nodeID).Delete(&model.ForwardPort{}).Error; err != nil {
 			return err
 		}

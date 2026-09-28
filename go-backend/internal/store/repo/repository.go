@@ -892,6 +892,7 @@ func (r *Repository) ListNodes() ([]map[string]interface{}, error) {
 			"http":          n.HTTP, "tls": n.TLS, "socks": n.Socks,
 			"status": n.Status, "isRemote": n.IsRemote,
 			"forwardMode":             defaultNodeForwardMode(n.ForwardMode),
+			"deleteState":             n.DeleteState,
 			"remoteUrl":               nullableString(n.RemoteURL),
 			"remoteToken":             nullableString(n.RemoteToken),
 			"remoteConfig":            nullableString(n.RemoteConfig),

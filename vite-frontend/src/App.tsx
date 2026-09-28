@@ -24,19 +24,43 @@ const ConfigPage = lazy(() => import("@/pages/config"));
 const PanelSharingPage = lazy(() => import("@/pages/panel-sharing"));
 
 function RequireSession() {
-  useSession();
+  const session = useSession();
   const location = useLocation();
 
-  return isLoggedIn() ? (
-    <Outlet />
-  ) : (
-    <Navigate replace state={{ from: location.pathname }} to="/" />
-  );
+  if (!isLoggedIn()) {
+    const from =
+      location.pathname === "/change-password"
+        ? "/dashboard"
+        : location.pathname;
+
+    return <Navigate replace state={{ from }} to="/" />;
+  }
+  if (
+    session.requirePasswordChange &&
+    location.pathname !== "/change-password"
+  ) {
+    return <Navigate replace to="/change-password" />;
+  }
+  if (
+    !session.requirePasswordChange &&
+    location.pathname === "/change-password"
+  ) {
+    return <Navigate replace to="/dashboard" />;
+  }
+
+  return <Outlet />;
 }
 function LoginRoute() {
-  useSession();
+  const session = useSession();
 
-  return isLoggedIn() ? <Navigate replace to="/dashboard" /> : <IndexPage />;
+  return isLoggedIn() ? (
+    <Navigate
+      replace
+      to={session.requirePasswordChange ? "/change-password" : "/dashboard"}
+    />
+  ) : (
+    <IndexPage />
+  );
 }
 function App() {
   const { effectiveMode } = useThemeContext();

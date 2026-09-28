@@ -35,6 +35,7 @@ def prepare(repository: str, version: str, output: Path, require_artifacts: bool
             if source.count(marker) != 1:
                 raise ValueError("Panel installer entry point has changed")
             helper = (ROOT / "scripts/release-image-loader.sh").read_text()
+            helper += "\n" + (ROOT / "scripts/release-docker-bootstrap.sh").read_text()
             source = source.replace(marker, f'FLUX_IMAGE_PREFIX="{image_prefix}"\n\n{helper}\n{marker}')
             source = replace_once(
                 r'^  get_config_params$',
@@ -47,6 +48,7 @@ def prepare(repository: str, version: str, output: Path, require_artifacts: bool
                 source,
             )
             source = source.replace("curl -L -o docker-compose.yml", "curl -fL --retry 3 -o docker-compose.yml")
+            source = source.replace("  check_docker\n", "  check_docker || return 1\n")
             source = source.replace("https://tes.cc/guide.html", f"https://github.com/{repository}/blob/main/doc/install.md")
             source = source.replace("部署完成后请阅读下使用文档，求求了啊，不要上去就是一顿操作", "部署完成后可按使用文档接入节点与配置规则")
         path = output / name

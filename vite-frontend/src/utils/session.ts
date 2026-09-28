@@ -3,6 +3,7 @@ export const SESSION_STORAGE_KEYS = {
   roleId: "role_id",
   name: "name",
   admin: "admin",
+  requirePasswordChange: "requirePasswordChange",
 } as const;
 
 export interface SessionData {
@@ -10,12 +11,14 @@ export interface SessionData {
   roleId: number | null;
   name: string | null;
   isAdmin: boolean;
+  requirePasswordChange: boolean;
 }
 
 export interface LoginSessionPayload {
   token: string;
   role_id: number;
   name: string;
+  requirePasswordChange?: boolean;
 }
 
 const SESSION_EVENT_NAME = "sessionUpdated";
@@ -65,6 +68,9 @@ export const readSession = (): SessionData => {
     roleId: getRoleId(),
     name: getSessionName(),
     isAdmin: getAdminFlag(),
+    requirePasswordChange:
+      localStorage.getItem(SESSION_STORAGE_KEYS.requirePasswordChange) ===
+      "true",
   };
 };
 
@@ -72,6 +78,10 @@ export const writeLoginSession = (payload: LoginSessionPayload): void => {
   localStorage.setItem(SESSION_STORAGE_KEYS.token, payload.token);
   localStorage.setItem(SESSION_STORAGE_KEYS.roleId, String(payload.role_id));
   localStorage.setItem(SESSION_STORAGE_KEYS.name, payload.name);
+  localStorage.setItem(
+    SESSION_STORAGE_KEYS.requirePasswordChange,
+    String(payload.requirePasswordChange === true),
+  );
   localStorage.setItem(
     SESSION_STORAGE_KEYS.admin,
     String(payload.role_id === 0),
@@ -84,6 +94,7 @@ export const clearSession = (): void => {
   localStorage.removeItem(SESSION_STORAGE_KEYS.roleId);
   localStorage.removeItem(SESSION_STORAGE_KEYS.name);
   localStorage.removeItem(SESSION_STORAGE_KEYS.admin);
+  localStorage.removeItem(SESSION_STORAGE_KEYS.requirePasswordChange);
   window.dispatchEvent(new Event(SESSION_EVENT_NAME));
 };
 

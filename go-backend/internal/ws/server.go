@@ -81,14 +81,14 @@ type CommandResult struct {
 }
 
 type Server struct {
-	repo         *repo.Repository
-	jwtSecret    string
-	upgrader     websocket.Upgrader
-	onNodeOnline func(nodeID int64)
-	onNodeMetric func(nodeID int64, info SystemInfo)
+	repo             *repo.Repository
+	jwtSecret        string
+	upgrader         websocket.Upgrader
+	onNodeOnline     func(nodeID int64)
+	onNodeMetric     func(nodeID int64, info SystemInfo)
 	getUserAuthState func(userID int64) (*auth.UserAuthState, error)
 
-	mu      sync.RWMutex
+	mu       sync.RWMutex
 	admins   map[*adminSession]struct{}
 	monitors map[*monitorSession]struct{}
 	nodes    map[int64]*nodeSession
@@ -280,7 +280,10 @@ func (s *Server) handleNode(w http.ResponseWriter, r *http.Request, nodeID int64
 		return conn.SetReadDeadline(time.Now().Add(wsPongWait))
 	})
 	done := make(chan struct{})
-	go startKeepalive(cw, done, nil)
+	go startKeepalive(cw, done, func() bool {
+		node, err := s.repo.GetNodeByID(nodeID)
+		return err == nil && node != nil && node.Secret == secret
+	})
 
 	version := r.URL.Query().Get("version")
 	httpVal := parseIntDefault(r.URL.Query().Get("http"), 0)
@@ -339,6 +342,13 @@ func (s *Server) handleNode(w http.ResponseWriter, r *http.Request, nodeID int64
 
 		msg := decryptIfNeeded(payload, ns.crypto, secret)
 		s.tryResolvePending(nodeID, msg)
+		node, lookupErr := s.repo.GetNodeByID(nodeID)
+		if lookupErr != nil || node == nil || node.Secret != secret {
+			return
+		}
+		if node.DeleteState != 0 {
+			continue
+		}
 
 		var parsed struct {
 			Type string `json:"type"`
@@ -439,6 +449,15 @@ func (s *Server) SendCommand(nodeID int64, cmdType string, data interface{}, tim
 	}
 	if strings.TrimSpace(cmdType) == "" {
 		return CommandResult{}, errors.New("command type is empty")
+	}
+	if s.repo != nil && cmdType != "RetireNode" && cmdType != "FinalizeNodeDeletion" && cmdType != "UpgradeAgent" {
+		node, err := s.repo.GetNodeByID(nodeID)
+		if err != nil {
+			return CommandResult{}, err
+		}
+		if node == nil || node.DeleteState != 0 {
+			return CommandResult{}, errors.New("节点已删除或正在清理")
+		}
 	}
 	if timeout <= 0 {
 		timeout = 10 * time.Second

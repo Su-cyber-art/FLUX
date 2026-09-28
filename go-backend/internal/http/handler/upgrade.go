@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -398,6 +399,12 @@ func (h *Handler) consumeNodePendingUpgradeRedeploy(nodeID int64) bool {
 }
 
 func (h *Handler) onNodeOnline(nodeID int64) {
+	if node, err := h.repo.GetNodeByID(nodeID); err == nil && node != nil && node.DeleteState != 0 {
+		if err := h.deleteNodeByID(nodeID); err != nil {
+			log.Printf("node %d cleanup pending: %v", nodeID, err)
+		}
+		return
+	}
 	if !h.startNodeOnlineRedeploy(nodeID, time.Now()) {
 		return
 	}

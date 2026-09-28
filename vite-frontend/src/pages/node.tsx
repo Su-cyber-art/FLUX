@@ -778,6 +778,7 @@ export default function NodePage() {
         setNodeToDelete(null);
       } else {
         toast.error(res.msg || "删除失败");
+        void loadNodes({ silent: true });
       }
     } catch {
       toast.error("网络错误，请重试");
@@ -1227,11 +1228,21 @@ export default function NodePage() {
       const res = await batchDeleteNodes(Array.from(selectedIds));
 
       if (res.code === 0) {
-        toast.success(`成功删除 ${selectedIds.size} 个节点`);
-        setNodeList((prev) => prev.filter((n) => !selectedIds.has(n.id)));
-        setSelectedIds(new Set());
-        setBatchDeleteModalOpen(false);
-        setSelectMode(false);
+        const failures: { id: number; reason: string }[] =
+          res.data?.failures || [];
+
+        if (res.data?.successCount)
+          toast.success(`成功删除 ${res.data.successCount} 个节点`);
+        if (failures.length)
+          toast.error(
+            failures
+              .map((item) => `节点 ${item.id}：${item.reason}`)
+              .join("\n"),
+          );
+        setSelectedIds(new Set(failures.map((item) => item.id)));
+        setBatchDeleteModalOpen(failures.length > 0);
+        setSelectMode(failures.length > 0);
+        await loadNodes({ silent: true });
       } else {
         toast.error(res.msg || "删除失败");
       }
@@ -1720,6 +1731,7 @@ export default function NodePage() {
                         />
                         <span className="font-medium text-foreground text-sm">
                           {node.name}
+                          {node.deleteState ? " · 待清理" : ""}
                         </span>
                         {hasRemark && (
                           <Chip
@@ -1877,6 +1889,7 @@ export default function NodePage() {
                                 <div className="flex items-center gap-2 min-w-0">
                                   <h3 className="font-semibold text-foreground truncate text-lg leading-5">
                                     {node.name}
+                                    {node.deleteState ? " · 待清理" : ""}
                                   </h3>
                                   <div
                                     className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0
@@ -3002,7 +3015,8 @@ export default function NodePage() {
                   <strong>&quot;{nodeToDelete?.name}&quot;</strong> 吗？
                 </p>
                 <p className="text-small text-default-500">
-                  此操作不可恢复，请谨慎操作。
+                  本地节点会停止转发、清除配置并卸载
+                  agent；离线节点上线后自动清理。请先解除隧道、转发和共享引用。远程共享节点仅移除本面板的接入。
                 </p>
               </ModalBody>
               <ModalFooter>
@@ -3261,7 +3275,8 @@ export default function NodePage() {
                   个节点吗？
                 </p>
                 <p className="text-small text-default-500">
-                  此操作不可恢复，请谨慎操作。
+                  将逐项清理并卸载本地
+                  agent；离线节点上线后自动重试。有关联资源或清理失败的节点会保留并显示原因。
                 </p>
               </ModalBody>
               <ModalFooter>

@@ -71,7 +71,10 @@ export default function LoginPage() {
       const from = (location.state as { from?: string } | null)?.from;
 
       navigate(
-        from?.startsWith("/") && !from.startsWith("//") && from !== "/"
+        from?.startsWith("/") &&
+          !from.startsWith("//") &&
+          from !== "/" &&
+          from !== "/change-password"
           ? from
           : "/dashboard",
         { replace: true },

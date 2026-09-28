@@ -325,3 +325,25 @@ func TestZeroValues(t *testing.T) {
 		t.Fatalf("expected zero values, got CPU=%f Mem=%f Disk=%f", m.CPUUsage, m.MemUsage, m.DiskUsage)
 	}
 }
+
+func TestRetirementDropsBufferedAndLateMetrics(t *testing.T) {
+	r, err := repo.Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	svc := NewIngestionService(r)
+	svc.RecordNodeMetric(1, SystemInfo{CPUUsage: 10})
+	svc.RecordNodeMetric(2, SystemInfo{CPUUsage: 20})
+	svc.RetireNode(1)
+	svc.RecordNodeMetric(1, SystemInfo{CPUUsage: 30})
+	svc.flushNodeMetrics()
+	deleted, err := r.GetNodeMetrics(1, 0, time.Now().UnixMilli()+1000)
+	if err != nil || len(deleted) != 0 {
+		t.Fatalf("retired metric reappeared: %v, %v", deleted, err)
+	}
+	active, err := r.GetNodeMetrics(2, 0, time.Now().UnixMilli()+1000)
+	if err != nil || len(active) != 1 {
+		t.Fatalf("other node metric lost: %v, %v", active, err)
+	}
+}

@@ -39,6 +39,13 @@ func EnablePersist() {
 	persistEnable = true
 }
 
+// DisablePersist waits for any in-flight write before retirement removes files.
+func DisablePersist() {
+	persistMu.Lock()
+	defer persistMu.Unlock()
+	persistEnable = false
+}
+
 // persist writes the current global config to the configured file atomically.
 func persist() error {
 	persistMu.Lock()

@@ -31,6 +31,8 @@ type IngestionService struct {
 	repo          *repo.Repository
 	nodeBuffer    []*model.NodeMetric
 	nodeBufferMu  sync.Mutex
+	flushMu       sync.Mutex
+	retiredNodes  map[int64]struct{}
 	flushInterval time.Duration
 }
 
@@ -82,6 +84,10 @@ func (s *IngestionService) RecordNodeMetric(nodeID int64, info SystemInfo) {
 	}
 
 	s.nodeBufferMu.Lock()
+	if _, retired := s.retiredNodes[nodeID]; retired {
+		s.nodeBufferMu.Unlock()
+		return
+	}
 	s.nodeBuffer = append(s.nodeBuffer, m)
 	shouldFlush := len(s.nodeBuffer) >= 200
 	s.nodeBufferMu.Unlock()
@@ -92,6 +98,8 @@ func (s *IngestionService) RecordNodeMetric(nodeID int64, info SystemInfo) {
 }
 
 func (s *IngestionService) flushNodeMetrics() {
+	s.flushMu.Lock()
+	defer s.flushMu.Unlock()
 	s.nodeBufferMu.Lock()
 	if len(s.nodeBuffer) == 0 {
 		s.nodeBufferMu.Unlock()
@@ -107,6 +115,26 @@ func (s *IngestionService) flushNodeMetrics() {
 	if err := s.repo.InsertNodeMetricBatch(buffer); err != nil {
 		log.Printf("monitoring write failed op=node_metric.flush count=%d err=%v", len(buffer), err)
 	}
+}
+
+// RetireNode drains in-flight writes and drops buffered or late metrics before
+// the repository deletes this node's historical records.
+func (s *IngestionService) RetireNode(nodeID int64) {
+	s.flushMu.Lock()
+	defer s.flushMu.Unlock()
+	s.nodeBufferMu.Lock()
+	defer s.nodeBufferMu.Unlock()
+	if s.retiredNodes == nil {
+		s.retiredNodes = make(map[int64]struct{})
+	}
+	s.retiredNodes[nodeID] = struct{}{}
+	kept := s.nodeBuffer[:0]
+	for _, metric := range s.nodeBuffer {
+		if metric.NodeID != nodeID {
+			kept = append(kept, metric)
+		}
+	}
+	s.nodeBuffer = kept
 }
 
 func (s *IngestionService) pruneMetrics() {

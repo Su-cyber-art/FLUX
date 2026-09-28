@@ -703,6 +703,9 @@ func (h *Handler) sendNodeCommandWithTimeout(nodeID int64, commandType string, d
 	}
 
 	node, nodeErr := h.getNodeRecord(nodeID)
+	if nodeErr != nil {
+		return result, nodeErr
+	}
 	if nodeErr == nil && node != nil && node.IsRemote == 1 {
 		result, err = h.sendRemoteNodeCommandWithTimeout(node, commandType, data, timeout)
 	} else {

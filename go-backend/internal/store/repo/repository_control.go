@@ -207,6 +207,9 @@ func (r *Repository) GetNodeRecord(nodeID int64) (*model.NodeRecord, error) {
 	if err != nil {
 		return nil, err
 	}
+	if n.DeleteState != 0 {
+		return nil, errors.New("节点正在删除，不能再分配转发或隧道")
+	}
 	return nodeRecordFromModel(&n), nil
 }
 
@@ -221,6 +224,9 @@ func (r *Repository) GetNodeRecordTx(tx *gorm.DB, nodeID int64) (*model.NodeReco
 	}
 	if err != nil {
 		return nil, err
+	}
+	if n.DeleteState != 0 {
+		return nil, errors.New("节点正在删除，不能再分配转发或隧道")
 	}
 	return nodeRecordFromModel(&n), nil
 }
