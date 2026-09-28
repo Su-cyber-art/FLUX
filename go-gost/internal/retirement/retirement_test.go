@@ -38,11 +38,18 @@ func TestRemoveInstallation(t *testing.T) {
 				os.WriteFile(unit, []byte("WorkingDirectory="+dir+"\nExecStart="+i.binary+"\n"), 0600)
 			} else {
 				i.openrc = unit
+				i.runlevel = filepath.Join(root, "runlevel")
+				if err := os.Symlink(unit, i.runlevel); err != nil {
+					t.Fatal(err)
+				}
 				os.WriteFile(unit, []byte(`command="`+i.binary+`"`+"\n"+`directory="`+dir+`"`), 0600)
 			}
 			var calls []string
 			i.run = func(name string, args ...string) error {
 				calls = append(calls, name+" "+strings.Join(args, " "))
+				if name == "rc-update" {
+					return os.Remove(i.runlevel)
+				}
 				return nil
 			}
 			stopped := false
@@ -60,6 +67,9 @@ func TestRemoveInstallation(t *testing.T) {
 			}
 			if !stopped {
 				t.Fatal("runtime not stopped")
+			}
+			if manager == "openrc" && !strings.Contains(strings.Join(calls, "\n"), "rc-service flux_agent zap") {
+				t.Fatal("OpenRC started state was not reset")
 			}
 			for _, path := range []string{dir, unit} {
 				if _, err := os.Stat(path); !os.IsNotExist(err) {

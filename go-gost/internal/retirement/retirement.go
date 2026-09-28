@@ -17,6 +17,7 @@ type installation struct {
 	dir, binary, service string
 	systemd              []string
 	openrc               string
+	runlevel             string
 	pidfile              string
 	run                  func(string, ...string) error
 }
@@ -46,6 +47,7 @@ func locate(dir, binary string) (*installation, error) {
 		i.service = "flux_agent"
 		i.systemd = []string{"/etc/systemd/system/flux_agent.service"}
 		i.openrc = "/etc/init.d/flux_agent"
+		i.runlevel = "/etc/runlevels/default/flux_agent"
 		i.pidfile = "/run/flux_agent.pid"
 	case dir == "/etc/gost" && binary == "/usr/local/bin/gost":
 		i.service = "gost"
@@ -108,7 +110,11 @@ func (i *installation) remove(stop func() error) error {
 		}
 	}
 	if openrc {
-		if err := i.run("rc-update", "del", i.service, "default"); err != nil {
+		if _, err := os.Lstat(i.runlevel); err == nil {
+			if err := i.run("rc-update", "del", i.service, "default"); err != nil {
+				return err
+			}
+		} else if !os.IsNotExist(err) {
 			return err
 		}
 	}
@@ -126,6 +132,12 @@ func (i *installation) remove(stop func() error) error {
 		}
 	}
 	if openrc {
+		// Removing the init script alone leaves OpenRC's started marker behind,
+		// preventing a later install from starting. zap resets bookkeeping
+		// without killing this process before it can acknowledge cleanup.
+		if err := i.run("rc-service", i.service, "zap"); err != nil {
+			return err
+		}
 		if err := os.Remove(i.openrc); err != nil {
 			return err
 		}

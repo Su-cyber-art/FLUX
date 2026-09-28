@@ -11,7 +11,7 @@
 ## 手动触发
 
 ```bash
-gh workflow run docker-build.yml --repo Su-cyber-art/FLUX --ref main -f version=3.1.1
+gh workflow run docker-build.yml --repo Su-cyber-art/FLUX --ref main -f version=3.1.2
 ```
 
 工作流固定使用触发时的提交构建，全部检查完成后创建标签与 Release。无需提前创建空 Release，也无需设置额外的发布 PAT。

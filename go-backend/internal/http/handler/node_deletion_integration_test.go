@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -101,6 +102,18 @@ func TestAgentRemovalIntegration(t *testing.T) {
 		run("rc-service", "flux_agent", "start")
 	}
 	waitDeletionNodeOnline(t, h, n.ID)
+	unitContents, err := os.ReadFile(unit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var agentPID string
+	if manager == "openrc" {
+		pid, err := os.ReadFile("/run/flux_agent.pid")
+		if err != nil {
+			t.Fatal(err)
+		}
+		agentPID = strings.TrimSpace(string(pid))
+	}
 	listenerAddr := "127.0.0.1:" + strconv.Itoa(port)
 	conn, err := net.DialTimeout("tcp", listenerAddr, time.Second)
 	if err != nil {
@@ -126,5 +139,36 @@ func TestAgentRemovalIntegration(t *testing.T) {
 	}, "forwarding listener closed")
 	if manager == "systemd" {
 		waitForCondition(t, 5*time.Second, func() bool { return exec.Command("systemctl", "is-active", "--quiet", "flux_agent").Run() != nil }, "agent process exited")
+	}
+	if manager == "openrc" {
+		if _, err := os.Lstat("/run/openrc/started/flux_agent"); !os.IsNotExist(err) {
+			t.Fatal("OpenRC still considers the removed agent started")
+		}
+		waitForCondition(t, 5*time.Second, func() bool {
+			status, err := os.ReadFile("/proc/" + agentPID + "/status")
+			return os.IsNotExist(err) || strings.Contains(string(status), "State:\tZ")
+		}, "OpenRC agent process exited")
+		// Reinstall under the same service name to prove stale OpenRC state
+		// cannot prevent a newly enrolled agent from starting.
+		second := seedDeletionNode(t, h, 2, 0)
+		if err := os.Mkdir(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(dir+"/flux_agent", data, 0700); err != nil {
+			t.Fatal(err)
+		}
+		write(dir+"/config.json", fmt.Sprintf(`{"addr":%q,"secret":%q}`, server.URL, second.Secret))
+		write(dir+"/gost.json", `{}`)
+		write(unit, string(unitContents))
+		run("rc-update", "add", "flux_agent", "default")
+		run("rc-service", "flux_agent", "start")
+		waitDeletionNodeOnline(t, h, second.ID)
+		if err := h.deleteNodeByID(second.ID); err != nil {
+			t.Fatal(err)
+		}
+		assertNodeAbsent(t, h, second.ID)
+		if _, err := os.Lstat("/run/openrc/started/flux_agent"); !os.IsNotExist(err) {
+			t.Fatal("OpenRC state remains after second removal")
+		}
 	}
 }
