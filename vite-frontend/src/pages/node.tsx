@@ -1228,8 +1228,7 @@ export default function NodePage() {
       const res = await batchDeleteNodes(Array.from(selectedIds));
 
       if (res.code === 0) {
-        const failures: { id: number; reason: string }[] =
-          res.data?.failures || [];
+        const failures = res.data?.failures || [];
 
         if (res.data?.successCount)
           toast.success(`成功删除 ${res.data.successCount} 个节点`);
@@ -1239,7 +1238,13 @@ export default function NodePage() {
               .map((item) => `节点 ${item.id}：${item.reason}`)
               .join("\n"),
           );
-        setSelectedIds(new Set(failures.map((item) => item.id)));
+        setSelectedIds(
+          new Set(
+            failures.flatMap((item) =>
+              typeof item.id === "number" ? [item.id] : [],
+            ),
+          ),
+        );
         setBatchDeleteModalOpen(failures.length > 0);
         setSelectMode(failures.length > 0);
         await loadNodes({ silent: true });
