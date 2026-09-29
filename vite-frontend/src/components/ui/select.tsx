@@ -131,6 +131,7 @@ export function Select<T>({
     comboboxProps: {
       withinPortal: true,
       zIndex: 450,
+      middlewares: { flip: true, shift: { padding: 12 } },
       position:
         dropdownPlacement === "top" ? ("top" as const) : ("bottom" as const),
     },
@@ -139,7 +140,7 @@ export function Select<T>({
     }: {
       option: { value: string; label: string };
     }) => (
-      <div>
+      <div className="min-w-0">
         <Text size="sm">{option.label}</Text>
         {options.find((item) => item.value === option.value)?.description && (
           <Text c="dimmed" size="xs">

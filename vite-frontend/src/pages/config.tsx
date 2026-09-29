@@ -1968,9 +1968,6 @@ export default function ConfigPage() {
 
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={exportSelectorOpen}
         onOpenChange={setExportSelectorOpen}
       >
@@ -2000,9 +1997,6 @@ export default function ConfigPage() {
 
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={importSelectorOpen}
         onOpenChange={setImportSelectorOpen}
       >
@@ -2032,9 +2026,6 @@ export default function ConfigPage() {
 
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={systemUpgradeModalOpen}
         onOpenChange={(open) => {
           if (!systemUpgradeExecuting) {
@@ -2094,7 +2085,7 @@ export default function ConfigPage() {
       />
 
       {hasChanges && (
-        <div className="fixed bottom-5 right-5 z-40">
+        <div className="app-save-action">
           <Button
             color="primary"
             isLoading={saving}

@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   Button,
   Group,
-  Modal,
   Paper,
   PasswordInput,
   Stack,
@@ -26,6 +25,12 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { login, checkCaptcha, getPublicConfigByName } from "@/api";
 import { writeLoginSession } from "@/utils/session";
 import { toast } from "@/lib/notifications";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalHeader,
+} from "@/components/ui/modal";
 import { useWebViewMode } from "@/hooks/useWebViewMode";
 import { useSiteConfig } from "@/hooks/use-site-config";
 import { useThemeContext } from "@/themes/context";
@@ -218,31 +223,35 @@ export default function LoginPage() {
         </section>
       </div>
       <Modal
-        centered
-        opened={captchaOpen}
-        title="安全验证"
+        isOpen={captchaOpen}
+        size="sm"
         onClose={() => {
           setCaptchaOpen(false);
           setLoading(false);
         }}
       >
-        <Group justify="center">
-          {siteKey && (
-            <Turnstile
-              options={{ theme: effectiveMode }}
-              siteKey={siteKey}
-              onError={() => {
-                toast.error("验证失败，请重试");
-                setLoading(false);
-              }}
-              onExpire={() => setLoading(false)}
-              onSuccess={(token) => {
-                setCaptchaOpen(false);
-                void authenticate(token);
-              }}
-            />
-          )}
-        </Group>
+        <ModalContent>
+          <ModalHeader>安全验证</ModalHeader>
+          <ModalBody>
+            <Group justify="center">
+              {siteKey && (
+                <Turnstile
+                  options={{ theme: effectiveMode, size: "flexible" }}
+                  siteKey={siteKey}
+                  onError={() => {
+                    toast.error("验证失败，请重试");
+                    setLoading(false);
+                  }}
+                  onExpire={() => setLoading(false)}
+                  onSuccess={(token) => {
+                    setCaptchaOpen(false);
+                    void authenticate(token);
+                  }}
+                />
+              )}
+            </Group>
+          </ModalBody>
+        </ModalContent>
       </Modal>
     </DefaultLayout>
   );

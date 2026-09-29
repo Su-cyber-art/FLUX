@@ -12,7 +12,6 @@ import {
   Group,
   Kbd,
   Menu,
-  Modal,
   NavLink,
   ScrollArea,
   Stack,
@@ -46,6 +45,12 @@ import { BrandLogo } from "@/components/brand-logo";
 import { PageLoadingState } from "@/components/page-state";
 import { PageErrorBoundary } from "@/components/page-error-boundary";
 import { VersionFooter } from "@/components/version-footer";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalHeader,
+} from "@/components/ui/modal";
 import { getMonitorAccess } from "@/api";
 import { safeLogout } from "@/utils/logout";
 
@@ -419,45 +424,44 @@ export default function ApplicationLayout() {
           )}
         </div>
       </AppShell.Main>
-      <Modal
-        centered
-        opened={searchOpened}
-        size="md"
-        title="快速访问"
-        onClose={closeSearch}
-      >
-        <TextInput
-          data-autofocus
-          aria-label="搜索页面名称"
-          leftSection={<Search size={16} />}
-          placeholder="搜索页面名称或功能…"
-          value={search}
-          onChange={(event) => setSearch(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && matches[0]) {
-              navigate(matches[0].path);
-              closeSearch();
-            }
-          }}
-        />
-        <Stack gap={4} mt="sm">
-          {matches.map((item) => (
-            <NavLink
-              key={item.path}
-              component={Link}
-              description={item.group}
-              label={item.title}
-              leftSection={<item.icon size={17} />}
-              to={item.path}
-              onClick={closeSearch}
+      <Modal isOpen={searchOpened} size="md" onClose={closeSearch}>
+        <ModalContent>
+          <ModalHeader>快速访问</ModalHeader>
+          <ModalBody>
+            <TextInput
+              data-autofocus
+              aria-label="搜索页面名称"
+              leftSection={<Search size={16} />}
+              placeholder="搜索页面名称或功能…"
+              value={search}
+              onChange={(event) => setSearch(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && matches[0]) {
+                  navigate(matches[0].path);
+                  closeSearch();
+                }
+              }}
             />
-          ))}
-          {!matches.length && (
-            <Text c="dimmed" py="lg" size="sm" ta="center">
-              没有匹配的页面
-            </Text>
-          )}
-        </Stack>
+            <Stack gap={4} mt="sm">
+              {matches.map((item) => (
+                <NavLink
+                  key={item.path}
+                  component={Link}
+                  description={item.group}
+                  label={item.title}
+                  leftSection={<item.icon size={17} />}
+                  to={item.path}
+                  onClick={closeSearch}
+                />
+              ))}
+              {!matches.length && (
+                <Text c="dimmed" py="lg" size="sm" ta="center">
+                  没有匹配的页面
+                </Text>
+              )}
+            </Stack>
+          </ModalBody>
+        </ModalContent>
       </Modal>
     </AppShell>
   );

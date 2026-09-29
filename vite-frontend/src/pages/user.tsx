@@ -1374,9 +1374,6 @@ export default function UserPage() {
       {/* 用户表单模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
-        }}
         isOpen={isUserModalOpen}
         placement="center"
         scrollBehavior="inside"
@@ -1624,9 +1621,6 @@ export default function UserPage() {
       {/* 隧道权限管理模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "max-w-[95vw] sm:max-w-4xl",
-        }}
         isDismissable={false}
         isOpen={isTunnelModalOpen}
         placement="center"
@@ -1965,9 +1959,6 @@ export default function UserPage() {
       {/* 编辑隧道权限模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
-        }}
         isDismissable={false}
         isOpen={isEditTunnelModalOpen}
         placement="center"
@@ -2139,9 +2130,6 @@ export default function UserPage() {
       {/* 删除确认对话框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
-        }}
         isOpen={isDeleteModalOpen}
         placement="center"
         scrollBehavior="inside"
@@ -2185,9 +2173,6 @@ export default function UserPage() {
       {/* 删除隧道权限确认对话框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
-        }}
         isOpen={isDeleteTunnelModalOpen}
         placement="center"
         scrollBehavior="inside"
@@ -2233,9 +2218,6 @@ export default function UserPage() {
       {/* 重置流量确认对话框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
-        }}
         isOpen={isResetFlowModalOpen}
         placement="center"
         scrollBehavior="inside"
@@ -2325,9 +2307,6 @@ export default function UserPage() {
       {/* 重置隧道流量确认对话框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg",
-        }}
         isOpen={isResetTunnelFlowModalOpen}
         placement="center"
         scrollBehavior="inside"

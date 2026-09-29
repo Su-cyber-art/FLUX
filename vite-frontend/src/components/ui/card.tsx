@@ -10,7 +10,7 @@ export function Card({
   return (
     <Paper
       withBorder
-      className={cn("app-card", className)}
+      className={cn("app-card min-w-0", className)}
       data-slot="card"
       radius="md"
       {...props}
@@ -23,7 +23,7 @@ export function CardHeader({
 }: React.ComponentPropsWithoutRef<"div">) {
   return (
     <div
-      className={cn("flex flex-col gap-1.5 p-5", className)}
+      className={cn("min-w-0 flex flex-col gap-1.5 p-5", className)}
       data-slot="card-header"
       {...props}
     />
@@ -34,6 +34,10 @@ export function CardBody({
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
   return (
-    <div className={cn("p-5", className)} data-slot="card-content" {...props} />
+    <div
+      className={cn("min-w-0 p-5", className)}
+      data-slot="card-content"
+      {...props}
+    />
   );
 }

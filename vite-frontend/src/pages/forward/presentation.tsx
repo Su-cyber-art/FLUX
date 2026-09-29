@@ -707,7 +707,7 @@ export const SortableTableRow = ({
     zIndex: isDragging ? 50 : undefined,
     position: isDragging ? ("relative" as const) : undefined,
     willChange: "transform",
-    backgroundColor: isDragging ? "var(--nextui-default-100)" : undefined,
+    backgroundColor: isDragging ? "var(--default-100)" : undefined,
   };
 
   const strategyDisplay = getStrategyDisplay(forward.strategy);
@@ -926,7 +926,7 @@ export const SortableCompactTableRow = ({
     zIndex: isDragging ? 50 : undefined,
     position: isDragging ? ("relative" as const) : undefined,
     willChange: "transform",
-    backgroundColor: isDragging ? "var(--nextui-default-100)" : undefined,
+    backgroundColor: isDragging ? "var(--default-100)" : undefined,
   };
 
   const strategyDisplay = getStrategyDisplay(forward.strategy);

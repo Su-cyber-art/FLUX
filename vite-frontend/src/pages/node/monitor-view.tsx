@@ -1970,7 +1970,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
               ) : null}
             </div>
             {resultsMonitorId != null ? (
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Select
                   className="w-28"
                   selectedKeys={[String(resultsLimit)]}
@@ -2034,12 +2034,12 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                 <TableBody>
                   {modalResults.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm whitespace-nowrap">
                         <span className="font-mono">
                           {formatDateTime(r.timestamp)}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-20 whitespace-nowrap">
                         {r.success === 1 ? (
                           <Chip color="success" size="sm" variant="flat">
                             成功
@@ -2050,7 +2050,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                           </Chip>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <span className="font-mono text-sm">
                           {Number.isFinite(r.latencyMs)
                             ? `${r.latencyMs.toFixed(0)}ms`

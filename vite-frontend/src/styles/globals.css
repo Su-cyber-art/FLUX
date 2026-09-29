@@ -111,7 +111,7 @@
   --default-900: #f1f5f9;
 }
 html, body, #root { min-height: 100%; }
-html { background: var(--background); color: var(--foreground); }
+html { background: var(--background); color: var(--foreground); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .safe-top { padding-top: var(--safe-area-top); }

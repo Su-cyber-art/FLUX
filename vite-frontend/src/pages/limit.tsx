@@ -434,9 +434,6 @@ export default function LimitPage() {
       {/* 新增/编辑模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={modalOpen}
         placement="center"
         scrollBehavior="inside"
@@ -512,9 +509,6 @@ export default function LimitPage() {
       {/* 删除确认模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={deleteModalOpen}
         placement="center"
         scrollBehavior="inside"

@@ -698,9 +698,6 @@ export default function PanelSharingPage() {
       {/* Create Share Modal */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={createShareOpen}
         scrollBehavior="inside"
         onClose={() => setCreateShareOpen(false)}
@@ -810,9 +807,6 @@ export default function PanelSharingPage() {
       {/* Edit Share Modal */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={editShareOpen}
         scrollBehavior="inside"
         onClose={() => setEditShareOpen(false)}
@@ -915,9 +909,6 @@ export default function PanelSharingPage() {
       {/* Import Node Modal */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={importNodeOpen}
         onClose={() => setImportNodeOpen(false)}
       >

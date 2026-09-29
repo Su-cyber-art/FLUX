@@ -2336,9 +2336,6 @@ export default function NodePage() {
       {/* 新增/编辑节点对话框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={dialogVisible}
         placement="center"
         scrollBehavior="inside"
@@ -2968,9 +2965,6 @@ export default function NodePage() {
       {/* 回退确认模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={rollbackModalOpen}
         placement="center"
         scrollBehavior="inside"
@@ -3009,9 +3003,6 @@ export default function NodePage() {
       {/* 删除确认模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={deleteModalOpen}
         placement="center"
         scrollBehavior="inside"
@@ -3053,9 +3044,6 @@ export default function NodePage() {
 
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={installSelectorOpen}
         placement="center"
         size="md"
@@ -3106,9 +3094,6 @@ export default function NodePage() {
       {/* 安装命令模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={installCommandModal}
         placement="center"
         scrollBehavior="inside"
@@ -3163,9 +3148,6 @@ export default function NodePage() {
       {/* 版本选择升级模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={upgradeModalOpen}
         placement="center"
         scrollBehavior="inside"
@@ -3269,9 +3251,6 @@ export default function NodePage() {
       {/* 批量删除确认模态框 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={batchDeleteModalOpen}
         placement="center"
         scrollBehavior="inside"
@@ -3312,9 +3291,6 @@ export default function NodePage() {
       </Modal>
 
       <Modal
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={isFilterModalOpen}
         placement="center"
         size="md"

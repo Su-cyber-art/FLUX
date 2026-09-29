@@ -313,7 +313,7 @@ export default function ProfilePage() {
         </Card>
 
         <VersionFooter
-          containerClassName="fixed inset-x-0 bottom-20 text-center py-4"
+          containerClassName="mt-6 text-center py-4"
           poweredClassName="text-xs text-gray-400 dark:text-gray-500"
           updateBadgeClassName="ml-2 inline-flex items-center rounded-full bg-rose-500/90 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white"
           version={
@@ -326,9 +326,6 @@ export default function ProfilePage() {
       {/* 修改密码弹窗 */}
       <Modal
         backdrop="blur"
-        classNames={{
-          base: "!w-[calc(100%-32px)] !mx-auto sm:!w-full rounded-lg overflow-hidden",
-        }}
         isOpen={isOpen}
         placement="center"
         scrollBehavior="inside"

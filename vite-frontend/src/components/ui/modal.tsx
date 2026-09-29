@@ -1,6 +1,5 @@
 import * as React from "react";
 import { Modal as MantineModal } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
 
 import { cn } from "@/lib/utils";
 
@@ -46,47 +45,22 @@ export function Modal({
   classNames,
   className,
   isDismissable = true,
+  placement = "center",
 }: ModalProps) {
-  const mobile = useMediaQuery("(max-width: 47.99em)");
   const close = React.useCallback(() => {
     onOpenChange?.(false);
     onClose?.();
   }, [onClose, onOpenChange]);
-  const positions = React.useRef<
-    { element: HTMLElement; top: number; left: number }[]
-  >([]);
-
-  React.useLayoutEffect(() => {
-    if (isOpen) {
-      const frame = requestAnimationFrame(() =>
-        positions.current.forEach(({ element, top, left }) => {
-          element.scrollTop = top;
-          element.scrollLeft = left;
-        }),
-      );
-
-      return () => cancelAnimationFrame(frame);
-    }
-
-    return () => {
-      positions.current = Array.from(
-        document.querySelectorAll<HTMLElement>("main, [data-scroll-container]"),
-      ).map((element) => ({
-        element,
-        top: element.scrollTop,
-        left: element.scrollLeft,
-      }));
-    };
-  }, [isOpen]);
 
   return (
     <ModalContext.Provider value={{ onClose: close, classNames }}>
       <MantineModal.Root
         centered
-        className={className}
+        className={cn("app-modal", className)}
+        classNames={{ inner: "app-modal-viewport" }}
         closeOnClickOutside={isDismissable}
         closeOnEscape={isDismissable}
-        fullScreen={Boolean(mobile && size !== "sm" && size !== "md")}
+        data-placement={placement}
         opened={isOpen}
         size={
           {
@@ -99,8 +73,7 @@ export function Modal({
             full: "95vw",
           }[size]
         }
-        transitionProps={{ duration: 150 }}
-        yOffset={24}
+        transitionProps={{ duration: 150, transition: "fade" }}
         zIndex={300}
         onClose={close}
       >
@@ -122,7 +95,11 @@ export function ModalContent({
   return (
     <MantineModal.Content
       {...props}
-      className={cn("app-modal-content", context.classNames?.base, className)}
+      // Mantine also forwards Content.className to its positioning container.
+      // Assign the content slot explicitly so flex/size styles never leak there.
+      classNames={{
+        content: cn("app-modal-content", context.classNames?.base, className),
+      }}
     >
       {typeof children === "function" ? children(context.onClose) : children}
     </MantineModal.Content>
@@ -143,7 +120,7 @@ export function ModalHeader({
       >
         {children}
       </MantineModal.Title>
-      <MantineModal.CloseButton aria-label="关闭对话框" />
+      <MantineModal.CloseButton aria-label="关闭对话框" size="lg" />
     </MantineModal.Header>
   );
 }

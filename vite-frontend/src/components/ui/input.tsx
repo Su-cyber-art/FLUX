@@ -40,9 +40,9 @@ export function Input({
   return (
     <TextInput
       {...props}
-      className={classNames?.base}
+      className={cn("min-w-0", classNames?.base, className)}
       classNames={{
-        input: cn(classNames?.input, className),
+        input: classNames?.input,
         label: classNames?.label,
         description: classNames?.description,
         error: classNames?.errorMessage,
