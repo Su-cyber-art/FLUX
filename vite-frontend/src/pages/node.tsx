@@ -2258,7 +2258,6 @@ export default function NodePage() {
                               {!isRemoteNode && (
                                 <div className="grid grid-cols-3 gap-1.5">
                                   <Button
-                                    className="min-h-8"
                                     color="success"
                                     isLoading={node.copyLoading}
                                     size="sm"
@@ -2268,7 +2267,6 @@ export default function NodePage() {
                                     安装
                                   </Button>
                                   <Button
-                                    className="min-h-8"
                                     color="warning"
                                     isDisabled={
                                       node.connectionStatus !== "online"
@@ -2283,7 +2281,6 @@ export default function NodePage() {
                                     升级
                                   </Button>
                                   <Button
-                                    className="min-h-8"
                                     color="secondary"
                                     isDisabled={
                                       node.connectionStatus !== "online"
@@ -2302,7 +2299,6 @@ export default function NodePage() {
                               >
                                 {!isRemoteNode && (
                                   <Button
-                                    className="min-h-8"
                                     color="primary"
                                     size="sm"
                                     variant="flat"
@@ -2312,7 +2308,6 @@ export default function NodePage() {
                                   </Button>
                                 )}
                                 <Button
-                                  className="min-h-8"
                                   color="danger"
                                   size="sm"
                                   variant="flat"

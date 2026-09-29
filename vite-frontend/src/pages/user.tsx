@@ -1305,7 +1305,7 @@ export default function UserPage() {
                       {/* 第一行：编辑和重置 */}
                       <div className="flex gap-1.5">
                         <Button
-                          className="flex-1 min-h-8"
+                          className="flex-1"
                           color="primary"
                           size="sm"
                           startContent={<EditIcon className="w-3 h-3" />}
@@ -1315,7 +1315,7 @@ export default function UserPage() {
                           编辑
                         </Button>
                         <Button
-                          className="flex-1 min-h-8"
+                          className="flex-1"
                           color="warning"
                           size="sm"
                           startContent={
@@ -1342,7 +1342,7 @@ export default function UserPage() {
                       {/* 第二行：权限和删除 */}
                       <div className="flex gap-1.5">
                         <Button
-                          className="flex-1 min-h-8"
+                          className="flex-1"
                           color="success"
                           size="sm"
                           startContent={<SettingsIcon className="w-3 h-3" />}
@@ -1352,7 +1352,7 @@ export default function UserPage() {
                           权限
                         </Button>
                         <Button
-                          className="flex-1 min-h-8"
+                          className="flex-1"
                           color="danger"
                           size="sm"
                           startContent={<DeleteIcon className="w-3 h-3" />}

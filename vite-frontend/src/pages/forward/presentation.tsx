@@ -597,7 +597,7 @@ export const SortableTunnelGroupContainer = ({
           <Button
             isIconOnly
             aria-label={collapsed ? "展开分组" : "折叠分组"}
-            className="h-7 w-7 min-w-7"
+            className="h-7 w-7"
             size="sm"
             variant="light"
             onPress={onToggleCollapsed}

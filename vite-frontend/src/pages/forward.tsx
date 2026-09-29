@@ -2966,7 +2966,7 @@ export default function ForwardPage() {
 
           <div className="grid grid-cols-2 gap-1.5 mt-3">
             <Button
-              className="flex-1 min-h-8"
+              className="flex-1"
               color="primary"
               size="sm"
               startContent={
@@ -2985,7 +2985,7 @@ export default function ForwardPage() {
               编辑
             </Button>
             <Button
-              className="flex-1 min-h-8"
+              className="flex-1"
               color="warning"
               size="sm"
               startContent={
@@ -3008,7 +3008,7 @@ export default function ForwardPage() {
               诊断
             </Button>
             <Button
-              className="flex-1 min-h-8"
+              className="flex-1"
               color="secondary"
               isDisabled={(forward.inFlow || 0) + (forward.outFlow || 0) <= 0}
               size="sm"
@@ -3034,7 +3034,7 @@ export default function ForwardPage() {
               清零
             </Button>
             <Button
-              className="flex-1 min-h-8"
+              className="flex-1"
               color="danger"
               size="sm"
               startContent={

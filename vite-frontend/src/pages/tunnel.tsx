@@ -1908,7 +1908,7 @@ export default function TunnelPage() {
 
                             <div className="flex gap-1.5 mt-3">
                               <Button
-                                className="flex-1 min-h-8"
+                                className="flex-1"
                                 color="primary"
                                 size="sm"
                                 startContent={
@@ -1927,7 +1927,7 @@ export default function TunnelPage() {
                                 编辑
                               </Button>
                               <Button
-                                className="flex-1 min-h-8"
+                                className="flex-1"
                                 color="warning"
                                 size="sm"
                                 startContent={
@@ -1950,7 +1950,7 @@ export default function TunnelPage() {
                                 诊断
                               </Button>
                               <Button
-                                className="flex-1 min-h-8"
+                                className="flex-1"
                                 color="danger"
                                 size="sm"
                                 startContent={
