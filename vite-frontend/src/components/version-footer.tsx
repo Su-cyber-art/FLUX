@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { siteConfig } from "@/config/site";
+import { cn } from "@/lib/utils";
 import {
   UPDATE_CHANNEL_CHANGED_EVENT,
   type UpdateReleaseChannel,
@@ -87,10 +88,16 @@ export function VersionFooter({
   return (
     <div className={containerClassName}>
       <p className={versionClassName}>
-        v{version}
+        <span className="whitespace-nowrap">v{version}</span>
         {updateAvailable && latestUpdateVersion && (
-          <span className={updateBadgeClassName} role="status">
-            {latestUpdateVersion}
+          <span
+            className={cn(
+              "ml-2 inline-flex items-center whitespace-nowrap rounded-md bg-primary-50 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-primary",
+              updateBadgeClassName,
+            )}
+            role="status"
+          >
+            可更新 {latestUpdateVersion}
           </span>
         )}
       </p>
