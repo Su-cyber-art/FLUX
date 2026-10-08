@@ -130,7 +130,10 @@ func main() {
 	defer wsReporter.Stop()
 	service.SetHTTPReportURL(config.Addr, config.Secret)
 
-	p := &program{onStart: wsReporter.Start}
+	p := &program{startReporter: func() reporter {
+		wsReporter.Start()
+		return wsReporter
+	}}
 	wsReporter.SetRetirementHandlers(func() error {
 		return retirement.Uninstall(p.retire)
 	}, func() {

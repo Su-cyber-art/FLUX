@@ -15,6 +15,7 @@
 - **面板共享**：分享节点资源，接入其他面板的远程节点。
 - **数据管理**：SQLite / PostgreSQL、业务配置备份与恢复。
 - **面板自升级**：下载进度、自动备份、重启后继续查看状态、健康检查及失败恢复。
+- **通行证密钥**：可选的 Passkey 绑定和无用户名登录，支持设备解锁验证。
 - **Mantine 界面**：统一桌面和手机导航、浅色/深色/跟随系统、强调色、页面搜索和按需加载。
 
 ## 本分支的变化
@@ -42,6 +43,8 @@ curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/install
 支持 Linux amd64 / arm64。脚本与镜像来自本仓库的 [最新 Release](https://github.com/Su-cyber-art/FLUX/releases/latest)；镜像仓库不可用时，面板脚本会自动下载并校验 Release 镜像包，无需登录镜像仓库。
 
 指定版本、更新、Alpine 节点和源码部署见 [安装部署](doc/install.md)。维护者发版方式见 [发布指南](doc/releases.md)。
+
+通行证密钥默认关闭。管理员配置 `FLVX_WEBAUTHN_ORIGIN` 后，用户可在个人中心绑定密钥，再从登录页直接选择密钥登录。新装与升级后的启用步骤见 [通行证密钥配置](doc/install.md#通行证密钥登录330-起)。
 
 ## 开始使用
 

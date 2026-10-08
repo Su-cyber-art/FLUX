@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Button,
@@ -15,6 +15,7 @@ import { useForm } from "@mantine/form";
 import {
   ArrowRight,
   Check,
+  KeyRound,
   Network,
   Server,
   ShieldCheck,
@@ -22,7 +23,16 @@ import {
 } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
 
-import { login, checkCaptcha, getPublicConfigByName } from "@/api";
+import {
+  login,
+  checkCaptcha,
+  getPublicConfigByName,
+  getPasskeyStatus,
+  beginPasskeyLogin,
+  finishPasskeyLogin,
+  type LoginResponse,
+} from "@/api";
+import { getPasskey } from "@/utils/passkey";
 import { writeLoginSession } from "@/utils/session";
 import { toast } from "@/lib/notifications";
 import {
@@ -44,8 +54,29 @@ export default function LoginPage() {
   const isWebView = useWebViewMode();
   const { effectiveMode } = useThemeContext();
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeyEnabled, setPasskeyEnabled] = useState(false);
   const [siteKey, setSiteKey] = useState("");
   const [captchaOpen, setCaptchaOpen] = useState(false);
+  const busy = loading || passkeyLoading;
+
+  useEffect(() => {
+    if (!window.isSecureContext || !window.PublicKeyCredential) return;
+    let active = true;
+
+    getPasskeyStatus()
+      .then((res) => {
+        if (active) setPasskeyEnabled(res.code === 0 && res.data.enabled);
+      })
+      .catch(() => {
+        if (active) setPasskeyEnabled(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const form = useForm({
     initialValues: { username: "", password: "" },
     validate: {
@@ -54,6 +85,25 @@ export default function LoginPage() {
         value.length >= 6 ? null : "密码长度至少 6 位",
     },
   });
+  const completeLogin = (data: LoginResponse) => {
+    writeLoginSession(data);
+    if (data.requirePasswordChange) {
+      navigate("/change-password", { replace: true });
+
+      return;
+    }
+    const from = (location.state as { from?: string } | null)?.from;
+
+    navigate(
+      from?.startsWith("/") &&
+        !from.startsWith("//") &&
+        from !== "/" &&
+        from !== "/change-password"
+        ? from
+        : "/dashboard",
+      { replace: true },
+    );
+  };
   const authenticate = async (captchaId = "") => {
     try {
       const response = await login({
@@ -67,30 +117,40 @@ export default function LoginPage() {
 
         return;
       }
-      writeLoginSession(response.data);
-      if (response.data.requirePasswordChange) {
-        navigate("/change-password", { replace: true });
-
-        return;
-      }
-      const from = (location.state as { from?: string } | null)?.from;
-
-      navigate(
-        from?.startsWith("/") &&
-          !from.startsWith("//") &&
-          from !== "/" &&
-          from !== "/change-password"
-          ? from
-          : "/dashboard",
-        { replace: true },
-      );
+      completeLogin(response.data);
     } catch {
       toast.error("暂时无法连接面板，请稍后重试");
     } finally {
       setLoading(false);
     }
   };
+  const authenticatePasskey = async () => {
+    setPasskeyLoading(true);
+    try {
+      const begin = await beginPasskeyLogin();
+
+      if (begin.code !== 0) {
+        toast.error(begin.msg || "无法使用通行证密钥登录");
+
+        return;
+      }
+      const credential = await getPasskey(begin.data.options);
+      const result = await finishPasskeyLogin(begin.data.sessionId, credential);
+
+      if (result.code !== 0) {
+        toast.error(result.msg || "通行证密钥登录失败");
+
+        return;
+      }
+      completeLogin(result.data);
+    } catch {
+      toast.error("通行证密钥登录已取消或失败，请重试或使用密码登录");
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
   const submit = async () => {
+    if (busy) return;
     setLoading(true);
     try {
       const check = await checkCaptcha();
@@ -184,7 +244,7 @@ export default function LoginPage() {
                   <TextInput
                     required
                     autoComplete="username"
-                    disabled={loading}
+                    disabled={busy}
                     label="用户名"
                     placeholder="输入用户名"
                     {...form.getInputProps("username")}
@@ -192,7 +252,7 @@ export default function LoginPage() {
                   <PasswordInput
                     required
                     autoComplete="current-password"
-                    disabled={loading}
+                    disabled={busy}
                     label="密码"
                     placeholder="输入密码"
                     visibilityToggleButtonProps={{
@@ -202,6 +262,7 @@ export default function LoginPage() {
                   />
                   <Button
                     fullWidth
+                    disabled={passkeyLoading}
                     loading={loading}
                     mt="sm"
                     rightSection={<ArrowRight size={16} />}
@@ -211,6 +272,19 @@ export default function LoginPage() {
                   </Button>
                 </Stack>
               </form>
+              {passkeyEnabled && (
+                <Button
+                  fullWidth
+                  disabled={loading}
+                  leftSection={<KeyRound size={16} />}
+                  loading={passkeyLoading}
+                  mt="md"
+                  variant="default"
+                  onClick={() => void authenticatePasskey()}
+                >
+                  选择通行证密钥登录
+                </Button>
+              )}
             </Paper>
             <VersionFooter
               containerClassName="mt-6 text-center"

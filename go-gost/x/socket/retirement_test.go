@@ -2,8 +2,10 @@ package socket
 
 import (
 	"errors"
-	"github.com/go-gost/x/config"
 	"testing"
+	"time"
+
+	"github.com/go-gost/x/config"
 )
 
 func TestRetiredNodeRejectsStaleCommandsAndAcknowledgesRetry(t *testing.T) {
@@ -12,8 +14,9 @@ func TestRetiredNodeRejectsStaleCommandsAndAcknowledgesRetry(t *testing.T) {
 	config.Set(&config.Config{})
 	reporter := NewWebSocketReporter("ws://localhost", "test-secret")
 	defer reporter.Stop()
-	cleanups, finishes := 0, 0
-	reporter.SetRetirementHandlers(func() error { cleanups++; return nil }, func() { finishes++ })
+	cleanups := 0
+	finished := make(chan struct{})
+	reporter.SetRetirementHandlers(func() error { cleanups++; return nil }, func() { close(finished) })
 	reporter.routeCommand(CommandMessage{Type: "RetireNode"})
 	reporter.routeCommand(CommandMessage{Type: "RetireNode"})
 	if cleanups != 1 || !reporter.retired.Load() {
@@ -24,7 +27,9 @@ func TestRetiredNodeRejectsStaleCommandsAndAcknowledgesRetry(t *testing.T) {
 		t.Fatal("queued mutation resurrected config")
 	}
 	reporter.routeCommand(CommandMessage{Type: "FinalizeNodeDeletion"})
-	if finishes != 1 {
+	select {
+	case <-finished:
+	case <-time.After(time.Second):
 		t.Fatal("cleaned agent did not exit after panel confirmation")
 	}
 }
@@ -33,16 +38,22 @@ func TestFailedRetirementCannotFinalizeAndCanRetry(t *testing.T) {
 	reporter := NewWebSocketReporter("ws://localhost", "test-secret")
 	defer reporter.Stop()
 	failure := true
+	finished := make(chan struct{}, 1)
 	reporter.SetRetirementHandlers(func() error {
 		if failure {
 			return errors.New("disk failure")
 		}
 		return nil
-	}, func() { t.Fatal("failed cleanup finalized") })
+	}, func() { finished <- struct{}{} })
 	reporter.routeCommand(CommandMessage{Type: "RetireNode"})
 	reporter.routeCommand(CommandMessage{Type: "FinalizeNodeDeletion"})
 	if reporter.retired.Load() {
 		t.Fatal("failure counted as cleaned")
+	}
+	select {
+	case <-finished:
+		t.Fatal("failed cleanup finalized")
+	case <-time.After(30 * time.Millisecond):
 	}
 	failure = false
 	reporter.routeCommand(CommandMessage{Type: "RetireNode"})

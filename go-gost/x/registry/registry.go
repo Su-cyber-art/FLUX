@@ -34,7 +34,7 @@ var (
 	handlerReg   reg.Registry[NewHandler]          = new(handlerRegistry)
 	dialerReg    reg.Registry[NewDialer]           = new(dialerRegistry)
 	connectorReg reg.Registry[NewConnector]        = new(connectorRegistry)
-	serviceReg   reg.Registry[service.Service]     = new(serviceRegistry)
+	serviceReg                                     = new(serviceRegistry)
 	chainReg     reg.Registry[chain.Chainer]       = new(chainRegistry)
 	hopReg       reg.Registry[hop.Hop]             = new(hopRegistry)
 	autherReg    reg.Registry[auth.Authenticator]  = new(autherRegistry)

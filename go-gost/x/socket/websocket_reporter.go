@@ -185,6 +185,7 @@ type WebSocketReporter struct {
 	retired           atomic.Bool
 	retireNode        func() error
 	finishRetirement  func()
+	workers           sync.WaitGroup
 }
 
 var wsDial = func(dialer *websocket.Dialer, rawURL string) (*websocket.Conn, *http.Response, error) {
@@ -244,8 +245,15 @@ func (w *WebSocketReporter) releaseTCPPingSlot() {
 
 // Start 启动WebSocket报告器
 func (w *WebSocketReporter) Start() {
-	go w.runMutationCommands()
-	go w.run()
+	w.workers.Add(2)
+	go func() {
+		defer w.workers.Done()
+		w.runMutationCommands()
+	}()
+	go func() {
+		defer w.workers.Done()
+		w.run()
+	}()
 }
 
 // Stop 停止WebSocket报告器
@@ -256,6 +264,7 @@ func (w *WebSocketReporter) Stop() {
 		w.conn.Close()
 	}
 	w.connMutex.Unlock()
+	w.workers.Wait()
 }
 
 // backoffWithJitter 返回带随机抖动的退避时间（±25%）
@@ -345,10 +354,10 @@ func (w *WebSocketReporter) connect() error {
 
 	candidates := buildWebSocketCandidates(w.addr, w.secret, w.version, cfg.Http, cfg.Tls, cfg.Socks, w.preferredWSScheme)
 
-	dialer := websocket.DefaultDialer
+	dialer := *websocket.DefaultDialer
 	dialer.HandshakeTimeout = 10 * time.Second
 
-	conn, usedURL, err := dialWebSocketWithFallback(dialer, candidates)
+	conn, usedURL, err := dialWebSocketWithFallback(&dialer, candidates)
 	if err != nil {
 		if w.retired.Load() && errors.Is(err, errEnrollmentRevoked) && w.finishRetirement != nil {
 			go w.finishRetirement()
@@ -542,7 +551,11 @@ func (w *WebSocketReporter) handleConnection() {
 	}()
 
 	// 启动消息接收goroutine
-	go w.receiveMessages()
+	w.workers.Add(1)
+	go func() {
+		defer w.workers.Done()
+		w.receiveMessages()
+	}()
 
 	// 指标上报 ticker
 	metricTicker := time.NewTicker(w.pingInterval)
@@ -901,6 +914,14 @@ func isMutationCommand(commandType string) bool {
 
 // routeCommand 路由命令到对应的处理函数
 func (w *WebSocketReporter) routeCommand(cmd CommandMessage) {
+	if isMutationCommand(cmd.Type) {
+		unlock := config.LockMutation()
+		defer unlock()
+		if w.ctx.Err() != nil {
+			w.sendCommandFailure(cmd, "Agent is shutting down")
+			return
+		}
+	}
 	if w.retiring.Load() && cmd.Type != "RetireNode" && cmd.Type != "FinalizeNodeDeletion" {
 		w.sendCommandFailure(cmd, "节点正在删除，拒绝恢复运行配置")
 		return
@@ -1044,7 +1065,8 @@ func (w *WebSocketReporter) routeCommand(cmd CommandMessage) {
 
 	w.sendResponse(response)
 	if cmd.Type == "FinalizeNodeDeletion" && err == nil && w.finishRetirement != nil {
-		w.finishRetirement()
+		// Stop waits for this command worker, so finalization must run outside it.
+		go w.finishRetirement()
 	}
 }
 

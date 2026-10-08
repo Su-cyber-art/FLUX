@@ -123,8 +123,8 @@ jobs:
           ../artifacts/gost-${{ matrix.arch }} -V | grep -F "gost $FLUX_RELEASE_VERSION "
       - name: Agent unit and protocol tests
         run: |
-          (cd go-gost && go test ./internal/retirement)
-          (cd go-gost/x && go test ./socket ./config)
+          (cd go-gost && go test -count=1 ./...)
+          (cd go-gost/x && go test ./socket ./config/... ./api/... ./service ./registry)
       - name: Verify real agent removal on systemd and OpenRC
         run: |
           (cd go-backend && CGO_ENABLED=0 go test -c -o ../artifacts/node-deletion.test ./internal/http/handler)

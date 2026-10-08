@@ -53,6 +53,30 @@ curl -fsSL https://github.com/Su-cyber-art/FLUX/releases/latest/download/panel_i
 
 终端更新和网页升级共用锁，已有任务执行时，另一种方式会明确停止。健康检查默认等待 180 秒，安装环境可通过后端环境变量 `PANEL_UPGRADE_HEALTH_TIMEOUT` 调整为 10–300 秒。
 
+## 通行证密钥登录（3.3.0 起）
+
+通行证密钥（Passkey）默认关闭。管理员启用后，用户先用密码登录，在“个人中心 → 通行证密钥”输入当前密码并绑定设备密钥；之后可在登录页选择密钥，通过设备解锁直接登录，无需输入用户名或 Cloudflare 验证码。绑定和删除密钥均需验证当前密码，原密码登录仍可使用。
+
+在实际部署目录的 `.env` 中添加浏览器访问面板时的公开前端 origin：
+
+```dotenv
+FLVX_WEBAUTHN_ORIGIN=https://panel.example.com
+```
+
+必须包含协议、域名和必要的端口，不能带路径、查询参数或尾部 `/`。公网部署使用 HTTPS；本机开发可用 `http://localhost:3000` 或 `http://127.0.0.1:3000`。反向代理和独立 API 部署均填写浏览器地址栏中的前端 origin。
+
+确认部署的 `docker-compose.yml` 在 `backend.environment` 下传递该变量；3.3.0 的 IPv4 / IPv6 Compose 模板已包含：
+
+```yaml
+FLVX_WEBAUTHN_ORIGIN: ${FLVX_WEBAUTHN_ORIGIN:-}
+```
+
+保存后在部署目录执行 `docker compose up -d --force-recreate backend`，再重新加载前端页面。源码部署将同一环境变量传给 `paneld`；多文件 Compose 部署使用原有的 `-f` 参数。
+
+升级会保留已有 `.env`，不会自动启用此功能。旧部署若保留了自定义 Compose 文件，需要补上变量传递项。入口未出现时，检查实际容器中的变量、HTTPS 和浏览器对通行密钥的支持；PWA 提示新版本时选择刷新。未绑定密钥的账号仍需先完成密码和验证码登录。
+
+更换面板域名会改变密钥所属站点，需要在新域名重新绑定。设备丢失时可使用密码登录，在个人中心输入当前密码后删除旧密钥，再绑定新设备。
+
 ## 删除节点
 
 建议面板和 agent 均升级至 3.1.2 或更高版本后，再在节点页面删除本地节点。请先删除或迁移该节点关联的隧道、转发和节点共享，避免遗留其他节点上的链路资源。

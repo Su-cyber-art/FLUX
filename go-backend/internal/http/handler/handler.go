@@ -39,9 +39,12 @@ type Handler struct {
 	healthCheck     *health.Checker
 	nftablesManager nftablesRuntimeManager
 
+	peerResourceMu sync.Mutex
 	captchaMu      sync.Mutex
 	nodeDeletionMu sync.Mutex
 	captchaTokens  map[string]int64
+	passkeyMu      sync.Mutex
+	passkeyPending map[string]passkeyCeremony
 
 	jobsMu              sync.Mutex
 	jobsCancel          context.CancelFunc
@@ -50,12 +53,13 @@ type Handler struct {
 	fingerprintMu       sync.Mutex
 	licenseValidationMu sync.Mutex
 
-	upgradeMu                sync.Mutex
-	systemUpgradeMu          sync.Mutex
-	pendingUpgradeRedeploy   map[int64]struct{}
-	nodeOnlineRedeployAt     map[int64]time.Time
-	nodeOnlineRedeployQueued map[int64]struct{}
-	nodeOnlineRedeploying    map[int64]struct{}
+	upgradeMu                   sync.Mutex
+	systemUpgradeMu             sync.Mutex
+	pendingUpgradeRedeploy      map[int64]struct{}
+	nodeOnlineRedeployAt        map[int64]time.Time
+	nodeOnlineRedeployQueued    map[int64]struct{}
+	nodeOnlineRedeploying       map[int64]struct{}
+	nodeLocalRuntimeRetryQueued map[int64]struct{}
 
 	qualityProber *tunnelQualityProber
 	bestExit      *bestExitManager
@@ -115,6 +119,7 @@ func New(repo *repo.Repository, jwtSecret string) *Handler {
 		healthCheck:              nil,
 		nftablesManager:          runtimenft.NewManager(nil),
 		captchaTokens:            make(map[string]int64),
+		passkeyPending:           make(map[string]passkeyCeremony),
 		pendingUpgradeRedeploy:   make(map[int64]struct{}),
 		nodeOnlineRedeployAt:     make(map[int64]time.Time),
 		nodeOnlineRedeployQueued: make(map[int64]struct{}),
@@ -156,6 +161,13 @@ func (h *Handler) GetUserAuthState(userID int64) (*auth.UserAuthState, error) {
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/user/login", h.login)
+	mux.HandleFunc("/api/v1/user/passkey/status", h.passkeyStatus)
+	mux.HandleFunc("/api/v1/user/passkey/login/begin", h.passkeyLoginBegin)
+	mux.HandleFunc("/api/v1/user/passkey/login/finish", h.passkeyLoginFinish)
+	mux.HandleFunc("/api/v1/user/passkey/register/begin", h.passkeyRegisterBegin)
+	mux.HandleFunc("/api/v1/user/passkey/register/finish", h.passkeyRegisterFinish)
+	mux.HandleFunc("/api/v1/user/passkey/list", h.passkeyList)
+	mux.HandleFunc("/api/v1/user/passkey/delete", h.passkeyDelete)
 	mux.HandleFunc("/api/v1/user/list", h.userList)
 	mux.HandleFunc("/api/v1/user/create", h.userCreate)
 	mux.HandleFunc("/api/v1/user/update", h.userUpdate)
@@ -882,7 +894,7 @@ func (h *Handler) flowUpload(w http.ResponseWriter, r *http.Request) {
 				log.Printf("flow upload metadata lookup failed node_id=%d err=%v", node.ID, metaErr)
 				metas = map[int64]repo.FlowUploadForwardMeta{}
 			}
-			batch := h.buildFlowUploadBatch(items, metas)
+			batch := h.buildNodeFlowUploadBatch(node.ID, items, metas)
 			h.recordTunnelMetricsFromForwardBatch(node.ID, batch.forwardTraffic, metas, now.UnixMilli())
 			h.applyFlowUploadBatch(node.ID, batch, now)
 		}

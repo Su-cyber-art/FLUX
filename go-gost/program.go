@@ -3,6 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/go-gost/core/auth"
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/core/service"
@@ -18,25 +26,23 @@ import (
 	xservice "github.com/go-gost/x/service"
 	"github.com/go-gost/x/socket"
 	"github.com/judwhite/go-svc"
-	"net"
-	"net/http"
-	"os"
-	"os/signal"
-	"strings"
-	"sync"
-	"syscall"
-	"time"
 )
 
-type program struct {
-	runtimeMu    sync.Mutex
-	retiring     bool
-	onStart      func()
-	srvApi       service.Service
-	srvMetrics   service.Service
-	srvProfiling *http.Server
+type reporter interface {
+	Stop()
+}
 
-	cancel context.CancelFunc
+type program struct {
+	startReporter     func() reporter
+	reporter          reporter
+	srvApi            service.Service
+	srvMetrics        service.Service
+	srvProfiling      *http.Server
+	profilingListener net.Listener
+
+	cancel   context.CancelFunc
+	stopped  bool
+	retiring bool
 }
 
 func (p *program) Init(env svc.Environment) error {
@@ -53,14 +59,20 @@ func (p *program) Init(env svc.Environment) error {
 	return nil
 }
 
-func (p *program) Start() error {
-	p.runtimeMu.Lock()
-	defer p.runtimeMu.Unlock()
+func (p *program) Start() (err error) {
+	unlock := config.LockMutation()
+	defer unlock()
+	p.stopped = false
+	defer func() {
+		if err != nil {
+			p.stopRuntime()
+		}
+	}()
 	cfg := &config.Config{}
-	if _, err := os.Stat(".retiring"); err == nil {
+	if _, statErr := os.Stat(".retiring"); statErr == nil {
 		p.retiring = true
+		config.DisablePersist()
 	} else {
-		var err error
 		cfg, err = parser.Parse()
 		if err != nil {
 			return err
@@ -74,25 +86,30 @@ func (p *program) Start() error {
 		os.Exit(0)
 	}
 
-	config.Set(cfg)
-
 	if err := loader.Load(cfg); err != nil {
 		return err
-	}
-
-	// Enable config persistence after initial load so runtime mutations
-	// (AddService, UpdateService, DeleteService, etc.) are saved to disk.
-	if !p.retiring {
-		socket.EnableConfigPersist()
 	}
 
 	if err := p.run(cfg); err != nil {
 		return err
 	}
 
+	config.Set(cfg)
+	if !p.retiring {
+		socket.EnableConfigPersist()
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
-	go p.reload(ctx)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGHUP)
+	go p.reload(ctx, c)
+
+	// A connected panel may immediately send commands. Only expose the agent
+	// after initial config loading, runtime startup and persistence are ready.
+	if p.startReporter != nil {
+		p.reporter = p.startReporter()
+	}
 
 	go func() {
 		select {
@@ -103,17 +120,17 @@ func (p *program) Start() error {
 		}
 	}()
 
-	if p.onStart != nil {
-		p.onStart()
-	}
 	return nil
 }
 
+// retire is called by the serialized RetireNode command while LockMutation is held.
+// Keep the reporter alive until the panel acknowledges the completed cleanup.
 func (p *program) retire() error {
-	p.runtimeMu.Lock()
-	defer p.runtimeMu.Unlock()
 	p.retiring = true
 	config.DisablePersist()
+	if p.cancel != nil {
+		p.cancel()
+	}
 	if err := p.stopRuntime(); err != nil {
 		return err
 	}
@@ -121,7 +138,14 @@ func (p *program) retire() error {
 	return loader.Load(&config.Config{})
 }
 
-func (p *program) run(cfg *config.Config) error {
+func (p *program) run(cfg *config.Config) (err error) {
+	defer func() {
+		if err != nil {
+			// Auxiliary listeners may occupy ports required by the rollback config.
+			// Release all resources opened by this attempt before rebuilding it.
+			p.stopRuntime()
+		}
+	}()
 	for _, svc := range registry.ServiceRegistry().GetAll() {
 		svc := svc
 		go func() {
@@ -182,6 +206,10 @@ func (p *program) run(cfg *config.Config) error {
 
 	if p.srvProfiling != nil {
 		p.srvProfiling.Close()
+		if p.profilingListener != nil {
+			p.profilingListener.Close()
+			p.profilingListener = nil
+		}
 		p.srvProfiling = nil
 	}
 	if cfg.Profiling != nil {
@@ -192,7 +220,12 @@ func (p *program) run(cfg *config.Config) error {
 		s := &http.Server{
 			Addr: addr,
 		}
+		ln, err := net.Listen("tcp", addr)
+		if err != nil {
+			return err
+		}
 		p.srvProfiling = s
+		p.profilingListener = ln
 
 		go func() {
 			defer s.Close()
@@ -200,7 +233,7 @@ func (p *program) run(cfg *config.Config) error {
 			log := logger.Default().WithFields(map[string]any{"kind": "service", "service": "@profiling"})
 
 			log.Info("listening on ", addr)
-			if err := s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			if err := s.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 				log.Error(err)
 			}
 		}()
@@ -210,8 +243,16 @@ func (p *program) run(cfg *config.Config) error {
 }
 
 func (p *program) Stop() error {
-	p.runtimeMu.Lock()
-	defer p.runtimeMu.Unlock()
+	if p.cancel != nil {
+		p.cancel()
+	}
+
+	if p.reporter != nil {
+		p.reporter.Stop()
+	}
+	unlock := config.LockMutation()
+	defer unlock()
+	p.stopped = true
 	return p.stopRuntime()
 }
 
@@ -222,34 +263,35 @@ func (p *program) stopRuntime() error {
 			failures = append(failures, err)
 		}
 	}
-	if p.cancel != nil {
-		p.cancel()
-	}
-
-	for name, srv := range registry.ServiceRegistry().GetAll() {
-		closed(srv.Close())
+	for name := range registry.ServiceRegistry().GetAll() {
+		closed(registry.UnregisterService(name))
 		logger.Default().Debugf("service %s shutdown", name)
 	}
 
 	if p.srvApi != nil {
 		closed(p.srvApi.Close())
+		p.srvApi = nil
 		logger.Default().Debug("service @api shutdown")
 	}
 	if p.srvMetrics != nil {
 		closed(p.srvMetrics.Close())
+		p.srvMetrics = nil
 		logger.Default().Debug("service @metrics shutdown")
 	}
 	if p.srvProfiling != nil {
 		closed(p.srvProfiling.Close())
+		if p.profilingListener != nil {
+			closed(p.profilingListener.Close())
+			p.profilingListener = nil
+		}
+		p.srvProfiling = nil
 		logger.Default().Debug("service @profiling shutdown")
 	}
-
 	return errors.Join(failures...)
 }
 
-func (p *program) reload(ctx context.Context) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGHUP)
+func (p *program) reload(ctx context.Context, c chan os.Signal) {
+	defer signal.Stop(c)
 
 	for {
 		select {
@@ -267,8 +309,11 @@ func (p *program) reload(ctx context.Context) {
 }
 
 func (p *program) reloadConfig() error {
-	p.runtimeMu.Lock()
-	defer p.runtimeMu.Unlock()
+	unlock := config.LockMutation()
+	defer unlock()
+	if p.stopped {
+		return errors.New("agent is shutting down")
+	}
 	if p.retiring {
 		return errors.New("节点正在删除")
 	}
@@ -276,9 +321,7 @@ func (p *program) reloadConfig() error {
 	if err != nil {
 		return err
 	}
-	config.Set(cfg)
-
-	if err := loader.Load(cfg); err != nil {
+	if err := loader.Reload(cfg, p.run); err != nil {
 		return err
 	}
 	activeServices := make(map[string]struct{}, len(cfg.Services))
@@ -288,10 +331,6 @@ func (p *program) reloadConfig() error {
 		}
 	}
 	xservice.GetGlobalTrafficManager().RetainServices(activeServices)
-
-	if err := p.run(cfg); err != nil {
-		return err
-	}
 
 	return nil
 }
