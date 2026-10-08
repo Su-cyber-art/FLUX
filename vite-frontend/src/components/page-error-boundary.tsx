@@ -1,6 +1,8 @@
 import { Component, type ReactNode } from "react";
-import { Alert, Button, Stack } from "@mantine/core";
+import { Alert, Stack } from "@mantine/core";
 import { RefreshCw } from "lucide-react";
+
+import { RefreshApplicationButton } from "@/components/refresh-application-button";
 
 export class PageErrorBoundary extends Component<
   { children: ReactNode },
@@ -19,15 +21,14 @@ export class PageErrorBoundary extends Component<
       <Alert color="red" m="md" title="页面暂时无法加载">
         <Stack gap="sm">
           <span>请重新加载页面后重试。</span>
-          <Button
+          <RefreshApplicationButton
             color="red"
             leftSection={<RefreshCw size={14} />}
             size="xs"
             variant="light"
-            onClick={() => window.location.reload()}
           >
             重新加载
-          </Button>
+          </RefreshApplicationButton>
         </Stack>
       </Alert>
     );

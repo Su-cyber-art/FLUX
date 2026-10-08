@@ -14,6 +14,7 @@ import {
 } from "@mantine/core";
 import { AlertCircle, Check, LoaderCircle } from "lucide-react";
 
+import { RefreshApplicationButton } from "@/components/refresh-application-button";
 import {
   Modal,
   ModalBody,
@@ -177,9 +178,7 @@ export function SystemUpgradeProgress({
           <Button variant="default" onClick={onClose}>
             {active ? "后台继续" : "关闭"}
           </Button>
-          {(success || restored) && (
-            <Button onClick={() => window.location.reload()}>刷新页面</Button>
-          )}
+          {(success || restored) && <RefreshApplicationButton />}
         </ModalFooter>
       </ModalContent>
     </Modal>

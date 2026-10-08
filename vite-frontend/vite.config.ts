@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "prompt",
-      injectRegister: "auto",
+      injectRegister: false,
       includeAssets: ["favicon.ico", "apple-touch-icon.png"],
       manifest: {
         name: "FLVX",
@@ -40,6 +40,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        clientsClaim: true,
         navigateFallback: "/index.html",
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
