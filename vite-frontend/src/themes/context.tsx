@@ -6,7 +6,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createTheme, MantineProvider } from "@mantine/core";
+import {
+  createTheme,
+  MantineProvider,
+  type CSSVariablesResolver,
+} from "@mantine/core";
 
 export type ThemeMode = "light" | "dark" | "system";
 export const ACCENTS = [
@@ -23,6 +27,24 @@ interface ThemeState {
   setAccent: (accent: Accent) => void;
 }
 const ThemeContext = createContext<ThemeState | null>(null);
+// Light-variant text (Badge, ThemeIcon, light Button) uses the same shades as
+// the --*-ink tone tokens in styles/globals.css, so tinted UI stays readable.
+const cssVariablesResolver: CSSVariablesResolver = (theme) => {
+  const light: Record<string, string> = {};
+  const dark: Record<string, string> = {};
+
+  Object.keys(theme.colors).forEach((color) => {
+    if (color === "dark") return;
+    const lightShade = color === "gray" ? 7 : color === "yellow" ? 9 : 8;
+
+    light[`--mantine-color-${color}-light-color`] =
+      `var(--mantine-color-${color}-${lightShade})`;
+    dark[`--mantine-color-${color}-light-color`] =
+      `var(--mantine-color-${color}-3)`;
+  });
+
+  return { variables: {}, light, dark };
+};
 const readMode = (): ThemeMode => {
   const value = localStorage.getItem("flvx:theme");
 
@@ -114,7 +136,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <MantineProvider forceColorScheme={effectiveMode} theme={theme}>
+      <MantineProvider
+        cssVariablesResolver={cssVariablesResolver}
+        forceColorScheme={effectiveMode}
+        theme={theme}
+      >
         {children}
       </MantineProvider>
     </ThemeContext.Provider>

@@ -24,6 +24,7 @@ React dashboard for the FLUX personal fork. React 18 + TypeScript + Mantine 8 + 
 - All production controls are backed by Mantine; do not reintroduce the old shadcn/HeroUI bridge, Radix packages, or HeroUI/NextUI packages.
 - Preserve the raw JWT Authorization header (no Bearer prefix) and `{code,msg,data,ts}` response envelope.
 - Global colors come from Mantine and semantic tokens; retain the tailwind-theme.pcss import.
+- Color by tone, not palette: `Chip`/`IconTile`/`Button color` or `bg-*-soft`, `text-*-ink`, `border-*-line` (see `src/themes/README.md`). No raw Tailwind palette classes, fixed-scale tone classes, or `dark:` color overrides; icons come from `lucide-react`.
 - Dark utilities follow `data-mantine-color-scheme`, not an independent system media query.
 - Navigation/headers come from the shared app shell. Avoid repeated page-level account menus or nested application shells.
 - Keep errors, empty states, disabled controls, batch results, permission checks and mobile form scrolling functional.

@@ -1,6 +1,13 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { parseDate } from "@internationalized/date";
-import { LayoutGrid, List } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  RotateCcw,
+  Settings,
+  SquarePen,
+  Trash2,
+} from "lucide-react";
 
 import { SearchBar } from "@/components/search-bar";
 import {
@@ -78,7 +85,6 @@ import {
   assignMonitorPermission,
   removeMonitorPermission,
 } from "@/api";
-import { EditIcon, DeleteIcon, SettingsIcon } from "@/components/icons";
 import { PageLoadingState } from "@/components/page-state";
 import { TrafficLimitField } from "@/components/traffic-limit-field";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
@@ -969,7 +975,7 @@ export default function UserPage() {
       {loading ? (
         <PageLoadingState message="正在加载..." />
       ) : users.length === 0 ? (
-        <Card className="shadow-sm border border-gray-200 dark:border-gray-700 bg-default-50/50">
+        <Card className="shadow-sm border border-divider bg-default-50/50">
           <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
             <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
               暂无用户数据
@@ -1012,10 +1018,10 @@ export default function UserPage() {
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded-full bg-primary text-white font-bold text-sm relative">
+                        <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold text-sm relative">
                           {(user.name || user.user).slice(0, 2).toUpperCase()}
                           <span
-                            className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-divider dark:border-zinc-900 rounded-full ${userStatus.color === "success" ? "bg-success" : "bg-danger"}`}
+                            className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-content1 rounded-full ${userStatus.color === "success" ? "bg-success" : "bg-danger"}`}
                           />
                         </div>
                         <div className="flex flex-col">
@@ -1110,7 +1116,8 @@ export default function UserPage() {
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1.5 min-w-max">
                         <Button
-                          className="h-6 px-2 min-w-0 text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400"
+                          className="h-6 px-2 min-w-0 text-xs"
+                          color="success"
                           size="sm"
                           variant="flat"
                           onPress={() => handleManageTunnels(user)}
@@ -1118,7 +1125,8 @@ export default function UserPage() {
                           权限
                         </Button>
                         <Button
-                          className="h-6 px-2 min-w-0 text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-400"
+                          className="h-6 px-2 min-w-0 text-xs"
+                          color="warning"
                           size="sm"
                           title="重置流量"
                           variant="flat"
@@ -1127,7 +1135,8 @@ export default function UserPage() {
                           重置
                         </Button>
                         <Button
-                          className="h-6 px-2 min-w-0 text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400"
+                          className="h-6 px-2 min-w-0 text-xs"
+                          color="primary"
                           size="sm"
                           variant="flat"
                           onPress={() => handleEdit(user)}
@@ -1135,7 +1144,8 @@ export default function UserPage() {
                           编辑
                         </Button>
                         <Button
-                          className="h-6 px-2 min-w-0 text-xs bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-400"
+                          className="h-6 px-2 min-w-0 text-xs"
+                          color="danger"
                           size="sm"
                           variant="flat"
                           onPress={() => handleDelete(user)}
@@ -1172,10 +1182,10 @@ export default function UserPage() {
                   <CardHeader className="pb-2 md:pb-2">
                     <div className="flex justify-between items-start w-full">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded-full bg-primary text-white font-bold text-sm relative">
+                        <div className="flex items-center justify-center shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold text-sm relative">
                           {(user.name || user.user).slice(0, 2).toUpperCase()}
                           <span
-                            className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-divider dark:border-zinc-900 rounded-full ${userStatus.color === "success" ? "bg-success" : "bg-danger"}`}
+                            className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-content1 rounded-full ${userStatus.color === "success" ? "bg-success" : "bg-danger"}`}
                           />
                         </div>
                         <div className="flex flex-col min-w-0">
@@ -1308,7 +1318,7 @@ export default function UserPage() {
                           className="flex-1"
                           color="primary"
                           size="sm"
-                          startContent={<EditIcon className="w-3 h-3" />}
+                          startContent={<SquarePen className="w-3 h-3" />}
                           variant="flat"
                           onPress={() => handleEdit(user)}
                         >
@@ -1318,20 +1328,7 @@ export default function UserPage() {
                           className="flex-1"
                           color="warning"
                           size="sm"
-                          startContent={
-                            <svg
-                              aria-hidden="true"
-                              className="w-3 h-3"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                clipRule="evenodd"
-                                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                                fillRule="evenodd"
-                              />
-                            </svg>
-                          }
+                          startContent={<RotateCcw className="w-3 h-3" />}
                           variant="flat"
                           onPress={() => handleResetFlow(user)}
                         >
@@ -1345,7 +1342,7 @@ export default function UserPage() {
                           className="flex-1"
                           color="success"
                           size="sm"
-                          startContent={<SettingsIcon className="w-3 h-3" />}
+                          startContent={<Settings className="w-3 h-3" />}
                           variant="flat"
                           onPress={() => handleManageTunnels(user)}
                         >
@@ -1355,7 +1352,7 @@ export default function UserPage() {
                           className="flex-1"
                           color="danger"
                           size="sm"
-                          startContent={<DeleteIcon className="w-3 h-3" />}
+                          startContent={<Trash2 className="w-3 h-3" />}
                           variant="flat"
                           onPress={() => handleDelete(user)}
                         >
@@ -1635,7 +1632,7 @@ export default function UserPage() {
               {/* 监控权限部分 */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">监控权限</h3>
-                <div className="flex items-center justify-between gap-4 bg-default-100 dark:bg-default-50 p-4 rounded-lg border border-default-200 dark:border-default-100/30">
+                <div className="flex items-center justify-between gap-4 bg-default-100 dark:bg-default-50 p-4 rounded-lg border border-divider">
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-foreground">
                       允许访问监控功能
@@ -1670,7 +1667,7 @@ export default function UserPage() {
               <div>
                 <h3 className="text-lg font-semibold mb-4">分配新权限</h3>
                 <div className="space-y-4">
-                  <div className="text-sm text-default-500 bg-default-100 dark:bg-default-50 p-3 rounded-lg border border-default-200 dark:border-default-100/30">
+                  <div className="text-sm text-default-500 bg-default-100 dark:bg-default-50 p-3 rounded-lg border border-divider">
                     流量限制、规则数量、到期时间、流量重置时间将自动继承用户设置
                   </div>
 
@@ -1692,8 +1689,8 @@ export default function UserPage() {
                               isAssigned
                                 ? "bg-default-100/50 dark:bg-default-50/50 border-default-200/50 dark:border-default-100/20 opacity-60 cursor-not-allowed"
                                 : isSelected
-                                  ? "bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-500/50 shadow-sm"
-                                  : "bg-white dark:bg-default-50 border-default-200 dark:border-default-100/30 hover:border-primary-200 dark:hover:border-primary-500/30 hover:shadow-sm"
+                                  ? "bg-primary-soft border-primary-line shadow-sm"
+                                  : "bg-content1 border-divider hover:border-primary-line hover:shadow-sm"
                             }
                           `}
                           role="button"
@@ -1726,7 +1723,7 @@ export default function UserPage() {
                                 }
                               />
                               <span
-                                className={`font-medium truncate ${isAssigned ? "text-default-400" : "text-default-700 dark:text-default-600"}`}
+                                className={`font-medium truncate ${isAssigned ? "text-default-400" : "text-default-700"}`}
                               >
                                 {tunnel.name}
                               </span>
@@ -1791,7 +1788,7 @@ export default function UserPage() {
                       );
                     })}
                     {tunnels.length === 0 && (
-                      <div className="p-8 text-center text-default-400 bg-default-50 dark:bg-default-100/50 rounded-lg border border-dashed border-default-200 dark:border-default-100/30">
+                      <div className="p-8 text-center text-default-400 bg-default-50 dark:bg-default-100/50 rounded-lg border border-dashed border-divider">
                         暂无可用隧道
                       </div>
                     )}
@@ -1850,7 +1847,7 @@ export default function UserPage() {
                         <TableCell>
                           <div className="flex flex-col gap-1">
                             <div className="flex justify-between text-small">
-                              <span className="text-gray-600">限制:</span>
+                              <span className="text-default-600">限制:</span>
                               <span className="font-medium">
                                 {formatFlowLimit(
                                   userTunnel.flow,
@@ -1859,7 +1856,7 @@ export default function UserPage() {
                               </span>
                             </div>
                             <div className="flex justify-between text-small">
-                              <span className="text-gray-600">已用:</span>
+                              <span className="text-default-600">已用:</span>
                               <span className="font-medium text-danger">
                                 {formatFlow(
                                   calculateTunnelUsedFlow(userTunnel),
@@ -1907,7 +1904,7 @@ export default function UserPage() {
                               variant="flat"
                               onPress={() => handleEditTunnel(userTunnel)}
                             >
-                              <EditIcon className="w-4 h-4" />
+                              <SquarePen className="w-4 h-4" />
                             </Button>
                             <Button
                               isIconOnly
@@ -1918,18 +1915,7 @@ export default function UserPage() {
                               variant="flat"
                               onPress={() => handleResetTunnelFlow(userTunnel)}
                             >
-                              <svg
-                                aria-hidden="true"
-                                className="w-4 h-4"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  clipRule="evenodd"
-                                  d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                                  fillRule="evenodd"
-                                />
-                              </svg>
+                              <RotateCcw className="w-4 h-4" />
                             </Button>
                             <Button
                               isIconOnly
@@ -1939,7 +1925,7 @@ export default function UserPage() {
                               variant="flat"
                               onPress={() => handleRemoveTunnel(userTunnel)}
                             >
-                              <DeleteIcon className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -2142,8 +2128,8 @@ export default function UserPage() {
           </ModalHeader>
           <ModalBody>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-danger-100 rounded-full flex items-center justify-center">
-                <DeleteIcon className="w-6 h-6 text-danger" />
+              <div className="w-12 h-12 bg-danger-soft rounded-full flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-danger" />
               </div>
               <div className="flex-1">
                 <p className="text-foreground">
@@ -2185,8 +2171,8 @@ export default function UserPage() {
           </ModalHeader>
           <ModalBody>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-danger-100 rounded-full flex items-center justify-center">
-                <DeleteIcon className="w-6 h-6 text-danger" />
+              <div className="w-12 h-12 bg-danger-soft rounded-full flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-danger" />
               </div>
               <div className="flex-1">
                 <p className="text-foreground">
@@ -2230,19 +2216,8 @@ export default function UserPage() {
           </ModalHeader>
           <ModalBody>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-warning-100 rounded-full flex items-center justify-center">
-                <svg
-                  aria-hidden="true"
-                  className="w-6 h-6 text-warning"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    clipRule="evenodd"
-                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                    fillRule="evenodd"
-                  />
-                </svg>
+              <div className="w-12 h-12 bg-warning-soft rounded-full flex items-center justify-center">
+                <RotateCcw className="w-6 h-6 text-warning" />
               </div>
               <div className="flex-1">
                 <p className="text-foreground">
@@ -2255,10 +2230,8 @@ export default function UserPage() {
                 <p className="text-small text-default-500 mt-1">
                   该操作只会重置账号流量不会重置隧道权限流量，重置后该用户的上下行流量将归零，此操作不可撤销。
                 </p>
-                <div className="mt-2 p-2 bg-warning-50 dark:bg-warning-100/10 rounded text-xs">
-                  <div className="text-warning-700 dark:text-warning-300">
-                    当前流量使用情况：
-                  </div>
+                <div className="mt-2 p-2 bg-warning-soft rounded text-xs">
+                  <div className="text-warning-ink">当前流量使用情况：</div>
                   <div className="mt-1 space-y-1">
                     <div className="flex justify-between">
                       <span>上行流量：</span>
@@ -2278,7 +2251,7 @@ export default function UserPage() {
                     </div>
                     <div className="flex justify-between font-medium">
                       <span>总计：</span>
-                      <span className="font-mono text-warning-700 dark:text-warning-300">
+                      <span className="font-mono text-warning-ink">
                         {userToReset
                           ? formatFlow(calculateUserTotalUsedFlow(userToReset))
                           : "-"}
@@ -2319,19 +2292,8 @@ export default function UserPage() {
           </ModalHeader>
           <ModalBody>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-warning-100 rounded-full flex items-center justify-center">
-                <svg
-                  aria-hidden="true"
-                  className="w-6 h-6 text-warning"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    clipRule="evenodd"
-                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                    fillRule="evenodd"
-                  />
-                </svg>
+              <div className="w-12 h-12 bg-warning-soft rounded-full flex items-center justify-center">
+                <RotateCcw className="w-6 h-6 text-warning" />
               </div>
               <div className="flex-1">
                 <p className="text-foreground">
@@ -2346,10 +2308,8 @@ export default function UserPage() {
                 <p className="text-small text-default-500 mt-1">
                   该操作只会重置隧道权限流量不会重置账号流量，重置后该隧道权限的上下行流量将归零，此操作不可撤销。
                 </p>
-                <div className="mt-2 p-2 bg-warning-50 dark:bg-warning-100/10 rounded text-xs">
-                  <div className="text-warning-700 dark:text-warning-300">
-                    当前流量使用情况：
-                  </div>
+                <div className="mt-2 p-2 bg-warning-soft rounded text-xs">
+                  <div className="text-warning-ink">当前流量使用情况：</div>
                   <div className="mt-1 space-y-1">
                     <div className="flex justify-between">
                       <span>上行流量：</span>
@@ -2369,7 +2329,7 @@ export default function UserPage() {
                     </div>
                     <div className="flex justify-between font-medium">
                       <span>总计：</span>
-                      <span className="font-mono text-warning-700 dark:text-warning-300">
+                      <span className="font-mono text-warning-ink">
                         {tunnelToReset
                           ? formatFlow(calculateTunnelUsedFlow(tunnelToReset))
                           : "-"}

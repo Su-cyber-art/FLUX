@@ -1,5 +1,13 @@
 import type { BatchOperationFailure, ForwardApiItem } from "@/api/types";
 
+import {
+  ChevronDown,
+  ClipboardCheck,
+  GripVertical,
+  RefreshCw,
+  SquarePen,
+  Trash2,
+} from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -602,18 +610,9 @@ export const SortableTunnelGroupContainer = ({
             variant="light"
             onPress={onToggleCollapsed}
           >
-            <svg
-              aria-hidden="true"
+            <ChevronDown
               className={`h-4 w-4 transition-transform ${collapsed ? "-rotate-90" : "rotate-0"}`}
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
+            />
           </Button>
           {/* 倍率 */}
           <span className={titleClassName}>{tunnel.tunnelName}</span>
@@ -629,14 +628,7 @@ export const SortableTunnelGroupContainer = ({
             {...attributes}
             {...listeners}
           >
-            <svg
-              aria-hidden="true"
-              className="w-4 h-4"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14zm6-8a2 2 0 1 1-.001-4.001A2 2 0 0 1 13 6zm0 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 14z" />
-            </svg>
+            <GripVertical className="w-4 h-4" />
           </div>
         </div>
       </div>
@@ -729,14 +721,7 @@ export const SortableTableRow = ({
           {...listeners}
           title="拖拽排序"
         >
-          <svg
-            aria-hidden="true"
-            className="w-4 h-4"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14zm6-8a2 2 0 1 1-.001-4.001A2 2 0 0 1 13 6zm0 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 14z" />
-          </svg>
+          <GripVertical className="w-4 h-4" />
         </div>
       </TableCell>
       <TableCell
@@ -808,19 +793,7 @@ export const SortableTableRow = ({
             title="编辑"
             onPress={() => handleEdit(forward)}
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-              />
-            </svg>
+            <SquarePen className="h-4 w-4" />
           </Button>
           <Button
             isIconOnly
@@ -829,19 +802,7 @@ export const SortableTableRow = ({
             title="诊断"
             onPress={() => handleDiagnose(forward)}
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-              />
-            </svg>
+            <ClipboardCheck className="h-4 w-4" />
           </Button>
           <Button
             isIconOnly
@@ -851,20 +812,7 @@ export const SortableTableRow = ({
             title="流量清零"
             onPress={() => handleResetFlow(forward)}
           >
-            <svg
-              aria-hidden="true"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-13.657-3.657L4 8m16 8-2.343 2.657A8 8 0 014 15"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-              />
-            </svg>
+            <RefreshCw className="h-4 w-4" />
           </Button>
           <Button
             isIconOnly
@@ -873,19 +821,7 @@ export const SortableTableRow = ({
             title="删除"
             onPress={() => handleDelete(forward)}
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-              />
-            </svg>
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </TableCell>
@@ -942,25 +878,18 @@ export const SortableCompactTableRow = ({
         </TableCell>
       )}
       <TableCell
-        className={`${selectedIds.has(forward.id) ? "bg-primary-50/70 dark:bg-primary-900/40" : ""}`}
+        className={`${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
       >
         <div
           className="cursor-grab active:cursor-grabbing p-1 text-default-400 hover:text-default-600 transition-colors"
           {...attributes}
           {...listeners}
         >
-          <svg
-            aria-hidden="true"
-            className="w-4 h-4"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14zm6-8a2 2 0 1 1-.001-4.001A2 2 0 0 1 13 6zm0 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 14z" />
-          </svg>
+          <GripVertical className="w-4 h-4" />
         </div>
       </TableCell>
       <TableCell
-        className={`whitespace-nowrap text-foreground ${selectedIds.has(forward.id) ? "bg-primary-50/70 dark:bg-primary-900/40" : ""}`}
+        className={`whitespace-nowrap text-foreground ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
       >
         <button
           className="cursor-pointer hover:text-primary transition-colors text-left bg-transparent border-none p-0 outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-sm"
@@ -971,7 +900,7 @@ export const SortableCompactTableRow = ({
         </button>
       </TableCell>
       <TableCell
-        className={`whitespace-nowrap ${selectedIds.has(forward.id) ? "bg-primary-50/70 dark:bg-primary-900/40" : ""}`}
+        className={`whitespace-nowrap ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
       >
         <div className="flex items-center">
           <span className="font-medium text-default-700 text-sm">
@@ -986,7 +915,7 @@ export const SortableCompactTableRow = ({
         </div>
       </TableCell>
       <TableCell
-        className={`max-w-[220px] ${selectedIds.has(forward.id) ? "bg-primary-50/70 dark:bg-primary-900/40" : ""}`}
+        className={`max-w-[220px] ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
       >
         <button
           className={`w-full truncate rounded-md bg-default-100/50 px-2.5 py-1.5 text-left font-mono text-xs font-medium text-default-700 transition-all ${
@@ -1004,7 +933,7 @@ export const SortableCompactTableRow = ({
         </button>
       </TableCell>
       <TableCell
-        className={`max-w-[240px] ${selectedIds.has(forward.id) ? "bg-primary-50/70 dark:bg-primary-900/40" : ""}`}
+        className={`max-w-[240px] ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
       >
         <button
           className={`w-full truncate rounded-md bg-default-100/50 px-2.5 py-1.5 text-left font-mono text-xs font-medium text-default-700 transition-all ${
@@ -1021,7 +950,7 @@ export const SortableCompactTableRow = ({
       </TableCell>
 
       <TableCell
-        className={`${selectedIds.has(forward.id) ? "bg-primary-50/70 dark:bg-primary-900/40" : ""}`}
+        className={`${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
       >
         <Chip
           className="text-sm font-medium shrink-0 whitespace-nowrap"
@@ -1033,14 +962,14 @@ export const SortableCompactTableRow = ({
         </Chip>
       </TableCell>
       <TableCell
-        className={`whitespace-nowrap ${selectedIds.has(forward.id) ? "bg-primary-50/70 dark:bg-primary-900/40" : ""}`}
+        className={`whitespace-nowrap ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
       >
         <span className="text-sm font-medium text-default-600 font-mono">
           {formatFlow(getForwardDisplayFlow(forward))}
         </span>
       </TableCell>
       <TableCell
-        className={`${selectedIds.has(forward.id) ? "bg-primary-50/70 dark:bg-primary-900/40" : ""}`}
+        className={`${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
       >
         <div className="flex items-center gap-2.5 whitespace-nowrap">
           <Switch
@@ -1053,7 +982,7 @@ export const SortableCompactTableRow = ({
         </div>
       </TableCell>
       <TableCell
-        className={`${selectedIds.has(forward.id) ? "bg-primary-50/70 dark:bg-primary-900/40" : ""}`}
+        className={`${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
       >
         <div className="flex justify-start gap-2 pl-2">
           <Button
@@ -1063,17 +992,7 @@ export const SortableCompactTableRow = ({
             size="sm"
             onPress={() => handleEdit(forward)}
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                strokeWidth={2}
-              />
-            </svg>
+            <SquarePen className="h-4 w-4" />
           </Button>
           <Button
             isIconOnly
@@ -1082,17 +1001,7 @@ export const SortableCompactTableRow = ({
             size="sm"
             onPress={() => handleDiagnose(forward)}
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                strokeWidth={2}
-              />
-            </svg>
+            <ClipboardCheck className="h-4 w-4" />
           </Button>
           <Button
             isIconOnly
@@ -1102,20 +1011,7 @@ export const SortableCompactTableRow = ({
             title="流量清零"
             onPress={() => handleResetFlow(forward)}
           >
-            <svg
-              aria-hidden="true"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-13.657-3.657L4 8m16 8-2.343 2.657A8 8 0 014 15"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-              />
-            </svg>
+            <RefreshCw className="h-4 w-4" />
           </Button>
           <Button
             isIconOnly
@@ -1124,17 +1020,7 @@ export const SortableCompactTableRow = ({
             size="sm"
             onPress={() => handleDelete(forward)}
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                strokeWidth={2}
-              />
-            </svg>
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </TableCell>

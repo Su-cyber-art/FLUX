@@ -22,7 +22,21 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { LayoutGrid, List } from "lucide-react";
+import {
+  ChevronRight,
+  CircleArrowUp,
+  CirclePause,
+  CircleX,
+  GripVertical,
+  LayoutGrid,
+  Link,
+  List,
+  Pencil,
+  Plus,
+  Square,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 
 import { DiagnosisResults } from "@/components/diagnosis-results";
 import {
@@ -1485,8 +1499,7 @@ export default function TunnelPage() {
             ) : (
               <>
                 <Button
-                  className="bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:hover:bg-sky-900/45"
-                  color="default"
+                  color="info"
                   size="sm"
                   variant="flat"
                   onPress={toggleSelectMode}
@@ -1581,8 +1594,8 @@ export default function TunnelPage() {
                   const typeDisplay = getTunnelTypeDisplay(tunnel.type);
                   const tunnelTypeChipClassName =
                     tunnel.type === 1
-                      ? "text-[10px] h-5 bg-primary-100 text-primary-800 border-primary-300 dark:bg-primary-900/45 dark:text-primary-200 dark:border-primary-700"
-                      : "text-[10px] h-5 bg-success-100 text-success-800 border-success-300 dark:bg-success-900/35 dark:text-success-200 dark:border-success-700";
+                      ? "text-[10px] h-5 bg-primary-soft text-primary-ink border-primary-line"
+                      : "text-[10px] h-5 bg-success-soft text-success-ink border-success-line";
                   const bestExitStateContent = renderBestExitState(
                     tunnel.bestExitState,
                   );
@@ -1624,18 +1637,18 @@ export default function TunnelPage() {
                       <TableCell>
                         <div className="flex min-w-0 flex-col gap-1.5">
                           <div className="flex items-center gap-1.5 text-xs">
-                            <span className="font-semibold text-primary-700 dark:text-primary-400">
+                            <span className="font-semibold text-primary-ink">
                               {tunnel.inNodeId?.length || 0}入口
                             </span>
                             <span className="text-default-400">→</span>
-                            <span className="font-semibold text-secondary-700 dark:text-secondary-400">
+                            <span className="font-semibold text-secondary-ink">
                               {tunnel.type === 2
                                 ? tunnel.chainNodes?.length || 0
                                 : 0}
                               跳
                             </span>
                             <span className="text-default-400">→</span>
-                            <span className="font-semibold text-success-700 dark:text-success-400">
+                            <span className="font-semibold text-success-ink">
                               {tunnel.type === 2
                                 ? tunnel.outNodeId?.length || 0
                                 : tunnel.inNodeId?.length || 0}
@@ -1667,7 +1680,8 @@ export default function TunnelPage() {
                       <TableCell>
                         <div className="flex flex-wrap items-center gap-1.5 min-w-max">
                           <Button
-                            className="h-6 px-2 min-w-0 text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400"
+                            className="h-6 px-2 min-w-0 text-xs"
+                            color="primary"
                             size="sm"
                             variant="flat"
                             onPress={() => handleEdit(tunnel)}
@@ -1675,7 +1689,8 @@ export default function TunnelPage() {
                             编辑
                           </Button>
                           <Button
-                            className="h-6 px-2 min-w-0 text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-400"
+                            className="h-6 px-2 min-w-0 text-xs"
+                            color="warning"
                             size="sm"
                             variant="flat"
                             onPress={() => handleDiagnose(tunnel)}
@@ -1683,7 +1698,8 @@ export default function TunnelPage() {
                             诊断
                           </Button>
                           <Button
-                            className="h-6 px-2 min-w-0 text-xs bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-400"
+                            className="h-6 px-2 min-w-0 text-xs"
+                            color="danger"
                             size="sm"
                             variant="flat"
                             onPress={() => handleDelete(tunnel)}
@@ -1709,8 +1725,8 @@ export default function TunnelPage() {
                   const typeDisplay = getTunnelTypeDisplay(tunnel.type);
                   const tunnelTypeChipClassName =
                     tunnel.type === 1
-                      ? "text-xs bg-primary-100 text-primary-800 border-primary-300 dark:bg-primary-900/45 dark:text-primary-200 dark:border-primary-700"
-                      : "text-xs bg-success-100 text-success-800 border-success-300 dark:bg-success-900/35 dark:text-success-200 dark:border-success-700";
+                      ? "text-xs bg-primary-soft text-primary-ink border-primary-line"
+                      : "text-xs bg-success-soft text-success-ink border-success-line";
                   const bestExitStateContent = renderBestExitState(
                     tunnel.bestExitState,
                   );
@@ -1752,14 +1768,7 @@ export default function TunnelPage() {
                                 style={{ touchAction: "none" }}
                                 title="拖拽排序"
                               >
-                                <svg
-                                  aria-hidden="true"
-                                  className="w-4 h-4"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14zm6-8a2 2 0 1 1-.001-4.001A2 2 0 0 1 13 6zm0 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 14z" />
-                                </svg>
+                                <GripVertical className="w-4 h-4" />
                               </div>
                             </div>
                           </CardHeader>
@@ -1770,55 +1779,20 @@ export default function TunnelPage() {
                               <div className="pt-2 border-t border-divider">
                                 <div className="flex items-center justify-center gap-2 text-xs">
                                   {/* 入口节点 */}
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-primary-50/30 dark:bg-primary-100/20 rounded border border-primary-200/50 dark:border-primary-300/20">
-                                    <svg
-                                      aria-hidden="true"
-                                      className="w-3 h-3 text-primary-600"
-                                      fill="currentColor"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path
-                                        clipRule="evenodd"
-                                        d="M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2v8h10V6H5z"
-                                        fillRule="evenodd"
-                                      />
-                                    </svg>
-                                    <span className="font-semibold text-primary-700 dark:text-primary-400">
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-primary-soft rounded border border-primary-line">
+                                    <Square className="w-3 h-3 text-primary-ink" />
+                                    <span className="font-semibold text-primary-ink">
                                       {tunnel.inNodeId?.length || 0}入口
                                     </span>
                                   </div>
 
                                   {/* 箭头 */}
-                                  <svg
-                                    aria-hidden="true"
-                                    className="w-4 h-4 text-default-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      d="M9 5l7 7-7 7"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                    />
-                                  </svg>
+                                  <ChevronRight className="w-4 h-4 text-default-400" />
 
                                   {/* 转发链 */}
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-secondary-50/30 dark:bg-secondary-100/20 rounded border border-secondary-200/50 dark:border-secondary-300/20">
-                                    <svg
-                                      aria-hidden="true"
-                                      className="w-3 h-3 text-secondary-600"
-                                      fill="currentColor"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path
-                                        clipRule="evenodd"
-                                        d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
-                                        fillRule="evenodd"
-                                      />
-                                    </svg>
-                                    <span className="font-semibold text-secondary-700 dark:text-secondary-400">
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-secondary-soft rounded border border-secondary-line">
+                                    <Link className="w-3 h-3 text-secondary-ink" />
+                                    <span className="font-semibold text-secondary-ink">
                                       {tunnel.type === 2
                                         ? tunnel.chainNodes?.length || 0
                                         : 0}
@@ -1827,36 +1801,12 @@ export default function TunnelPage() {
                                   </div>
 
                                   {/* 箭头 */}
-                                  <svg
-                                    aria-hidden="true"
-                                    className="w-4 h-4 text-default-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      d="M9 5l7 7-7 7"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                    />
-                                  </svg>
+                                  <ChevronRight className="w-4 h-4 text-default-400" />
 
                                   {/* 出口节点 */}
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-success-50/30 dark:bg-success-100/20 rounded border border-success-200/50 dark:border-success-300/20">
-                                    <svg
-                                      aria-hidden="true"
-                                      className="w-3 h-3 text-success-600"
-                                      fill="currentColor"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path
-                                        clipRule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z"
-                                        fillRule="evenodd"
-                                      />
-                                    </svg>
-                                    <span className="font-semibold text-success-700 dark:text-success-400">
+                                  <div className="flex items-center gap-1 px-2 py-1 bg-success-soft rounded border border-success-line">
+                                    <CircleArrowUp className="w-3 h-3 text-success-ink" />
+                                    <span className="font-semibold text-success-ink">
                                       {tunnel.type === 2
                                         ? tunnel.outNodeId?.length || 0
                                         : tunnel.inNodeId?.length || 0}
@@ -1911,16 +1861,7 @@ export default function TunnelPage() {
                                 className="flex-1"
                                 color="primary"
                                 size="sm"
-                                startContent={
-                                  <svg
-                                    aria-hidden="true"
-                                    className="w-3 h-3"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                  </svg>
-                                }
+                                startContent={<Pencil className="w-3 h-3" />}
                                 variant="flat"
                                 onPress={() => handleEdit(tunnel)}
                               >
@@ -1931,18 +1872,7 @@ export default function TunnelPage() {
                                 color="warning"
                                 size="sm"
                                 startContent={
-                                  <svg
-                                    aria-hidden="true"
-                                    className="w-3 h-3"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      clipRule="evenodd"
-                                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                      fillRule="evenodd"
-                                    />
-                                  </svg>
+                                  <TriangleAlert className="w-3 h-3" />
                                 }
                                 variant="flat"
                                 onPress={() => handleDiagnose(tunnel)}
@@ -1954,23 +1884,7 @@ export default function TunnelPage() {
                                 color="danger"
                                 size="sm"
                                 startContent={
-                                  <svg
-                                    aria-hidden="true"
-                                    className="w-3 h-3"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      clipRule="evenodd"
-                                      d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"
-                                      fillRule="evenodd"
-                                    />
-                                    <path
-                                      clipRule="evenodd"
-                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 012 0v4a1 1 0 11-2 0V7zM12 7a1 1 0 012 0v4a1 1 0 11-2 0V7z"
-                                      fillRule="evenodd"
-                                    />
-                                  </svg>
+                                  <CirclePause className="w-3 h-3" />
                                 }
                                 variant="flat"
                                 onPress={() => handleDelete(tunnel)}
@@ -2147,22 +2061,7 @@ export default function TunnelPage() {
                         <Button
                           color="primary"
                           size="sm"
-                          startContent={
-                            <svg
-                              aria-hidden="true"
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                d="M12 4v16m8-8H4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                              />
-                            </svg>
-                          }
+                          startContent={<Plus className="w-4 h-4" />}
                           variant="flat"
                           onPress={() => {
                             // 添加新的一跳（一个空组，或包含占位节点）
@@ -2226,20 +2125,7 @@ export default function TunnelPage() {
                                     variant="light"
                                     onPress={() => removeChainNode(groupIndex)}
                                   >
-                                    <svg
-                                      aria-hidden="true"
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        d="M6 18L18 6M6 6l12 12"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                      />
-                                    </svg>
+                                    <X className="w-4 h-4" />
                                   </Button>
                                 </div>
 
@@ -3302,20 +3188,7 @@ export default function TunnelPage() {
                 ) : (
                   <div className="text-center py-16">
                     <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg
-                        aria-hidden="true"
-                        className="w-8 h-8 text-default-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                        />
-                      </svg>
+                      <CircleX className="w-8 h-8 text-default-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground">
                       暂无诊断数据

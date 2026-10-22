@@ -289,7 +289,7 @@ export default function LoginPage() {
             <VersionFooter
               containerClassName="mt-6 text-center"
               poweredClassName="text-xs text-default-500 mt-1"
-              updateBadgeClassName="ml-2 rounded bg-primary-50 px-1.5 py-0.5 text-primary"
+              updateBadgeClassName="ml-2 rounded bg-primary-soft px-1.5 py-0.5 text-primary"
               version={isWebView ? config.app_version : config.version}
               versionClassName="text-xs text-default-500"
             />

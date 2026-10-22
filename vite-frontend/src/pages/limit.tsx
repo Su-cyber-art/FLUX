@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { LayoutGrid, List } from "lucide-react";
+import { CirclePause, LayoutGrid, List, Pencil } from "lucide-react";
 
 import toast from "@/lib/notifications";
 import {
@@ -307,7 +307,8 @@ export default function LimitPage() {
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1.5 min-w-max">
                         <Button
-                          className="h-6 px-2 min-w-0 text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400"
+                          className="h-6 px-2 min-w-0 text-xs"
+                          color="primary"
                           size="sm"
                           variant="flat"
                           onPress={() => handleEdit(rule)}
@@ -315,7 +316,8 @@ export default function LimitPage() {
                           编辑
                         </Button>
                         <Button
-                          className="h-6 px-2 min-w-0 text-xs bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-400"
+                          className="h-6 px-2 min-w-0 text-xs"
+                          color="danger"
                           size="sm"
                           variant="flat"
                           onPress={() => handleDelete(rule)}
@@ -367,16 +369,7 @@ export default function LimitPage() {
                         className="flex-1"
                         color="primary"
                         size="sm"
-                        startContent={
-                          <svg
-                            aria-hidden="true"
-                            className="w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                          </svg>
-                        }
+                        startContent={<Pencil className="w-4 h-4" />}
                         variant="flat"
                         onPress={() => handleEdit(rule)}
                       >
@@ -386,25 +379,7 @@ export default function LimitPage() {
                         className="flex-1"
                         color="danger"
                         size="sm"
-                        startContent={
-                          <svg
-                            aria-hidden="true"
-                            className="w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              clipRule="evenodd"
-                              d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"
-                              fillRule="evenodd"
-                            />
-                            <path
-                              clipRule="evenodd"
-                              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 012 0v4a1 1 0 11-2 0V7zM12 7a1 1 0 012 0v4a1 1 0 11-2 0V7z"
-                              fillRule="evenodd"
-                            />
-                          </svg>
-                        }
+                        startContent={<CirclePause className="w-4 h-4" />}
                         variant="flat"
                         onPress={() => handleDelete(rule)}
                       >

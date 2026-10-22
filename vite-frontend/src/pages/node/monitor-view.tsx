@@ -256,7 +256,7 @@ function ServerCard({
         <div className="flex items-center justify-between p-2.5 rounded-lg bg-default-50 dark:bg-default-100/30 border border-divider mt-1 w-full">
           <div className="flex flex-col gap-0.5 min-w-0 flex-1">
             <div className="flex items-center gap-1 text-[10px] text-default-500">
-              <span className="text-primary-500 inline-block font-bold">↑</span>
+              <span className="text-primary-ink inline-block font-bold">↑</span>
               <span>上传</span>
             </div>
             <span className="font-mono text-xs font-semibold truncate">
@@ -269,7 +269,7 @@ function ServerCard({
           <div className="flex flex-col gap-0.5 items-end min-w-0 flex-1">
             <div className="flex items-center gap-1 text-[10px] text-default-500">
               <span>下载</span>
-              <span className="text-success-500 inline-block font-bold">↓</span>
+              <span className="text-success-ink inline-block font-bold">↓</span>
             </div>
             <span className="font-mono text-xs font-semibold truncate">
               {isOnline && metric
@@ -1382,26 +1382,26 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-2 py-1 text-xs whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 font-mono text-success-500">
+                            <div className="flex items-center gap-1.5 font-mono text-success-ink">
                               <span className="w-[86px] text-right inline-block">
                                 {isOnline && metric
                                   ? formatBytesPerSecond(metric.netOutSpeed)
                                   : "-"}
                               </span>
-                              <div className="flex items-center justify-center p-[3px] rounded-full bg-success-50 dark:bg-success-500/10 text-success-500">
+                              <div className="flex items-center justify-center p-[3px] rounded-full bg-success-soft text-success-ink">
                                 <ArrowUp
                                   className="w-3 h-3"
                                   strokeWidth={2.5}
                                 />
                               </div>
                             </div>
-                            <div className="flex items-center gap-1.5 font-mono text-primary-500">
+                            <div className="flex items-center gap-1.5 font-mono text-primary-ink">
                               <span className="w-[86px] text-right inline-block">
                                 {isOnline && metric
                                   ? formatBytesPerSecond(metric.netInSpeed)
                                   : "-"}
                               </span>
-                              <div className="flex items-center justify-center p-[3px] rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-500">
+                              <div className="flex items-center justify-center p-[3px] rounded-full bg-primary-soft text-primary-ink">
                                 <ArrowDown
                                   className="w-3 h-3"
                                   strokeWidth={2.5}
@@ -1779,10 +1779,10 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                                       ? "bg-default-400"
                                       : lr.success === 1
                                         ? isActive
-                                          ? "bg-white"
+                                          ? "bg-primary-foreground"
                                           : "bg-success"
                                         : isActive
-                                          ? "bg-white"
+                                          ? "bg-primary-foreground"
                                           : "bg-danger"
                                 }`}
                               />

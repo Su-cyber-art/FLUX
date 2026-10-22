@@ -635,7 +635,7 @@ export default function PanelSharingPage() {
                       </CardHeader>
                       <CardBody className="text-sm space-y-2 pt-0 md:pt-0">
                         {node.syncError && (
-                          <div className="px-2 py-1.5 rounded-md bg-warning-50 dark:bg-warning-100/10 text-warning-700 dark:text-warning-400 text-xs">
+                          <div className="px-2 py-1.5 rounded-md bg-warning-soft text-warning-ink text-xs">
                             {node.syncError === "provider_share_deleted"
                               ? "提供方已删除该分享"
                               : node.syncError === "provider_share_disabled"

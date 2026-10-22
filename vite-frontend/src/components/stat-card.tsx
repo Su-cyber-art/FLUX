@@ -2,18 +2,19 @@ import type { ReactNode } from "react";
 
 import { Group, Paper, Text } from "@mantine/core";
 
-import { cn } from "@/lib/utils";
+import { IconTile } from "@/components/ui/icon-tile";
+import { type SemanticColor } from "@/components/ui/shared";
 export interface StatCardProps {
   title: string;
   value: string | number;
-  iconClassName?: string;
+  tone?: SemanticColor;
   icon: ReactNode;
   bottomContent?: ReactNode;
 }
 export function StatCard({
   title,
   value,
-  iconClassName,
+  tone = "primary",
   icon,
   bottomContent,
 }: StatCardProps) {
@@ -23,14 +24,9 @@ export function StatCard({
         <Text truncate c="dimmed" fw={500} size="sm">
           {title}
         </Text>
-        <div
-          className={cn(
-            "flex items-center justify-center h-8 w-8 rounded-lg shrink-0",
-            iconClassName,
-          )}
-        >
+        <IconTile size="sm" tone={tone}>
           {icon}
-        </div>
+        </IconTile>
       </Group>
       <Text
         truncate

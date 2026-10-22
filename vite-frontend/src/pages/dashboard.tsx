@@ -1,9 +1,21 @@
 import { useState } from "react";
+import {
+  ArrowLeftRight,
+  Clock,
+  Database,
+  ListChecks,
+  Network,
+  TrendingUp,
+  TriangleAlert,
+} from "lucide-react";
 
 import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { IconTile } from "@/components/ui/icon-tile";
+import { type SemanticColor } from "@/components/ui/shared";
 import {
   Modal,
   ModalContent,
@@ -76,8 +88,7 @@ export default function DashboardPage() {
     if (!nextDueTime || renewalState === "unset") {
       return {
         label: "未设置",
-        badgeClassName:
-          "bg-default-100 text-default-700 dark:bg-default-50 dark:text-default-300",
+        tone: "default" as SemanticColor,
         nextDueTime: undefined as number | undefined,
       };
     }
@@ -89,8 +100,7 @@ export default function DashboardPage() {
     if (renewalState === "expired" || diffDays <= 0) {
       return {
         label: "已逾期",
-        badgeClassName:
-          "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300",
+        tone: "danger" as SemanticColor,
         nextDueTime,
       };
     }
@@ -98,18 +108,14 @@ export default function DashboardPage() {
     if (diffDays === 1) {
       return {
         label: "明天到期",
-        badgeClassName:
-          "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+        tone: "warning" as SemanticColor,
         nextDueTime,
       };
     }
 
     return {
       label: `${diffDays}天后到期`,
-      badgeClassName:
-        diffDays <= 7
-          ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
-          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+      tone: (diffDays <= 7 ? "warning" : "success") as SemanticColor,
       nextDueTime,
     };
   };
@@ -127,7 +133,7 @@ export default function DashboardPage() {
     return (
       <div
         key={node.id}
-        className="rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 shadow-sm dark:border-amber-500/20 dark:from-amber-950/20 dark:via-background dark:to-orange-950/10"
+        className="rounded-lg border border-warning-line bg-content1 p-4"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -138,14 +144,12 @@ export default function DashboardPage() {
               节点 ID: {node.id}
             </div>
           </div>
-          <span
-            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${expiryStatus.badgeClassName}`}
-          >
+          <Chip className="shrink-0" color={expiryStatus.tone} size="sm">
             {expiryStatus.label}
-          </span>
+          </Chip>
         </div>
 
-        <div className="mt-3 text-sm text-default-700 dark:text-default-300">
+        <div className="mt-3 text-sm text-default-700">
           {formatNodeRenewalTime(renewalSnapshot.nextDueTime)}
         </div>
 
@@ -154,7 +158,7 @@ export default function DashboardPage() {
         </div>
 
         {node.remark?.trim() && (
-          <p className="mt-3 line-clamp-2 text-xs leading-5 text-default-600 dark:text-default-400">
+          <p className="mt-3 line-clamp-2 text-xs leading-5 text-default-600">
             {node.remark.trim()}
           </p>
         )}
@@ -192,53 +196,28 @@ export default function DashboardPage() {
   };
 
   const getExpStatus = (expTime?: string | number) => {
-    if (!expTime)
-      return {
-        color: "text-green-600 dark:text-green-400",
-        bg: "bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20",
-        text: "永久",
-      };
+    if (!expTime) return { tone: "success" as SemanticColor, text: "永久" };
 
     const now = new Date();
     const expDate = new Date(expTime);
 
     if (isNaN(expDate.getTime())) {
-      return {
-        color: "text-gray-600 dark:text-gray-400",
-        bg: "bg-gray-50 bg-content1 border-gray-200 dark:border-gray-500/20",
-        text: "无效",
-      };
+      return { tone: "default" as SemanticColor, text: "无效" };
     }
 
     if (expDate < now) {
-      return {
-        color: "text-red-600 dark:text-red-400",
-        bg: "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20",
-        text: "已过期",
-      };
+      return { tone: "danger" as SemanticColor, text: "已过期" };
     }
 
     const diffTime = expDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays <= 7) {
-      return {
-        color: "text-red-600 dark:text-red-400",
-        bg: "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20",
-        text: `${diffDays}天后过期`,
-      };
+      return { tone: "danger" as SemanticColor, text: `${diffDays}天后过期` };
     } else if (diffDays <= 30) {
-      return {
-        color: "text-orange-600 dark:text-orange-400",
-        bg: "bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20",
-        text: `${diffDays}天后过期`,
-      };
+      return { tone: "warning" as SemanticColor, text: `${diffDays}天后过期` };
     } else {
-      return {
-        color: "text-green-600 dark:text-green-400",
-        bg: "bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20",
-        text: `${diffDays}天后过期`,
-      };
+      return { tone: "success" as SemanticColor, text: `${diffDays}天后过期` };
     }
   };
 
@@ -270,10 +249,10 @@ export default function DashboardPage() {
   };
 
   const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return "bg-red-500 dark:bg-red-600";
-    if (percentage >= 70) return "bg-orange-500 dark:bg-orange-600";
+    if (percentage >= 90) return "bg-danger";
+    if (percentage >= 70) return "bg-warning";
 
-    return "bg-blue-500 dark:bg-blue-600";
+    return "bg-primary";
   };
 
   const renderProgressBar = (
@@ -287,10 +266,10 @@ export default function DashboardPage() {
       return (
         <div className="w-full">
           <div
-            className={`w-full bg-gradient-to-r from-blue-200 to-purple-200 dark:from-blue-500/30 dark:to-purple-500/30 rounded-full ${height}`}
+            className={`w-full bg-primary-soft-hover rounded-full ${height}`}
           >
             <div
-              className={`${height} bg-gradient-to-r from-blue-500 to-purple-500 rounded-full w-full opacity-60`}
+              className={`${height} bg-gradient-to-r from-primary to-secondary rounded-full w-full opacity-60`}
             />
           </div>
         </div>
@@ -299,9 +278,7 @@ export default function DashboardPage() {
 
     return (
       <div className="w-full">
-        <div
-          className={`w-full bg-gray-200 dark:bg-gray-800 rounded-full ${height}`}
-        >
+        <div className={`w-full bg-default-200 rounded-full ${height}`}>
           <div
             className={`${height} rounded-full transition-all duration-300 ${getUsageColor(percentage)}`}
             style={{ width: `${Math.min(percentage, 100)}%` }}
@@ -629,18 +606,9 @@ export default function DashboardPage() {
       )}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6 lg:mb-8">
         <MetricCard
-          icon={
-            <svg
-              aria-hidden="true"
-              className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600 dark:text-blue-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-            </svg>
-          }
-          iconClassName="bg-blue-100 dark:bg-blue-500/20"
+          icon={<Database size={17} />}
           title="总流量"
+          tone="primary"
           value={formatFlowLimit(userInfo.flow, userInfo.flowMiB)}
         />
 
@@ -661,18 +629,7 @@ export default function DashboardPage() {
                 {userInfo.flowResetTime !== undefined &&
                   userInfo.flowResetTime !== null && (
                     <div className="text-xs text-default-500 flex items-center gap-1">
-                      <svg
-                        aria-hidden="true"
-                        className="w-3 h-3"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          clipRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                          fillRule="evenodd"
-                        />
-                      </svg>
+                      <Clock className="w-3 h-3" />
                       <span className="truncate">
                         {formatResetTime(userInfo.flowResetTime)}
                       </span>
@@ -681,42 +638,16 @@ export default function DashboardPage() {
               </div>
             </div>
           }
-          icon={
-            <svg
-              aria-hidden="true"
-              className="w-4 h-4 lg:w-5 lg:h-5 text-green-600 dark:text-green-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                clipRule="evenodd"
-                d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z"
-                fillRule="evenodd"
-              />
-            </svg>
-          }
-          iconClassName="bg-green-100 dark:bg-green-500/20"
+          icon={<TrendingUp size={17} />}
           title="已用流量"
+          tone="success"
           value={formatFlow(calculateUserTotalUsedFlow())}
         />
 
         <MetricCard
-          icon={
-            <svg
-              aria-hidden="true"
-              className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600 dark:text-purple-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                clipRule="evenodd"
-                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                fillRule="evenodd"
-              />
-            </svg>
-          }
-          iconClassName="bg-purple-100 dark:bg-purple-500/20"
+          icon={<ArrowLeftRight size={17} />}
           title="规则配额"
+          tone="secondary"
           value={formatNumber(userInfo.num || 0)}
         />
 
@@ -735,22 +666,9 @@ export default function DashboardPage() {
               </p>
             </div>
           }
-          icon={
-            <svg
-              aria-hidden="true"
-              className="w-4 h-4 lg:w-5 lg:h-5 text-orange-600 dark:text-orange-400"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                clipRule="evenodd"
-                d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
-                fillRule="evenodd"
-              />
-            </svg>
-          }
-          iconClassName="bg-orange-100 dark:bg-orange-500/20"
+          icon={<ListChecks size={17} />}
           title="已用规则"
+          tone="warning"
           value={forwardList.length}
         />
       </div>
@@ -762,24 +680,13 @@ export default function DashboardPage() {
       />
 
       {isAdmin && nodeExpiryReminders.length > 0 && (
-        <Card className="mb-6 lg:mb-8 border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-background to-orange-50/70 shadow-sm dark:border-amber-500/20 dark:from-amber-950/10 dark:to-orange-950/10">
+        <Card className="mb-6 lg:mb-8 border-warning-line bg-warning-soft">
           <CardHeader className="pb-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between w-full">
               <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
-                  <svg
-                    aria-hidden="true"
-                    className="h-5 w-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      clipRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.981-1.742 2.981H4.42c-1.53 0-2.492-1.647-1.743-2.98l5.58-9.92zM11 13a1 1 0 10-2 0 1 1 0 002 0zm-1-7a1 1 0 00-1 1v3a1 1 0 102 0V7a1 1 0 00-1-1z"
-                      fillRule="evenodd"
-                    />
-                  </svg>
-                </div>
+                <IconTile size="lg" tone="warning">
+                  <TriangleAlert size={20} />
+                </IconTile>
                 <div>
                   <h2 className="text-lg lg:text-xl font-semibold text-foreground">
                     节点到期提醒
@@ -790,9 +697,9 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-              <span className="inline-flex w-fit items-center rounded-full bg-content1 px-3 py-1 text-xs font-medium text-amber-700 ring-1 ring-amber-200/80 dark:bg-content1 dark:text-amber-300 dark:ring-amber-500/20">
+              <Chip className="w-fit" color="warning">
                 {nodeExpiryReminders.length} 个提醒
-              </span>
+              </Chip>
             </div>
           </CardHeader>
           <CardBody className="pt-0">
@@ -814,24 +721,11 @@ export default function DashboardPage() {
         <Card className="mb-6 lg:mb-8">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
-              <svg
-                aria-hidden="true"
-                className="w-5 h-5 text-primary"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  clipRule="evenodd"
-                  d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
-                  fillRule="evenodd"
-                />
-              </svg>
+              <Network className="w-5 h-5 text-primary" />
               <h2 className="text-lg lg:text-xl font-semibold text-foreground">
                 隧道权限
               </h2>
-              <span className="px-2 py-1 bg-default-100 dark:bg-default-50 text-default-600 rounded-full text-xs">
-                {userTunnels.length}
-              </span>
+              <Chip size="sm">{userTunnels.length}</Chip>
             </div>
           </CardHeader>
           <CardBody className="pt-0">
@@ -845,7 +739,7 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={tunnel.id}
-                      className="border border-gray-200 dark:border-default-100 rounded-lg p-3 lg:p-4 hover:shadow-sm transition-shadow"
+                      className="border border-divider rounded-lg p-3 lg:p-4 hover:shadow-sm transition-shadow"
                     >
                       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-3">
                         <div>
@@ -853,18 +747,19 @@ export default function DashboardPage() {
                             {tunnel.tunnelName} ID: {tunnel.id}
                           </h3>
                           <div className="flex flex-wrap items-center gap-2 mt-1">
-                            <span
-                              className={`px-2 py-1 rounded-md text-xs font-medium ${tunnel.tunnelFlow === 1 ? "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300" : "bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300"}`}
+                            <Chip
+                              color={
+                                tunnel.tunnelFlow === 1 ? "primary" : "warning"
+                              }
+                              size="sm"
                             >
                               {tunnel.tunnelFlow === 1
                                 ? "单向计费"
                                 : "双向计费"}
-                            </span>
-                            <span
-                              className={`px-2 py-1 rounded-md text-xs font-medium border ${tunnelExpStatus.bg} ${tunnelExpStatus.color}`}
-                            >
+                            </Chip>
+                            <Chip dot color={tunnelExpStatus.tone} size="sm">
                               {tunnelExpStatus.text}
-                            </span>
+                            </Chip>
                             {tunnel.flowResetTime !== undefined &&
                               tunnel.flowResetTime !== null && (
                                 <span className="text-xs text-default-500">
@@ -936,66 +831,37 @@ export default function DashboardPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <svg
-              aria-hidden="true"
-              className="w-5 h-5 text-primary"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                clipRule="evenodd"
-                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                fillRule="evenodd"
-              />
-            </svg>
+            <ArrowLeftRight className="w-5 h-5 text-primary" />
             <h2 className="text-lg lg:text-xl font-semibold text-foreground">
               规则配置
             </h2>
-            <span className="px-2 py-1 bg-default-100 dark:bg-default-50 text-default-600 rounded-full text-xs">
-              {forwardList.length}
-            </span>
+            <Chip size="sm">{forwardList.length}</Chip>
           </div>
         </CardHeader>
         <CardBody className="pt-0">
           {groupedForwards().length === 0 ? (
-            <div className="text-center py-12">
-              <svg
-                aria-hidden="true"
-                className="w-12 h-12 text-default-400 mx-auto mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M8 9l4-4 4 4m0 6l-4 4-4-4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                />
-              </svg>
-              <p className="text-default-500">暂无规则配置</p>
-            </div>
+            <PageEmptyState className="h-48" message="暂无规则配置" />
           ) : (
             <div className="space-y-4">
               {groupedForwards().map((group) => (
                 <div
                   key={group.tunnelName}
-                  className="border border-gray-200 dark:border-default-100 rounded-lg p-3 lg:p-4"
+                  className="border border-divider rounded-lg p-3 lg:p-4"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-foreground">
                       {group.tunnelName}
                     </h3>
-                    <span className="px-2 py-1 bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 rounded-md text-sm">
+                    <Chip color="primary" size="sm">
                       {group.forwards.length} 个规则
-                    </span>
+                    </Chip>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                     {group.forwards.map((forward) => (
                       <div
                         key={forward.id}
-                        className="bg-content1 border border-divider rounded-lg p-3 shadow-sm hover:shadow-sm transition-all duration-300"
+                        className="bg-content1 border border-divider rounded-lg p-3 transition-shadow hover:shadow-sm"
                       >
                         <div className="space-y-3">
                           <div>
@@ -1004,7 +870,7 @@ export default function DashboardPage() {
                             </h4>
                             <div className="space-y-1">
                               <button
-                                className={`block max-w-full px-2 py-2 text-left bg-content1 rounded-lg border border-divider border-divider font-mono text-xs truncate text-foreground transition-all duration-300 ${hasMultipleIps(forward.inIp) ? "cursor-pointer hover:bg-content1 dark:hover:bg-content1" : ""}`}
+                                className={`block max-w-full px-2 py-2 text-left bg-content1 rounded-lg border border-divider font-mono text-xs truncate text-foreground transition-colors ${hasMultipleIps(forward.inIp) ? "cursor-pointer hover:bg-default-soft" : ""}`}
                                 disabled={!hasMultipleIps(forward.inIp)}
                                 title={formatInAddress(
                                   forward.inIp,
@@ -1025,7 +891,7 @@ export default function DashboardPage() {
                                 ↓
                               </div>
                               <button
-                                className={`block max-w-full px-2 py-2 text-left bg-content1 rounded-lg border border-divider border-divider font-mono text-xs truncate text-foreground transition-all duration-300 ${hasMultipleRemoteAddresses(forward.remoteAddr) ? "cursor-pointer hover:bg-content1 dark:hover:bg-content1" : ""}`}
+                                className={`block max-w-full px-2 py-2 text-left bg-content1 rounded-lg border border-divider font-mono text-xs truncate text-foreground transition-colors ${hasMultipleRemoteAddresses(forward.remoteAddr) ? "cursor-pointer hover:bg-default-soft" : ""}`}
                                 disabled={
                                   !hasMultipleRemoteAddresses(
                                     forward.remoteAddr,
@@ -1045,13 +911,13 @@ export default function DashboardPage() {
                             </div>
                           </div>
 
-                          <div className="pt-2 border-t border-gray-200 dark:border-default-200">
+                          <div className="pt-2 border-t border-divider">
                             <div className="grid grid-cols-3 gap-1 text-xs">
                               <div className="text-center">
                                 <div className="text-default-500 mb-1">
                                   上传
                                 </div>
-                                <div className="font-medium text-green-600 dark:text-green-400 truncate">
+                                <div className="font-medium text-success-ink truncate">
                                   {formatFlow(forward.inFlow || 0)}
                                 </div>
                               </div>
@@ -1059,7 +925,7 @@ export default function DashboardPage() {
                                 <div className="text-default-500 mb-1">
                                   下载
                                 </div>
-                                <div className="font-medium text-orange-600 dark:text-orange-400 truncate">
+                                <div className="font-medium text-warning-ink truncate">
                                   {formatFlow(forward.outFlow || 0)}
                                 </div>
                               </div>
@@ -1108,7 +974,7 @@ export default function DashboardPage() {
               {addressList.map((item) => (
                 <div
                   key={item.id}
-                  className="flex justify-between items-center p-3 border border-default-200 dark:border-default-100 rounded-lg"
+                  className="flex justify-between items-center p-3 border border-divider rounded-lg"
                 >
                   <code className="font-mono text-sm flex-1 mr-3 text-foreground">
                     {item.address}

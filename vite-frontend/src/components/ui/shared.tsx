@@ -6,7 +6,9 @@ export type SemanticColor =
   | "secondary"
   | "success"
   | "warning"
-  | "danger";
+  | "danger"
+  | "info";
+// Keep in sync with the --*-ink tone tokens in styles/globals.css.
 export const uiColor = (color?: string) =>
   ({
     default: "gray",
@@ -15,6 +17,7 @@ export const uiColor = (color?: string) =>
     success: "teal",
     warning: "orange",
     danger: "red",
+    info: "cyan",
   })[color as SemanticColor] ?? (color === "primary" ? undefined : color);
 export const uiVariant = (variant?: string) =>
   ({

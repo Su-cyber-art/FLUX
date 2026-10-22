@@ -1,5 +1,21 @@
 import type { BatchOperationFailure, SpeedLimitApiItem } from "@/api/types";
 
+import {
+  Check,
+  CirclePause,
+  CircleX,
+  Clipboard,
+  Copy,
+  GripVertical,
+  LayoutGrid,
+  List,
+  Pencil,
+  RefreshCw,
+  Search,
+  TriangleAlert,
+  Upload,
+  X,
+} from "lucide-react";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   DndContext,
@@ -2812,14 +2828,7 @@ export default function ForwardPage() {
                   style={{ touchAction: "none" }}
                   title="拖拽排序"
                 >
-                  <svg
-                    aria-hidden="true"
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14zm6-8a2 2 0 1 1-.001-4.001A2 2 0 0 1 13 6zm0 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 14z" />
-                  </svg>
+                  <GripVertical className="w-4 h-4" />
                 </div>
               )}
             </div>
@@ -2852,20 +2861,7 @@ export default function ForwardPage() {
                     </code>
                   </div>
                   {hasMultipleAddresses(forward.inIp) && (
-                    <svg
-                      aria-hidden="true"
-                      className="w-3 h-3 text-default-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                      />
-                    </svg>
+                    <Copy className="w-3 h-3 text-default-400 flex-shrink-0" />
                   )}
                 </div>
               </button>
@@ -2892,20 +2888,7 @@ export default function ForwardPage() {
                     </code>
                   </div>
                   {hasMultipleAddresses(forward.remoteAddr) && (
-                    <svg
-                      aria-hidden="true"
-                      className="w-3 h-3 text-default-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                      />
-                    </svg>
+                    <Copy className="w-3 h-3 text-default-400 flex-shrink-0" />
                   )}
                 </div>
               </button>
@@ -2969,16 +2952,7 @@ export default function ForwardPage() {
               className="flex-1"
               color="primary"
               size="sm"
-              startContent={
-                <svg
-                  aria-hidden="true"
-                  className="w-3 h-3"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                </svg>
-              }
+              startContent={<Pencil className="w-3 h-3" />}
               variant="flat"
               onPress={() => handleEdit(forward)}
             >
@@ -2988,20 +2962,7 @@ export default function ForwardPage() {
               className="flex-1"
               color="warning"
               size="sm"
-              startContent={
-                <svg
-                  aria-hidden="true"
-                  className="w-3 h-3"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    clipRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    fillRule="evenodd"
-                  />
-                </svg>
-              }
+              startContent={<TriangleAlert className="w-3 h-3" />}
               variant="flat"
               onPress={() => handleDiagnose(forward)}
             >
@@ -3012,22 +2973,7 @@ export default function ForwardPage() {
               color="secondary"
               isDisabled={(forward.inFlow || 0) + (forward.outFlow || 0) <= 0}
               size="sm"
-              startContent={
-                <svg
-                  aria-hidden="true"
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M4 4v6h6M20 20v-6h-6M20 9a8 8 0 00-13.657-3.657L4 8m16 8-2.343 2.657A8 8 0 014 15"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                  />
-                </svg>
-              }
+              startContent={<RefreshCw className="w-3 h-3" />}
               variant="flat"
               onPress={() => handleResetFlow(forward)}
             >
@@ -3037,25 +2983,7 @@ export default function ForwardPage() {
               className="flex-1"
               color="danger"
               size="sm"
-              startContent={
-                <svg
-                  aria-hidden="true"
-                  className="w-3 h-3"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    clipRule="evenodd"
-                    d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"
-                    fillRule="evenodd"
-                  />
-                  <path
-                    clipRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 012 0v4a1 1 0 11-2 0V7zM12 7a1 1 0 012 0v4a1 1 0 11-2 0V7z"
-                    fillRule="evenodd"
-                  />
-                </svg>
-              }
+              startContent={<CirclePause className="w-3 h-3" />}
               variant="flat"
               onPress={() => handleDelete(forward)}
             >
@@ -3089,22 +3017,8 @@ export default function ForwardPage() {
             />
           </div>
           <Button
-            className="bg-default-100 dark:bg-default-100 text-default-700 dark:text-default-300 font-semibold hover:bg-default-200 dark:hover:bg-default-200"
-            startContent={
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                />
-              </svg>
-            }
+            className="bg-default-100 dark:bg-default-100 text-default-700 font-semibold hover:bg-default-200 dark:hover:bg-default-200"
+            startContent={<Search className="w-4 h-4" />}
             onPress={() => setIsSearchModalOpen(true)}
           >
             高级筛选 {activeFilterCount > 0 ? `(${activeFilterCount})` : ""}
@@ -3210,27 +3124,9 @@ export default function ForwardPage() {
                   onPress={handleViewModeChange}
                 >
                   {viewMode === "grouped" ? (
-                    <svg
-                      aria-hidden="true"
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        clipRule="evenodd"
-                        d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zM3 16a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z"
-                        fillRule="evenodd"
-                      />
-                    </svg>
+                    <List className="w-4 h-4" />
                   ) : (
-                    <svg
-                      aria-hidden="true"
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                    </svg>
+                    <LayoutGrid className="w-4 h-4" />
                   )}
                 </Button>
 
@@ -4364,20 +4260,7 @@ export default function ForwardPage() {
                     isDisabled={!selectedTunnelForExport}
                     isLoading={exportLoading}
                     size="sm"
-                    startContent={
-                      <svg
-                        aria-hidden="true"
-                        className="w-4 h-4"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          clipRule="evenodd"
-                          d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
-                          fillRule="evenodd"
-                        />
-                      </svg>
-                    }
+                    startContent={<Upload className="w-4 h-4" />}
                     onPress={executeExport}
                   >
                     重新生成
@@ -4385,17 +4268,7 @@ export default function ForwardPage() {
                   <Button
                     color="secondary"
                     size="sm"
-                    startContent={
-                      <svg
-                        aria-hidden="true"
-                        className="w-4 h-4"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                        <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-                      </svg>
-                    }
+                    startContent={<Clipboard className="w-4 h-4" />}
                     onPress={copyExportData}
                   >
                     复制
@@ -4411,20 +4284,7 @@ export default function ForwardPage() {
                     isDisabled={!selectedTunnelForExport}
                     isLoading={exportLoading}
                     size="sm"
-                    startContent={
-                      <svg
-                        aria-hidden="true"
-                        className="w-4 h-4"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          clipRule="evenodd"
-                          d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
-                          fillRule="evenodd"
-                        />
-                      </svg>
-                    }
+                    startContent={<Upload className="w-4 h-4" />}
                     onPress={executeExport}
                   >
                     生成导出数据
@@ -4589,45 +4449,23 @@ export default function ForwardPage() {
                         key={index}
                         className={`p-2 rounded border ${
                           result.success
-                            ? "bg-success-50 dark:bg-success-100/10 border-success-200 dark:border-success-300/20"
-                            : "bg-danger-50 dark:bg-danger-100/10 border-danger-200 dark:border-danger-300/20"
+                            ? "bg-success-soft border-success-line"
+                            : "bg-danger-soft border-danger-line"
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           {result.success ? (
-                            <svg
-                              aria-hidden="true"
-                              className="w-3 h-3 text-success-600 flex-shrink-0"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                clipRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                fillRule="evenodd"
-                              />
-                            </svg>
+                            <Check className="w-3 h-3 text-success-ink flex-shrink-0" />
                           ) : (
-                            <svg
-                              aria-hidden="true"
-                              className="w-3 h-3 text-danger-600 flex-shrink-0"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                clipRule="evenodd"
-                                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                fillRule="evenodd"
-                              />
-                            </svg>
+                            <X className="w-3 h-3 text-danger-ink flex-shrink-0" />
                           )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                               <span
                                 className={`text-xs font-medium ${
                                   result.success
-                                    ? "text-success-700 dark:text-success-300"
-                                    : "text-danger-700 dark:text-danger-300"
+                                    ? "text-success-ink"
+                                    : "text-danger-ink"
                                 }`}
                               >
                                 {result.success ? "成功" : "失败"}
@@ -4642,8 +4480,8 @@ export default function ForwardPage() {
                             <div
                               className={`text-xs ${
                                 result.success
-                                  ? "text-success-600 dark:text-success-400"
-                                  : "text-danger-600 dark:text-danger-400"
+                                  ? "text-success-ink"
+                                  : "text-danger-ink"
                               }`}
                             >
                               {result.message}
@@ -4748,20 +4586,7 @@ export default function ForwardPage() {
                 ) : (
                   <div className="text-center py-16">
                     <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg
-                        aria-hidden="true"
-                        className="w-8 h-8 text-default-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                        />
-                      </svg>
+                      <CircleX className="w-8 h-8 text-default-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground">
                       暂无诊断数据

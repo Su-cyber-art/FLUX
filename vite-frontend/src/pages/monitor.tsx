@@ -197,8 +197,8 @@ export default function MonitorPage() {
             <p className="text-xs text-default-500">在线节点平均负载</p>
           }
           icon={<Server size={18} />}
-          iconClassName="bg-primary-50 text-primary"
           title="平均 CPU 负载"
+          tone="primary"
           value={`${aggregateMetrics.avgCpu.toFixed(1)}%`}
         />
         <StatCard
@@ -206,8 +206,8 @@ export default function MonitorPage() {
             <p className="text-xs text-default-500">TCP 与 UDP 连接合计</p>
           }
           icon={<ArrowRightLeft size={18} />}
-          iconClassName="bg-success-50 text-success"
           title="活跃连接"
+          tone="success"
           value={aggregateMetrics.totalConns}
         />
         <StatCard
@@ -215,8 +215,8 @@ export default function MonitorPage() {
             <p className="text-xs text-default-500">在线节点收发速率合计</p>
           }
           icon={<RefreshCw size={18} />}
-          iconClassName="bg-secondary-50 text-secondary"
           title="实时带宽"
+          tone="secondary"
           value={formatBytesPerSecond(aggregateMetrics.totalBandwidth)}
         />
       </div>

@@ -229,8 +229,8 @@ export const renderBestExitState = (state?: BestExitState) => {
       ? `等待探测 · ${summaryText}`
       : summaryText;
   const className = isWaiting
-    ? "border-warning-200/70 bg-warning-50/50 text-warning-700 dark:border-warning-300/20 dark:bg-warning-900/20 dark:text-warning-300"
-    : "border-success-200/60 bg-success-50/40 text-success-700 dark:border-success-300/20 dark:bg-success-900/20 dark:text-success-300";
+    ? "border-warning-line bg-warning-soft text-warning-ink"
+    : "border-success-line bg-success-soft text-success-ink";
 
   return (
     <span

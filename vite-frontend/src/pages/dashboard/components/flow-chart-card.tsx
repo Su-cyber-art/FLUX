@@ -6,6 +6,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartLine } from "lucide-react";
 
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageEmptyState } from "@/components/page-state";
@@ -30,15 +31,7 @@ export const FlowChartCard = ({
     <Card className="mb-6 lg:mb-8">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <svg
-            aria-hidden="true"
-            className="w-5 h-5 text-primary"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
-            <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
-          </svg>
+          <ChartLine className="w-5 h-5 text-primary" />
           <h2 className="text-base font-semibold text-foreground">
             24小时流量统计
           </h2>

@@ -92,7 +92,7 @@ export function VersionFooter({
         {updateAvailable && latestUpdateVersion && (
           <span
             className={cn(
-              "ml-2 inline-flex items-center whitespace-nowrap rounded-md bg-primary-50 px-1.5 py-0.5 text-[10px] font-medium leading-4 text-primary",
+              "ml-2 inline-flex items-center whitespace-nowrap rounded-md bg-primary-soft px-1.5 py-0.5 text-[10px] font-medium leading-4 text-primary",
               updateBadgeClassName,
             )}
             role="status"
@@ -105,7 +105,7 @@ export function VersionFooter({
         <p className={poweredClassName}>
           Powered by{" "}
           <a
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="text-default-500 hover:text-default-600 transition-colors"
             href={siteConfig.github_repo}
             rel="noopener noreferrer"
             target="_blank"

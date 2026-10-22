@@ -14,7 +14,16 @@ import {
   rectSortingStrategy,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { LayoutGrid, List } from "lucide-react";
+import {
+  CreditCard,
+  Download,
+  Funnel,
+  GripVertical,
+  Info,
+  LayoutGrid,
+  List,
+  Lock,
+} from "lucide-react";
 
 import {
   NODE_FALLBACK_REFRESH_INTERVAL_MS,
@@ -1590,27 +1599,13 @@ export default function NodePage() {
                   variant="flat"
                   onPress={() => setIsFilterModalOpen(true)}
                 >
-                  <svg
-                    aria-hidden="true"
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                    />
-                  </svg>
+                  <Funnel className="w-4 h-4" />
                   {canUseExpiryFilter && nodeFilterMode !== "all" && (
                     <span className="absolute top-1.5 right-1.5 flex h-1.5 w-1.5 rounded-full bg-primary" />
                   )}
                 </Button>
                 <Button
-                  className="bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:hover:bg-sky-900/45"
-                  color="default"
+                  color="info"
                   size="sm"
                   variant="flat"
                   onPress={toggleSelectMode}
@@ -1775,7 +1770,8 @@ export default function NodePage() {
                       <div className="flex flex-wrap items-center gap-1.5 min-w-max">
                         {!isRemoteNode && (
                           <Button
-                            className="h-6 px-2 min-w-0 text-xs bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400"
+                            className="h-6 px-2 min-w-0 text-xs"
+                            color="success"
                             isLoading={node.copyLoading}
                             size="sm"
                             variant="flat"
@@ -1786,7 +1782,8 @@ export default function NodePage() {
                         )}
                         {!isRemoteNode && (
                           <Button
-                            className="h-6 px-2 min-w-0 text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-400"
+                            className="h-6 px-2 min-w-0 text-xs"
+                            color="warning"
                             isDisabled={node.connectionStatus !== "online"}
                             isLoading={node.upgradeLoading}
                             size="sm"
@@ -1801,7 +1798,8 @@ export default function NodePage() {
                         )}
                         {!isRemoteNode && (
                           <Button
-                            className="h-6 px-2 min-w-0 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-400"
+                            className="h-6 px-2 min-w-0 text-xs"
+                            color="info"
                             isDisabled={node.connectionStatus !== "online"}
                             isLoading={node.rollbackLoading}
                             size="sm"
@@ -1813,7 +1811,8 @@ export default function NodePage() {
                         )}
                         {!isRemoteNode && (
                           <Button
-                            className="h-6 px-2 min-w-0 text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400"
+                            className="h-6 px-2 min-w-0 text-xs"
+                            color="primary"
                             size="sm"
                             variant="flat"
                             onPress={() => handleEdit(node)}
@@ -1822,7 +1821,8 @@ export default function NodePage() {
                           </Button>
                         )}
                         <Button
-                          className="h-6 px-2 min-w-0 text-xs bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-400"
+                          className="h-6 px-2 min-w-0 text-xs"
+                          color="danger"
                           size="sm"
                           variant="flat"
                           onPress={() => handleDelete(node)}
@@ -1884,14 +1884,7 @@ export default function NodePage() {
                                 style={{ touchAction: "none" }}
                                 title="拖拽排序"
                               >
-                                <svg
-                                  aria-hidden="true"
-                                  className="w-4 h-4"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M7 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 2zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 7 14zm6-8a2 2 0 1 1-.001-4.001A2 2 0 0 1 13 6zm0 2a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 8zm0 6a2 2 0 1 1 .001 4.001A2 2 0 0 1 13 14z" />
-                                </svg>
+                                <GripVertical className="w-4 h-4" />
                               </div>
                               {selectMode && (
                                 <Checkbox
@@ -1908,12 +1901,12 @@ export default function NodePage() {
                                   </h3>
                                   <div
                                     className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0
-                                      ${connectionStatusMeta.color === "success" ? "bg-emerald-500/20 text-emerald-600" : "bg-rose-500/20 text-rose-600"}
+                                      ${connectionStatusMeta.color === "success" ? "bg-success-soft text-success-ink" : "bg-danger-soft text-danger-ink"}
                                     `}
                                     title={connectionStatusMeta.text}
                                   >
                                     <span
-                                      className={`h-1.5 w-1.5 rounded-full ${connectionStatusMeta.color === "success" ? "bg-emerald-500" : "bg-rose-500"}`}
+                                      className={`h-1.5 w-1.5 rounded-full ${connectionStatusMeta.color === "success" ? "bg-success" : "bg-danger"}`}
                                     />
                                     {connectionStatusMeta.text}
                                   </div>
@@ -1940,20 +1933,7 @@ export default function NodePage() {
                                       )
                                     }
                                   >
-                                    <svg
-                                      aria-hidden="true"
-                                      className="h-3.5 w-3.5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={1.8}
-                                      />
-                                    </svg>
+                                    <Info className="h-3.5 w-3.5" />
                                     {hasRemark && (
                                       <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5 rounded-full border border-background bg-default-300 shadow-sm dark:bg-default-500" />
                                     )}
@@ -2027,7 +2007,7 @@ export default function NodePage() {
 
                         <CardBody className="pt-0 pb-3 md:pt-0 md:pb-3 flex-1 flex flex-col">
                           {isRemoteNode && node.syncError && (
-                            <div className="mb-3 px-2 py-1.5 rounded-md bg-warning-50 dark:bg-warning-100/10 text-warning-700 dark:text-warning-400 text-xs">
+                            <div className="mb-3 px-2 py-1.5 rounded-md bg-warning-soft text-warning-ink text-xs">
                               {getRemoteSyncErrorMessage(node.syncError)}
                             </div>
                           )}
@@ -2111,7 +2091,7 @@ export default function NodePage() {
                             <div className="space-y-3 mb-4">
                               {remoteUsage ? (
                                 <>
-                                  <div className="text-xs rounded-md border border-default-200 dark:border-default-100/30 bg-default-50 dark:bg-default-100/20 p-2.5 space-y-2">
+                                  <div className="text-xs rounded-md border border-divider bg-default-50 dark:bg-default-100/20 p-2.5 space-y-2">
                                     <div className="flex justify-between gap-2">
                                       <span className="text-default-500">
                                         远程地址
@@ -2159,12 +2139,12 @@ export default function NodePage() {
                                     </div>
                                   </div>
 
-                                  <div className="text-xs rounded-md border border-default-200 dark:border-default-100/30 bg-default-50 dark:bg-default-100/20 p-2.5">
+                                  <div className="text-xs rounded-md border border-divider bg-default-50 dark:bg-default-100/20 p-2.5">
                                     <div className="flex items-center justify-between mb-2">
                                       <span className="text-default-500">
                                         占用端口
                                       </span>
-                                      <span className="font-mono text-default-700 dark:text-default-300">
+                                      <span className="font-mono text-default-700">
                                         {remoteUsage.usedPorts.length}/
                                         {Math.max(
                                           remoteUsage.portRangeEnd -
@@ -2196,12 +2176,12 @@ export default function NodePage() {
                                     </div>
                                   </div>
 
-                                  <div className="text-xs rounded-md border border-default-200 dark:border-default-100/30 bg-default-50 dark:bg-default-100/20 p-2.5">
+                                  <div className="text-xs rounded-md border border-divider bg-default-50 dark:bg-default-100/20 p-2.5">
                                     <div className="flex items-center justify-between mb-2">
                                       <span className="text-default-500">
                                         绑定明细
                                       </span>
-                                      <span className="font-mono text-default-700 dark:text-default-300">
+                                      <span className="font-mono text-default-700">
                                         {remoteUsage.activeBindingNum}
                                       </span>
                                     </div>
@@ -2210,7 +2190,7 @@ export default function NodePage() {
                                         remoteUsage.bindings.map((binding) => (
                                           <div
                                             key={binding.bindingId}
-                                            className="rounded border border-default-200 dark:border-default-100/30 bg-content1 p-2"
+                                            className="rounded border border-divider bg-content1 p-2"
                                           >
                                             <div className="flex items-center justify-between gap-2">
                                               <span
@@ -2245,7 +2225,7 @@ export default function NodePage() {
                                   </div>
                                 </>
                               ) : (
-                                <div className="text-xs rounded-md border border-default-200 dark:border-default-100/30 bg-default-50 dark:bg-default-100/20 p-2.5 text-default-500">
+                                <div className="text-xs rounded-md border border-divider bg-default-50 dark:bg-default-100/20 p-2.5 text-default-500">
                                   暂未获取到远程占用数据
                                 </div>
                               )}
@@ -2532,9 +2512,9 @@ export default function NodePage() {
                 >
                   <div className="space-y-4 pb-2">
                     {form.forwardMode === "nftables" ? (
-                      <div className="space-y-4 rounded-xl border border-warning-200 bg-warning-50/60 p-4 dark:border-warning-500/30 dark:bg-warning-950/20">
+                      <div className="space-y-4 rounded-xl border border-warning-line bg-warning-soft p-4">
                         <div>
-                          <div className="text-sm font-medium text-warning-700 dark:text-warning-300">
+                          <div className="text-sm font-medium text-warning-ink">
                             SSH 配置
                           </div>
                           <div className="text-xs text-default-500">
@@ -2797,21 +2777,9 @@ export default function NodePage() {
                         className={`grid grid-cols-1 sm:grid-cols-3 gap-3 bg-content1 bg-content1 p-3 rounded-md border border-divider ${protocolControlsDisabled ? "opacity-70" : ""}`}
                       >
                         {/* HTTP tile */}
-                        <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-200 dark:hover:border-primary-500/30 transition-colors">
+                        <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-line transition-colors">
                           <div className="flex items-center gap-2 mb-2">
-                            <svg
-                              aria-hidden="true"
-                              className="w-4 h-4 text-default-500"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              viewBox="0 0 24 24"
-                            >
-                              <rect height="16" rx="2" width="20" x="2" y="4" />
-                              <path d="M2 10h20" />
-                            </svg>
+                            <CreditCard className="w-4 h-4 text-default-500" />
                             <div className="text-sm font-medium text-default-700">
                               HTTP
                             </div>
@@ -2838,27 +2806,9 @@ export default function NodePage() {
                         </div>
 
                         {/* TLS tile */}
-                        <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-200 dark:hover:border-primary-500/30 transition-colors">
+                        <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-line transition-colors">
                           <div className="flex items-center gap-2 mb-2">
-                            <svg
-                              aria-hidden="true"
-                              className="w-4 h-4 text-default-500"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M6 10V7a6 6 0 1 1 12 0v3" />
-                              <rect
-                                height="10"
-                                rx="2"
-                                width="16"
-                                x="4"
-                                y="10"
-                              />
-                            </svg>
+                            <Lock className="w-4 h-4 text-default-500" />
                             <div className="text-sm font-medium text-default-700">
                               TLS
                             </div>
@@ -2882,22 +2832,9 @@ export default function NodePage() {
                         </div>
 
                         {/* SOCKS tile */}
-                        <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-200 dark:hover:border-primary-500/30 transition-colors">
+                        <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-line transition-colors">
                           <div className="flex items-center gap-2 mb-2">
-                            <svg
-                              aria-hidden="true"
-                              className="w-4 h-4 text-default-500"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                              <polyline points="7 10 12 15 17 10" />
-                              <line x1="12" x2="12" y1="15" y2="3" />
-                            </svg>
+                            <Download className="w-4 h-4 text-default-500" />
                             <div className="text-sm font-medium text-default-700">
                               SOCKS
                             </div>
