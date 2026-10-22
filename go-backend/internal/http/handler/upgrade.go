@@ -574,6 +574,20 @@ func (h *Handler) finishNodeOnlineRedeploy(nodeID int64) {
 	h.upgradeMu.Unlock()
 }
 
+// NodeOnlineRedeploySettled reports whether the reconnect restore for a node
+// has started and finished with nothing queued. Contract tests wait on it so
+// the background restore cannot interleave with the request they measure.
+func (h *Handler) NodeOnlineRedeploySettled(nodeID int64) bool {
+	if h == nil || nodeID <= 0 {
+		return false
+	}
+	h.upgradeMu.Lock()
+	defer h.upgradeMu.Unlock()
+	_, inFlight := h.nodeOnlineRedeploying[nodeID]
+	_, queued := h.nodeOnlineRedeployQueued[nodeID]
+	return !h.nodeOnlineRedeployAt[nodeID].IsZero() && !inFlight && !queued
+}
+
 func (h *Handler) redeployNodeRuntimeAfterUpgrade(nodeID int64) bool {
 	sharedOK := h.reconcileSharedNodeRuntime(nodeID)
 	localOK := h.redeployLocalNodeRuntime(nodeID)

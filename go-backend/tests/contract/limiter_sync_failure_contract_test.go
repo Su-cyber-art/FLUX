@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"go-backend/internal/auth"
+	"go-backend/internal/http/handler"
 	"go-backend/internal/http/response"
 	"go-backend/internal/security"
 )
@@ -541,7 +542,7 @@ func TestBatchAssignInsertRollbackWhenLimiterDispatchFailsContract(t *testing.T)
 
 func TestTunnelUpdateRecoversFromAddressInUseContract(t *testing.T) {
 	secret := "contract-jwt-secret"
-	router, r := setupContractRouter(t, secret)
+	router, r, h := setupContractRouterWithHandler(t, secret)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -622,6 +623,9 @@ func TestTunnelUpdateRecoversFromAddressInUseContract(t *testing.T) {
 	defer stopExit()
 	waitNodeStatus(t, r, entryNodeID, 1)
 	waitNodeStatus(t, r, exitNodeID, 1)
+	// A late reconnect restore would read the tunnel after the update converts
+	// it to type 2 and deploy it again, adding an extra AddService.
+	waitNodeOnlineRedeploySettled(t, h, entryNodeID, exitNodeID)
 
 	payload := map[string]interface{}{
 		"id":           tunnelID,
@@ -1175,6 +1179,21 @@ func startMockNodeSessionWithCommandFailures(t *testing.T, baseURL string, nodeS
 			_ = conn.Close()
 			wg.Wait()
 		})
+	}
+}
+
+// waitNodeOnlineRedeploySettled blocks until the background restore started by
+// each node's reconnect has finished, so it cannot overlap a measured request.
+func waitNodeOnlineRedeploySettled(t *testing.T, h *handler.Handler, nodeIDs ...int64) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for _, nodeID := range nodeIDs {
+		for !h.NodeOnlineRedeploySettled(nodeID) {
+			if time.Now().After(deadline) {
+				t.Fatalf("node %d reconnect restore did not settle before timeout", nodeID)
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 }
 
