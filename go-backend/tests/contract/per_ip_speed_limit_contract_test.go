@@ -17,7 +17,7 @@ import (
 
 func TestPerIPSpeedLimitRuntimePayload(t *testing.T) {
 	secret := "contract-jwt-secret"
-	router, r := setupContractRouter(t, secret)
+	router, r, h := setupContractRouterWithHandler(t, secret)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -91,6 +91,7 @@ func TestPerIPSpeedLimitRuntimePayload(t *testing.T) {
 	defer stopNode()
 
 	waitNodeStatus(t, r, nodeID, 1)
+	waitNodeOnlineRedeploySettled(t, h, nodeID)
 
 	payload := map[string]interface{}{
 		"name":       "per-ip-speed-forward",

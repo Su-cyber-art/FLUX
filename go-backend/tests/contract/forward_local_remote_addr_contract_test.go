@@ -21,7 +21,7 @@ func TestForwardLocalRemoteAddrToggleContracts(t *testing.T) {
 	})
 
 	secret := "contract-jwt-secret"
-	router, repo := setupContractRouter(t, secret)
+	router, repo, h := setupContractRouterWithHandler(t, secret)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -71,6 +71,7 @@ func TestForwardLocalRemoteAddrToggleContracts(t *testing.T) {
 	stopNode := startMockNodeSession(t, server.URL, "local-remote-secret")
 	defer stopNode()
 	waitNodeStatus(t, repo, entryNodeID, 1)
+	waitNodeOnlineRedeploySettled(t, h, entryNodeID)
 
 	t.Run("local remote address is rejected on create when toggle is off", func(t *testing.T) {
 		createPayload := map[string]interface{}{

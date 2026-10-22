@@ -22,7 +22,7 @@ import (
 
 func TestMaxConnLimit(t *testing.T) {
 	secret := "contract-jwt-secret"
-	router, r := setupContractRouter(t, secret)
+	router, r, h := setupContractRouterWithHandler(t, secret)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -91,6 +91,7 @@ func TestMaxConnLimit(t *testing.T) {
 	defer stopNode()
 
 	waitNodeStatus(t, r, nodeID, 1)
+	waitNodeOnlineRedeploySettled(t, h, nodeID)
 
 	payload := map[string]interface{}{
 		"name":          "max-conn-forward",
@@ -230,7 +231,7 @@ func TestMaxConnLimit(t *testing.T) {
 
 func TestUserMaxConnUpdateResyncsExistingForwards(t *testing.T) {
 	secret := "contract-jwt-secret"
-	router, r := setupContractRouter(t, secret)
+	router, r, h := setupContractRouterWithHandler(t, secret)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -303,6 +304,7 @@ func TestUserMaxConnUpdateResyncsExistingForwards(t *testing.T) {
 	defer stopNode()
 
 	waitNodeStatus(t, r, 20, 1)
+	waitNodeOnlineRedeploySettled(t, h, 20)
 
 	payload := map[string]interface{}{
 		"id":            2,
@@ -369,7 +371,7 @@ func TestUserMaxConnUpdateResyncsExistingForwards(t *testing.T) {
 
 func TestUserMaxConnWithPerIPRuleSplitsRuntimeLimiters(t *testing.T) {
 	secret := "contract-jwt-secret"
-	router, r := setupContractRouter(t, secret)
+	router, r, h := setupContractRouterWithHandler(t, secret)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -430,6 +432,7 @@ func TestUserMaxConnWithPerIPRuleSplitsRuntimeLimiters(t *testing.T) {
 	defer stopNode()
 
 	waitNodeStatus(t, r, 21, 1)
+	waitNodeOnlineRedeploySettled(t, h, 21)
 
 	payload := map[string]interface{}{
 		"name":       "user-per-ip-conn-forward",

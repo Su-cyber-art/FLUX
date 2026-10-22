@@ -925,7 +925,7 @@ func TestForwardCreateThenPauseResumeContract(t *testing.T) {
 
 func TestForwardUpdateRecoversFromAddressInUseContract(t *testing.T) {
 	secret := "contract-jwt-secret"
-	router, repo := setupContractRouter(t, secret)
+	router, repo, h := setupContractRouterWithHandler(t, secret)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -1019,6 +1019,7 @@ func TestForwardUpdateRecoversFromAddressInUseContract(t *testing.T) {
 	})
 	defer stopNode()
 	waitNodeStatus(t, repo, nodeID, 1)
+	waitNodeOnlineRedeploySettled(t, h, nodeID)
 
 	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/forward/create", bytes.NewReader(createBody))
 	createReq.Header.Set("Authorization", adminToken)

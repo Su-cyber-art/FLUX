@@ -673,7 +673,7 @@ func TestTunnelUpdateRecoversFromAddressInUseContract(t *testing.T) {
 
 func TestTunnelUpdateChangesEntryNodeButLeavesOldForwardRuntimeContract(t *testing.T) {
 	secret := "contract-jwt-secret"
-	router, r := setupContractRouter(t, secret)
+	router, r, h := setupContractRouterWithHandler(t, secret)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -803,8 +803,11 @@ func TestTunnelUpdateChangesEntryNodeButLeavesOldForwardRuntimeContract(t *testi
 	defer stopExit()
 
 	waitNodeStatus(t, r, oldEntryNodeID, 1)
+	waitNodeOnlineRedeploySettled(t, h, oldEntryNodeID)
 	waitNodeStatus(t, r, newEntryNodeID, 1)
+	waitNodeOnlineRedeploySettled(t, h, newEntryNodeID)
 	waitNodeStatus(t, r, exitNodeID, 1)
+	waitNodeOnlineRedeploySettled(t, h, exitNodeID)
 
 	payload := map[string]interface{}{
 		"id":           tunnelID,
@@ -849,7 +852,7 @@ func TestTunnelUpdateChangesEntryNodeButLeavesOldForwardRuntimeContract(t *testi
 
 func TestTunnelUpdateEntryTransitionsCleanupForwardRuntimeContract(t *testing.T) {
 	secret := "contract-jwt-secret"
-	router, r := setupContractRouter(t, secret)
+	router, r, h := setupContractRouterWithHandler(t, secret)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -934,9 +937,13 @@ func TestTunnelUpdateEntryTransitionsCleanupForwardRuntimeContract(t *testing.T)
 	defer stopExit()
 
 	waitNodeStatus(t, r, entryA, 1)
+	waitNodeOnlineRedeploySettled(t, h, entryA)
 	waitNodeStatus(t, r, entryB, 1)
+	waitNodeOnlineRedeploySettled(t, h, entryB)
 	waitNodeStatus(t, r, entryC, 1)
+	waitNodeOnlineRedeploySettled(t, h, entryC)
 	waitNodeStatus(t, r, exitNodeID, 1)
+	waitNodeOnlineRedeploySettled(t, h, exitNodeID)
 
 	updateTunnelEntries := func(entries []map[string]interface{}) {
 		payload := map[string]interface{}{
