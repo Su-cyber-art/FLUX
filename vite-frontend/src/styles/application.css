@@ -201,6 +201,34 @@
     .tunnel-list-head { display: grid; align-items: center; padding: 8px 12px 8px 14px; font-size: 12px; font-weight: 600; color: var(--default-500); background: var(--default-50); border-bottom: 1px solid var(--border); }
     .tunnel-row-lead, .tunnel-row-actions { align-self: center; padding-top: 0; }
   }
+  .user-list { container: user-list / inline-size; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--content1); }
+  .user-list-head { display: none; }
+  .user-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "name actions" "flow flow" "meta expiry";
+    align-items: center;
+    gap: 10px 12px;
+    padding: 12px 12px 12px 14px;
+    background: var(--content1);
+    transition: background-color .12s ease;
+  }
+  .user-row + .user-row { border-top: 1px solid var(--border); }
+  .user-row:hover { background: var(--default-soft); }
+  .user-row-name { grid-area: name; }
+  .user-row-flow { grid-area: flow; }
+  .user-row-meta { grid-area: meta; display: grid; gap: 2px; }
+  .user-row-expiry { grid-area: expiry; justify-self: end; }
+  .user-row-actions { grid-area: actions; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+  @container user-list (min-width: 820px) {
+    .user-list-head, .user-row {
+      grid-template-columns: minmax(190px, 1.2fr) minmax(170px, 1fr) minmax(170px, 1.1fr) 130px 112px;
+      grid-template-areas: "name flow meta expiry actions";
+      column-gap: 20px;
+    }
+    .user-list-head { display: grid; align-items: center; padding: 8px 12px 8px 14px; font-size: 12px; font-weight: 600; color: var(--default-500); background: var(--default-50); border-bottom: 1px solid var(--border); }
+    .user-row-expiry { justify-self: start; }
+  }
   .app-batch-bar { position: sticky; top: calc(var(--app-shell-header-height, 64px) + 12px); z-index: 30; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 16px; padding: 8px 10px 8px 14px; border: 1px solid var(--primary-line); border-radius: 10px; background: var(--primary-soft); box-shadow: 0 4px 16px #0f172a14; }
   .accent-choice { display: flex; align-items: center; gap: 7px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 7px; }
   .accent-choice[aria-pressed="true"] { border-color: var(--primary); }
