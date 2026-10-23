@@ -509,6 +509,32 @@ func assertCount(t *testing.T, r *repo.Repository, query string, arg interface{}
 	}
 }
 
+// expectPanelRegistration arms a pong watcher on a mock node connection; call
+// it before the read loop starts. The returned wait pings the panel and blocks
+// until it answers. The websocket handshake completes before the panel
+// registers the node, but the panel only starts reading (and answering pings)
+// after registration, so the pong proves commands can reach this node.
+func expectPanelRegistration(t *testing.T, conn *websocket.Conn) func() {
+	t.Helper()
+	pong := make(chan struct{})
+	var once sync.Once
+	conn.SetPongHandler(func(string) error {
+		once.Do(func() { close(pong) })
+		return nil
+	})
+	return func() {
+		t.Helper()
+		if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(time.Second)); err != nil {
+			t.Fatalf("ping panel from mock node: %v", err)
+		}
+		select {
+		case <-pong:
+		case <-time.After(5 * time.Second):
+			t.Fatal("panel did not register the mock node session")
+		}
+	}
+}
+
 func startMockNodeSession(t *testing.T, baseURL string, nodeSecret string) func() {
 	return startMockNodeSessionWithHook(t, baseURL, nodeSecret, nil)
 }
@@ -538,6 +564,7 @@ func startMockNodeSessionWithHook(t *testing.T, baseURL string, nodeSecret strin
 	if err != nil {
 		t.Fatalf("dial mock node websocket: %v", err)
 	}
+	awaitRegistration := expectPanelRegistration(t, conn)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -601,6 +628,7 @@ func startMockNodeSessionWithHook(t *testing.T, baseURL string, nodeSecret strin
 	}()
 
 	var stopOnce sync.Once
+	awaitRegistration()
 	return func() {
 		stopOnce.Do(func() {
 			_ = conn.Close()

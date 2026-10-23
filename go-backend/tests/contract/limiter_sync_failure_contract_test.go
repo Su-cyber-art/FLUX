@@ -1119,6 +1119,7 @@ func startMockNodeSessionWithCommandFailures(t *testing.T, baseURL string, nodeS
 	if err != nil {
 		t.Fatalf("dial mock node websocket: %v", err)
 	}
+	awaitRegistration := expectPanelRegistration(t, conn)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -1181,6 +1182,7 @@ func startMockNodeSessionWithCommandFailures(t *testing.T, baseURL string, nodeS
 	}()
 
 	var stopOnce sync.Once
+	awaitRegistration()
 	return func() {
 		stopOnce.Do(func() {
 			_ = conn.Close()
@@ -1230,6 +1232,7 @@ func startMockNodeSessionWithCommandRecorder(t *testing.T, baseURL string, nodeS
 	if err != nil {
 		t.Fatalf("dial mock node websocket: %v", err)
 	}
+	awaitRegistration := expectPanelRegistration(t, conn)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -1296,6 +1299,7 @@ func startMockNodeSessionWithCommandRecorder(t *testing.T, baseURL string, nodeS
 	}()
 
 	var stopOnce sync.Once
+	awaitRegistration()
 	return func() {
 		stopOnce.Do(func() {
 			_ = conn.Close()

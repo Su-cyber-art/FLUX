@@ -533,6 +533,7 @@ func startMockSessionForMaxConn(t *testing.T, baseURL string, nodeSecret string,
 	if err != nil {
 		t.Fatalf("dial mock node websocket: %v", err)
 	}
+	awaitRegistration := expectPanelRegistration(t, conn)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -599,6 +600,7 @@ func startMockSessionForMaxConn(t *testing.T, baseURL string, nodeSecret string,
 	}()
 
 	var stopOnce sync.Once
+	awaitRegistration()
 	return func() {
 		stopOnce.Do(func() {
 			_ = conn.Close()
