@@ -31,6 +31,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  Settings,
   ShieldCheck,
   Sun,
   UserRound,
@@ -45,6 +46,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { PageLoadingState } from "@/components/page-state";
 import { PageErrorBoundary } from "@/components/page-error-boundary";
 import { VersionFooter } from "@/components/version-footer";
+import { IconTile } from "@/components/ui/icon-tile";
 import {
   Modal,
   ModalBody,
@@ -69,6 +71,7 @@ export default function ApplicationLayout() {
     () => localStorage.getItem("sidebar_collapsed") === "true",
   );
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(0);
   const [monitorAllowed, setMonitorAllowed] = useState<boolean | null>(
     session.isAdmin ? true : null,
   );
@@ -84,11 +87,20 @@ export default function ApplicationLayout() {
       (item.path !== "/monitor" || monitorAllowed),
   );
 
+  const openMatch = (index: number) => {
+    const match = matches[index];
+
+    if (!match) return;
+    navigate(match.path);
+    closeSearch();
+  };
+
   useHotkeys([["mod+K", () => openSearch()]]);
   useEffect(() => {
     closeMobile();
     closeSearch();
     setSearch("");
+    setSelected(0);
     window.scrollTo(0, 0);
     mainRef.current?.scrollTo(0, 0);
   }, [location.pathname]);
@@ -254,7 +266,23 @@ export default function ApplicationLayout() {
                 </UnstyledButton>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Label>账号设置</Menu.Label>
+                <div className="flex items-center gap-2.5 px-3 pb-2.5 pt-2">
+                  <Avatar
+                    color="initials"
+                    name={session.name || "用户"}
+                    radius="xl"
+                    size={34}
+                  />
+                  <div className="min-w-0">
+                    <Text truncate fw={600} size="sm">
+                      {session.name || "用户"}
+                    </Text>
+                    <Text c="dimmed" size="xs">
+                      {session.isAdmin ? "管理员" : "成员"}
+                    </Text>
+                  </div>
+                </div>
+                <Menu.Divider />
                 <Menu.Item
                   component={Link}
                   leftSection={<UserRound size={15} />}
@@ -262,6 +290,15 @@ export default function ApplicationLayout() {
                 >
                   个人中心
                 </Menu.Item>
+                {session.isAdmin && (
+                  <Menu.Item
+                    component={Link}
+                    leftSection={<Settings size={15} />}
+                    to="/config"
+                  >
+                    系统设置
+                  </Menu.Item>
+                )}
                 <Menu.Divider />
                 <Menu.Item
                   color="red"
@@ -365,16 +402,17 @@ export default function ApplicationLayout() {
             </Tooltip>
           ) : (
             <>
-              <Group gap={7} mb="xs">
+              <Group gap={7} mb={6}>
                 <ShieldCheck className="text-default-500" size={14} />
                 <Text c="dimmed" size="xs">
                   {session.isAdmin ? "管理工作空间" : "个人工作空间"}
                 </Text>
               </Group>
               <VersionFooter
-                poweredClassName="text-xs text-default-500"
+                containerClassName="flex flex-wrap items-center gap-x-2 gap-y-1"
+                poweredClassName="text-[11px] text-default-400"
                 version={config.version}
-                versionClassName="text-xs text-default-500"
+                versionClassName="text-[11px] text-default-500"
               />
             </>
           )}
@@ -434,32 +472,60 @@ export default function ApplicationLayout() {
               leftSection={<Search size={16} />}
               placeholder="搜索页面名称或功能…"
               value={search}
-              onChange={(event) => setSearch(event.currentTarget.value)}
+              onChange={(event) => {
+                setSearch(event.currentTarget.value);
+                setSelected(0);
+              }}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && matches[0]) {
-                  navigate(matches[0].path);
-                  closeSearch();
+                // Enter also confirms an IME candidate; don't navigate then.
+                if (event.nativeEvent.isComposing) return;
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  const step = event.key === "ArrowDown" ? 1 : -1;
+
+                  setSelected((index) =>
+                    matches.length
+                      ? (index + step + matches.length) % matches.length
+                      : 0,
+                  );
                 }
+                if (event.key === "Enter") openMatch(selected);
               }}
             />
-            <Stack gap={4} mt="sm">
-              {matches.map((item) => (
-                <NavLink
+            <div className="app-quick-results" role="listbox">
+              {matches.map((item, index) => (
+                <UnstyledButton
                   key={item.path}
-                  component={Link}
-                  description={item.group}
-                  label={item.title}
-                  leftSection={<item.icon size={17} />}
-                  to={item.path}
-                  onClick={closeSearch}
-                />
+                  aria-selected={index === selected}
+                  className="app-quick-item"
+                  data-selected={index === selected || undefined}
+                  role="option"
+                  onClick={() => openMatch(index)}
+                  onMouseEnter={() => setSelected(index)}
+                >
+                  <IconTile
+                    size="sm"
+                    tone={index === selected ? "primary" : "default"}
+                  >
+                    <item.icon size={15} />
+                  </IconTile>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">
+                      {item.title}
+                    </span>
+                    <span className="block truncate text-xs text-default-500">
+                      {item.description}
+                    </span>
+                  </span>
+                  <span className="app-quick-enter">↵ 打开</span>
+                </UnstyledButton>
               ))}
               {!matches.length && (
                 <Text c="dimmed" py="lg" size="sm" ta="center">
                   没有匹配的页面
                 </Text>
               )}
-            </Stack>
+            </div>
           </ModalBody>
         </ModalContent>
       </Modal>

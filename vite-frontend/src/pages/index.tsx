@@ -2,24 +2,28 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Button,
+  Divider,
   Group,
   Paper,
   PasswordInput,
   Stack,
   Text,
   TextInput,
-  ThemeIcon,
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import {
+  Activity,
+  ArrowLeftRight,
   ArrowRight,
-  Check,
   KeyRound,
+  LockKeyhole,
   Network,
   Server,
-  ShieldCheck,
   Target,
+  UserRound,
+  Users,
+  type LucideIcon,
 } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
 
@@ -41,11 +45,39 @@ import {
   ModalContent,
   ModalHeader,
 } from "@/components/ui/modal";
+import { IconTile } from "@/components/ui/icon-tile";
+import { type SemanticColor } from "@/components/ui/shared";
 import { useWebViewMode } from "@/hooks/useWebViewMode";
 import { useSiteConfig } from "@/hooks/use-site-config";
 import { useThemeContext } from "@/themes/context";
 import { VersionFooter } from "@/components/version-footer";
 import DefaultLayout from "@/layouts/default";
+
+const AUTH_FEATURES: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  tone: SemanticColor;
+}[] = [
+  {
+    icon: ArrowLeftRight,
+    title: "转发与流量策略",
+    description: "端口转发、限速与流量配额集中管理",
+    tone: "primary",
+  },
+  {
+    icon: Activity,
+    title: "节点与链路监控",
+    description: "实时查看节点负载、隧道质量与服务可用性",
+    tone: "success",
+  },
+  {
+    icon: Users,
+    title: "用户与分组权限",
+    description: "按用户组与隧道组精细分配访问权限",
+    tone: "secondary",
+  },
+];
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -185,58 +217,62 @@ export default function LoginPage() {
     <DefaultLayout>
       <div className="auth-grid">
         <section className="auth-intro">
-          <Text c="blue" fw={650} mb="lg" size="xs">
+          <p className="mb-4 text-xs font-semibold tracking-[0.18em] text-primary-ink">
             节点 · 隧道 · 转发
-          </Text>
-          <Title fw={650} lh={1.3} order={1} size={42}>
+          </p>
+          <Title fw={650} lh={1.25} order={1} size={42}>
             掌握每一条连接。
           </Title>
-          <Text c="dimmed" lh={1.8} mt="lg" size="md">
+          <Text c="dimmed" lh={1.8} mt="md" size="md">
             将转发规则、节点状态和访问权限集中到一个清晰的工作空间。
           </Text>
-          <div className="auth-network">
+          <div aria-hidden className="auth-network">
             <div className="auth-network-node">
-              <Server size={24} />
-              <span>入口节点</span>
+              <IconTile size="sm" tone="default">
+                <Server size={16} />
+              </IconTile>
+              入口节点
+            </div>
+            <div className="auth-network-line" />
+            <div data-active className="auth-network-node">
+              <IconTile size="sm" tone="primary">
+                <Network size={16} />
+              </IconTile>
+              转发隧道
             </div>
             <div className="auth-network-line" />
             <div className="auth-network-node">
-              <Network color="var(--primary)" size={24} />
-              <span>转发隧道</span>
-            </div>
-            <div className="auth-network-line" />
-            <div className="auth-network-node">
-              <Target size={24} />
-              <span>目标服务</span>
+              <IconTile size="sm" tone="default">
+                <Target size={16} />
+              </IconTile>
+              目标服务
             </div>
           </div>
-          <Stack gap="sm">
-            {[
-              "集中管理转发与流量策略",
-              "实时查看节点和链路状态",
-              "精细配置用户与分组权限",
-            ].map((text) => (
-              <Group key={text} gap="xs">
-                <ThemeIcon color="teal" radius="xl" size={20} variant="light">
-                  <Check size={13} />
-                </ThemeIcon>
-                <Text c="dimmed" size="sm">
-                  {text}
-                </Text>
-              </Group>
+          <div className="flex flex-col gap-4">
+            {AUTH_FEATURES.map((feature) => (
+              <div key={feature.title} className="flex items-start gap-3">
+                <IconTile size="sm" tone={feature.tone}>
+                  <feature.icon size={15} />
+                </IconTile>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {feature.title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-default-500">
+                    {feature.description}
+                  </p>
+                </div>
+              </div>
             ))}
-          </Stack>
+          </div>
         </section>
         <section className="auth-form-panel">
           <div className="auth-form">
-            <Paper withBorder p={32} radius="lg">
-              <ThemeIcon mb="xl" radius="md" size={44} variant="light">
-                <ShieldCheck size={23} />
-              </ThemeIcon>
-              <Title order={2} size={25}>
+            <Paper withBorder p={{ base: 24, sm: 32 }} radius="lg" shadow="xs">
+              <Title order={2} size={24}>
                 登录控制台
               </Title>
-              <Text c="dimmed" mb="xl" mt={6} size="sm">
+              <Text c="dimmed" mb={28} mt={6} size="sm">
                 欢迎回来，请使用你的面板账号登录。
               </Text>
               <form noValidate onSubmit={form.onSubmit(submit)}>
@@ -246,6 +282,7 @@ export default function LoginPage() {
                     autoComplete="username"
                     disabled={busy}
                     label="用户名"
+                    leftSection={<UserRound size={16} />}
                     placeholder="输入用户名"
                     {...form.getInputProps("username")}
                   />
@@ -254,6 +291,7 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     disabled={busy}
                     label="密码"
+                    leftSection={<LockKeyhole size={16} />}
                     placeholder="输入密码"
                     visibilityToggleButtonProps={{
                       "aria-label": "显示或隐藏密码",
@@ -264,7 +302,7 @@ export default function LoginPage() {
                     fullWidth
                     disabled={passkeyLoading}
                     loading={loading}
-                    mt="sm"
+                    mt="xs"
                     rightSection={<ArrowRight size={16} />}
                     type="submit"
                   >
@@ -273,25 +311,31 @@ export default function LoginPage() {
                 </Stack>
               </form>
               {passkeyEnabled && (
-                <Button
-                  fullWidth
-                  disabled={loading}
-                  leftSection={<KeyRound size={16} />}
-                  loading={passkeyLoading}
-                  mt="md"
-                  variant="default"
-                  onClick={() => void authenticatePasskey()}
-                >
-                  选择通行证密钥登录
-                </Button>
+                <>
+                  <Divider
+                    c="dimmed"
+                    label="或"
+                    labelPosition="center"
+                    my="lg"
+                  />
+                  <Button
+                    fullWidth
+                    disabled={loading}
+                    leftSection={<KeyRound size={16} />}
+                    loading={passkeyLoading}
+                    variant="default"
+                    onClick={() => void authenticatePasskey()}
+                  >
+                    使用通行证密钥登录
+                  </Button>
+                </>
               )}
             </Paper>
             <VersionFooter
-              containerClassName="mt-6 text-center"
-              poweredClassName="text-xs text-default-500 mt-1"
-              updateBadgeClassName="ml-2 rounded bg-primary-soft px-1.5 py-0.5 text-primary"
+              containerClassName="mt-6 flex items-center justify-center gap-3"
+              poweredClassName="text-xs text-default-400"
               version={isWebView ? config.app_version : config.version}
-              versionClassName="text-xs text-default-500"
+              versionClassName="text-xs text-default-400"
             />
           </div>
         </section>
