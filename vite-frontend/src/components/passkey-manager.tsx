@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import {
+  ActionIcon,
   Alert,
   Button,
   Group,
   Loader,
-  Paper,
   PasswordInput,
   SimpleGrid,
   Stack,
   Text,
   TextInput,
-  Title,
+  Tooltip,
 } from "@mantine/core";
 import { KeyRound, Plus, Trash2 } from "lucide-react";
 
@@ -22,9 +22,11 @@ import {
   listPasskeys,
   type PasskeyItem,
 } from "@/api";
+import { IconTile } from "@/components/ui/icon-tile";
 import { toast } from "@/lib/notifications";
 import { createPasskey } from "@/utils/passkey";
 
+/** Settings row for binding and removing passkeys; hidden when unsupported. */
 export function PasskeyManager() {
   const [enabled, setEnabled] = useState(false);
   const [items, setItems] = useState<PasskeyItem[]>([]);
@@ -139,26 +141,21 @@ export function PasskeyManager() {
   };
 
   return (
-    <Paper withBorder p="lg" radius="md">
-      <Stack gap="md">
-        <div>
-          <Group gap="xs" mb={6}>
-            <KeyRound aria-hidden size={18} />
-            <Title order={3} size="h5">
-              通行证密钥
-            </Title>
-          </Group>
-          <Text c="dimmed" size="sm">
-            绑定后可直接选择密钥并使用设备解锁登录，无需输入用户名和验证码。
-            绑定和删除均需验证当前密码。
-          </Text>
-        </div>
-        <SimpleGrid cols={{ base: 1, sm: 2 }}>
+    <div className="settings-row">
+      <div>
+        <p className="settings-row-label">通行证密钥</p>
+        <p className="settings-row-desc">
+          绑定后可直接选择密钥并使用设备解锁登录，无需输入用户名和验证码。绑定和删除均需验证当前密码。
+        </p>
+      </div>
+      <Stack gap="sm">
+        <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
           <PasswordInput
             autoComplete="current-password"
             disabled={busy !== null}
             label="当前密码"
             placeholder="输入当前登录密码"
+            size="sm"
             value={password}
             visibilityToggleButtonProps={{ "aria-label": "显示或隐藏当前密码" }}
             onChange={(event) => setPassword(event.currentTarget.value)}
@@ -168,6 +165,7 @@ export function PasskeyManager() {
             label="密钥名称（可选）"
             maxLength={100}
             placeholder="例如：我的手机"
+            size="sm"
             value={name}
             onChange={(event) => setName(event.currentTarget.value)}
           />
@@ -177,6 +175,8 @@ export function PasskeyManager() {
             disabled={busy !== null && busy !== "register"}
             leftSection={<Plus size={16} />}
             loading={busy === "register"}
+            size="sm"
+            variant="light"
             onClick={() => void register()}
           >
             绑定通行证密钥
@@ -203,44 +203,47 @@ export function PasskeyManager() {
             </Text>
           </Group>
         ) : items.length === 0 ? (
-          <Text c="dimmed" size="sm">
+          <Text c="dimmed" size="xs">
             尚未绑定通行证密钥。
           </Text>
         ) : (
-          <Stack gap="xs">
+          <div className="overflow-hidden rounded-[10px] border border-divider">
             {items.map((item) => (
-              <Paper key={item.id} withBorder p="sm" radius="md">
-                <Group gap="sm" justify="space-between" wrap="nowrap">
-                  <div style={{ minWidth: 0, overflowWrap: "anywhere" }}>
-                    <Text fw={500} size="sm">
-                      {item.name}
-                    </Text>
-                    <Text c="dimmed" size="xs">
-                      创建于 {new Date(item.createdAt).toLocaleDateString()}
-                      {item.lastUsedAt
-                        ? ` · 最近使用 ${new Date(item.lastUsedAt).toLocaleDateString()}`
-                        : " · 尚未使用"}
-                    </Text>
-                  </div>
-                  <Button
+              <div
+                key={item.id}
+                className="flex items-center gap-3 border-divider px-3 py-2.5 [&+&]:border-t"
+              >
+                <IconTile size="sm" tone="primary">
+                  <KeyRound size={15} />
+                </IconTile>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {item.name}
+                  </p>
+                  <p className="truncate text-xs text-default-500">
+                    创建于 {new Date(item.createdAt).toLocaleDateString()}
+                    {item.lastUsedAt
+                      ? ` · 最近使用 ${new Date(item.lastUsedAt).toLocaleDateString()}`
+                      : " · 尚未使用"}
+                  </p>
+                </div>
+                <Tooltip label="删除密钥（需当前密码）">
+                  <ActionIcon
                     aria-label={`删除密钥 ${item.name}`}
                     color="red"
                     disabled={busy !== null && busy !== item.id}
-                    leftSection={<Trash2 size={14} />}
                     loading={busy === item.id}
-                    size="sm"
-                    style={{ flexShrink: 0 }}
-                    variant="light"
+                    variant="subtle"
                     onClick={() => void remove(item.id)}
                   >
-                    删除
-                  </Button>
-                </Group>
-              </Paper>
+                    <Trash2 size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              </div>
             ))}
-          </Stack>
+          </div>
         )}
       </Stack>
-    </Paper>
+    </div>
   );
 }
