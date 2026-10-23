@@ -3,11 +3,13 @@ import type { MonitorNodeApiItem } from "@/api/types";
 import { SegmentedControl, Group } from "@mantine/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  RefreshCw,
+  Activity,
+  ArrowRightLeft,
+  Gauge,
   LayoutGrid,
   List,
+  RefreshCw,
   Server,
-  ArrowRightLeft,
 } from "lucide-react";
 
 import { StatCard } from "@/components/stat-card";
@@ -183,6 +185,7 @@ export default function MonitorPage() {
     const avgCpu = onlineCount > 0 ? totalCpu / onlineCount : 0;
 
     return {
+      onlineCount,
       avgCpu,
       totalConns,
       totalBandwidth: totalNetIn + totalNetOut,
@@ -192,6 +195,23 @@ export default function MonitorPage() {
   return (
     <AnimatedPage>
       <div className="monitor-summary">
+        <StatCard
+          bottomContent={
+            <p className="text-xs text-default-500">
+              {nodeMap.size - aggregateMetrics.onlineCount > 0
+                ? `${nodeMap.size - aggregateMetrics.onlineCount} 个节点离线`
+                : "全部节点在线"}
+            </p>
+          }
+          icon={<Activity size={18} />}
+          title="在线节点"
+          tone={
+            nodeMap.size > 0 && aggregateMetrics.onlineCount < nodeMap.size
+              ? "warning"
+              : "success"
+          }
+          value={`${aggregateMetrics.onlineCount} / ${nodeMap.size}`}
+        />
         <StatCard
           bottomContent={
             <p className="text-xs text-default-500">在线节点平均负载</p>
@@ -207,14 +227,14 @@ export default function MonitorPage() {
           }
           icon={<ArrowRightLeft size={18} />}
           title="活跃连接"
-          tone="success"
+          tone="info"
           value={aggregateMetrics.totalConns}
         />
         <StatCard
           bottomContent={
             <p className="text-xs text-default-500">在线节点收发速率合计</p>
           }
-          icon={<RefreshCw size={18} />}
+          icon={<Gauge size={18} />}
           title="实时带宽"
           tone="secondary"
           value={formatBytesPerSecond(aggregateMetrics.totalBandwidth)}
@@ -229,7 +249,7 @@ export default function MonitorPage() {
               {
                 value: "nodes",
                 label: (
-                  <Group gap={6}>
+                  <Group gap={6} wrap="nowrap">
                     <Server size={15} />
                     节点监控
                   </Group>
@@ -238,39 +258,52 @@ export default function MonitorPage() {
               {
                 value: "tunnels",
                 label: (
-                  <Group gap={6}>
+                  <Group gap={6} wrap="nowrap">
                     <ArrowRightLeft size={15} />
                     隧道监控
                   </Group>
                 ),
               },
             ]}
+            size="sm"
             value={activeTab}
             onChange={(value) => setActiveTab(value as MonitorTab)}
           />
           <div className="flex items-center gap-2">
-            <Button
-              isIconOnly
-              aria-label={viewMode === "list" ? "切换卡片视图" : "切换列表视图"}
+            <SegmentedControl
+              aria-label="显示方式"
+              data={[
+                {
+                  value: "grid",
+                  label: (
+                    <Group gap={6} wrap="nowrap">
+                      <LayoutGrid size={15} />
+                      <span className="hidden sm:inline">卡片</span>
+                    </Group>
+                  ),
+                },
+                {
+                  value: "list",
+                  label: (
+                    <Group gap={6} wrap="nowrap">
+                      <List size={15} />
+                      <span className="hidden sm:inline">列表</span>
+                    </Group>
+                  ),
+                },
+              ]}
               size="sm"
-              variant="flat"
-              onPress={() => setViewMode(viewMode === "list" ? "grid" : "list")}
-            >
-              {viewMode === "list" ? (
-                <LayoutGrid className="w-4 h-4" />
-              ) : (
-                <List className="w-4 h-4" />
-              )}
-            </Button>
+              value={viewMode}
+              onChange={(value) => setViewMode(value as "list" | "grid")}
+            />
             {activeTab === "nodes" && (
               <Button
+                aria-label="刷新节点"
                 isLoading={nodesLoading}
-                size="sm"
-                variant="flat"
+                startContent={<RefreshCw size={15} />}
                 onPress={() => loadNodes()}
               >
-                <RefreshCw className="w-4 h-4 mr-1" />
-                刷新节点
+                <span className="hidden sm:inline">刷新</span>
               </Button>
             )}
           </div>

@@ -242,7 +242,8 @@
   .auth-network-node { width: 88px; height: 82px; border: 1px solid var(--border); border-radius: 12px; background: var(--content1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; font-size: 12px; color: var(--default-600); }
   .auth-network-line { height: 1px; flex: 1; max-width: 46px; background: var(--input); }
   .metric-value { font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
-  .monitor-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .monitor-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 75em) { .monitor-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .monitor-summary-item { padding: 20px; }
   .page-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
   .has-custom-bg .app-shell { background-image: var(--custom-bg-image); background-color: var(--custom-bg-color, var(--background)); background-size: cover; background-position: center; background-attachment: fixed; }
@@ -276,7 +277,9 @@
     .auth-grid { display: block; min-height: calc(100dvh - 64px); }
     .auth-intro { display: none; }
     .auth-form-panel { padding: 54px 24px; }
-    .monitor-summary { grid-template-columns: 1fr; gap: 10px; }
+    .monitor-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .monitor-summary > .mantine-Paper-root { padding: 14px; }
+    .monitor-summary .metric-value { font-size: 20px; margin-top: 8px; }
     .monitor-summary-item { padding: 16px 18px; }
   }
   @media (pointer: coarse) {

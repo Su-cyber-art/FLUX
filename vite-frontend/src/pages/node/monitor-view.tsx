@@ -1327,45 +1327,50 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
             </div>
           ) : (
             <Card className="w-full">
-              <Table
-                aria-label="节点列表"
-                className="overflow-x-auto min-w-full"
-                classNames={{
-                  wrapper:
-                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-                  td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
-                }}
-              >
+              <Table aria-label="节点列表">
                 <TableHeader>
-                  <TableColumn>状态</TableColumn>
-                  <TableColumn>名称</TableColumn>
-                  <TableColumn>速率</TableColumn>
-                  <TableColumn>流量</TableColumn>
-                  <TableColumn>开机时长</TableColumn>
-                  <TableColumn>连接数</TableColumn>
+                  <TableColumn>节点</TableColumn>
+                  <TableColumn>实时速率</TableColumn>
+                  <TableColumn>累计流量</TableColumn>
+                  <TableColumn>连接</TableColumn>
                   <TableColumn>CPU</TableColumn>
-                  <TableColumn>RAM</TableColumn>
-                  <TableColumn>存储</TableColumn>
-                  <TableColumn align="center">操作</TableColumn>
+                  <TableColumn>内存</TableColumn>
+                  <TableColumn>磁盘</TableColumn>
+                  <TableColumn align="center">详情</TableColumn>
                 </TableHeader>
                 <TableBody emptyContent="暂无节点">
                   {nodes.map((node) => {
                     const metric = realtimeNodeMetrics[node.id] || null;
                     const isOnline = node.connectionStatus === "online";
+                    const live = isOnline && metric;
+                    const usageCell = (value?: number) => (
+                      <div className="flex items-center gap-2 whitespace-nowrap">
+                        {live ? (
+                          <Progress
+                            className="w-12"
+                            color={getColorByUsage(value ?? 0)}
+                            size="sm"
+                            value={value ?? 0}
+                          />
+                        ) : (
+                          <div className="h-1.5 w-12 rounded-full bg-default-soft" />
+                        )}
+                        <span className="w-10 text-right font-mono text-xs tabular-nums text-default-600">
+                          {live ? `${(value ?? 0).toFixed(1)}%` : "-"}
+                        </span>
+                      </div>
+                    );
 
                     return (
                       <TableRow key={node.id}>
                         <TableCell>
-                          <div
-                            className={`w-2 h-2 rounded-full ml-1 ${isOnline ? "bg-success" : "bg-danger"}`}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className={`h-2 w-2 shrink-0 rounded-full ${isOnline ? "bg-success" : "bg-danger"}`}
+                              title={isOnline ? "在线" : "离线"}
+                            />
                             <DistroIcon
-                              className="w-4 h-4 flex-shrink-0"
+                              className="h-4 w-4 flex-shrink-0"
                               distro={parseDistroFromVersion(node.version)}
                               style={{
                                 color: isOnline
@@ -1375,145 +1380,55 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                                   : undefined,
                               }}
                             />
-                            <span className="font-semibold text-sm whitespace-nowrap">
-                              {node.name}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-2 py-1 text-xs whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 font-mono text-success-ink">
-                              <span className="w-[86px] text-right inline-block">
-                                {isOnline && metric
-                                  ? formatBytesPerSecond(metric.netOutSpeed)
-                                  : "-"}
-                              </span>
-                              <div className="flex items-center justify-center p-[3px] rounded-full bg-success-soft text-success-ink">
-                                <ArrowUp
-                                  className="w-3 h-3"
-                                  strokeWidth={2.5}
-                                />
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 font-mono text-primary-ink">
-                              <span className="w-[86px] text-right inline-block">
-                                {isOnline && metric
-                                  ? formatBytesPerSecond(metric.netInSpeed)
-                                  : "-"}
-                              </span>
-                              <div className="flex items-center justify-center p-[3px] rounded-full bg-primary-soft text-primary-ink">
-                                <ArrowDown
-                                  className="w-3 h-3"
-                                  strokeWidth={2.5}
-                                />
-                              </div>
+                            <div className="min-w-0">
+                              <p className="whitespace-nowrap text-sm font-semibold text-foreground">
+                                {node.name}
+                              </p>
+                              <p className="whitespace-nowrap text-[11px] text-default-500">
+                                {live
+                                  ? `运行 ${formatUptime(metric.uptime)}`
+                                  : "离线"}
+                              </p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col gap-2 py-1 text-xs whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 font-mono text-default-600">
-                              <span className="w-[86px] text-right inline-block">
-                                {isOnline && metric
-                                  ? formatBytes(metric.netOutBytes)
-                                  : "-"}
-                              </span>
-                              <div className="flex items-center justify-center p-[3px] rounded-full bg-default-100 text-default-500 dark:bg-default-100/50">
-                                <ArrowUp
-                                  className="w-3 h-3"
-                                  strokeWidth={2.5}
-                                />
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 font-mono text-default-600">
-                              <span className="w-[86px] text-right inline-block">
-                                {isOnline && metric
-                                  ? formatBytes(metric.netInBytes)
-                                  : "-"}
-                              </span>
-                              <div className="flex items-center justify-center p-[3px] rounded-full bg-default-100 text-default-500 dark:bg-default-100/50">
-                                <ArrowDown
-                                  className="w-3 h-3"
-                                  strokeWidth={2.5}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-mono text-xs text-default-500 whitespace-nowrap">
-                            {isOnline && metric
-                              ? formatUptime(metric.uptime)
-                              : "-"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1.5 text-xs font-mono text-default-500">
-                            <div>
-                              TCP {isOnline && metric ? metric.tcpConns : "-"}
-                            </div>
-                            <div>
-                              UDP {isOnline && metric ? metric.udpConns : "-"}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {isOnline && metric ? (
-                              <Progress
-                                className="w-[40px] md:w-[60px]"
-                                color={getColorByUsage(metric.cpuUsage)}
-                                size="sm"
-                                value={metric.cpuUsage}
-                              />
-                            ) : (
-                              <div className="w-[40px] md:w-[60px] h-2 rounded-full bg-default-100" />
-                            )}
-                            <span className="text-xs font-mono w-9 text-right text-default-500">
-                              {isOnline && metric
-                                ? `${metric.cpuUsage.toFixed(1)}%`
+                          <div className="space-y-0.5 whitespace-nowrap font-mono text-xs tabular-nums">
+                            <p className="flex items-center gap-1 text-success-ink">
+                              <ArrowUp size={12} strokeWidth={2.5} />
+                              {live
+                                ? formatBytesPerSecond(metric.netOutSpeed)
                                 : "-"}
-                            </span>
+                            </p>
+                            <p className="flex items-center gap-1 text-primary-ink">
+                              <ArrowDown size={12} strokeWidth={2.5} />
+                              {live
+                                ? formatBytesPerSecond(metric.netInSpeed)
+                                : "-"}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            {isOnline && metric ? (
-                              <Progress
-                                className="w-[40px] md:w-[60px]"
-                                color={getColorByUsage(metric.memoryUsage)}
-                                size="sm"
-                                value={metric.memoryUsage}
-                              />
-                            ) : (
-                              <div className="w-[40px] md:w-[60px] h-2 rounded-full bg-default-100" />
-                            )}
-                            <span className="text-xs font-mono w-9 text-right text-default-500">
-                              {isOnline && metric
-                                ? `${metric.memoryUsage.toFixed(1)}%`
-                                : "-"}
-                            </span>
+                          <div className="space-y-0.5 whitespace-nowrap font-mono text-xs tabular-nums text-default-600">
+                            <p className="flex items-center gap-1">
+                              <ArrowUp size={12} strokeWidth={2.5} />
+                              {live ? formatBytes(metric.netOutBytes) : "-"}
+                            </p>
+                            <p className="flex items-center gap-1">
+                              <ArrowDown size={12} strokeWidth={2.5} />
+                              {live ? formatBytes(metric.netInBytes) : "-"}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            {isOnline && metric ? (
-                              <Progress
-                                className="w-[40px] md:w-[60px]"
-                                color={getColorByUsage(metric.diskUsage)}
-                                size="sm"
-                                value={metric.diskUsage}
-                              />
-                            ) : (
-                              <div className="w-[40px] md:w-[60px] h-2 rounded-full bg-default-100" />
-                            )}
-                            <span className="text-xs font-mono w-9 text-right text-default-500">
-                              {isOnline && metric
-                                ? `${metric.diskUsage.toFixed(1)}%`
-                                : "-"}
-                            </span>
+                          <div className="space-y-0.5 whitespace-nowrap font-mono text-xs tabular-nums text-default-600">
+                            <p>TCP {live ? metric.tcpConns : "-"}</p>
+                            <p>UDP {live ? metric.udpConns : "-"}</p>
                           </div>
                         </TableCell>
+                        <TableCell>{usageCell(metric?.cpuUsage)}</TableCell>
+                        <TableCell>{usageCell(metric?.memoryUsage)}</TableCell>
+                        <TableCell>{usageCell(metric?.diskUsage)}</TableCell>
                         <TableCell>
                           <div className="flex justify-center">
                             <Button
@@ -1526,7 +1441,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                                 setSelectedNodeId(node.id);
                               }}
                             >
-                              <Eye className="w-4 h-4 text-default-500" />
+                              <Eye className="h-4 w-4 text-default-500" />
                             </Button>
                           </div>
                         </TableCell>
