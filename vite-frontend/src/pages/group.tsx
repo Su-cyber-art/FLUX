@@ -1,8 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActionIcon, Tooltip } from "@mantine/core";
+import {
+  ArrowRight,
+  Network,
+  Plus,
+  ShieldCheck,
+  SquarePen,
+  Trash2,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
-import { PageLoadingState } from "@/components/page-state";
+import { PageEmptyState, PageLoadingState } from "@/components/page-state";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { SectionHeader } from "@/components/section-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +28,6 @@ import {
   useDisclosure,
 } from "@/components/ui/modal";
 import { Select, SelectItem } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Chip } from "@/components/ui/chip";
 import {
   assignGroupPermission,
@@ -88,6 +93,161 @@ const formatDate = (timestamp?: number): string => {
   return new Date(timestamp).toLocaleString();
 };
 
+interface GroupPanelItem {
+  id: number;
+  name: string;
+  status: number;
+  members: string[];
+  createdTime: number;
+}
+
+const MEMBER_PREVIEW_LIMIT = 4;
+
+/** One group family (tunnel or user groups): header, rows and empty state. */
+function GroupPanel({
+  icon,
+  title,
+  description,
+  items,
+  memberUnit,
+  assignLabel,
+  emptyText,
+  onCreate,
+  onAssign,
+  onEdit,
+  onDelete,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  items: GroupPanelItem[];
+  memberUnit: string;
+  assignLabel: string;
+  emptyText: string;
+  onCreate: () => void;
+  onAssign: (id: number) => void;
+  onEdit: (id: number) => void;
+  onDelete: (item: GroupPanelItem) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <SectionHeader
+          actions={
+            <Button
+              color="primary"
+              size="sm"
+              startContent={<Plus size={14} />}
+              variant="flat"
+              onPress={onCreate}
+            >
+              新建
+            </Button>
+          }
+          count={items.length}
+          description={description}
+          icon={icon}
+          title={title}
+        />
+      </CardHeader>
+      <CardBody className="pt-0">
+        {items.length === 0 ? (
+          <PageEmptyState className="min-h-32" message={emptyText} />
+        ) : (
+          <ul className="divide-y divide-divider overflow-hidden rounded-lg border border-divider">
+            {items.map((item) => {
+              const hidden = item.members.length - MEMBER_PREVIEW_LIMIT;
+
+              return (
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-default-soft"
+                >
+                  <div className="min-w-0 flex-1 basis-60">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {item.name}
+                      </span>
+                      {item.status !== 1 && (
+                        <Chip dot color="warning" size="xs">
+                          停用
+                        </Chip>
+                      )}
+                      <span className="shrink-0 text-xs text-default-500">
+                        {item.members.length} {memberUnit}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {item.members.length === 0 ? (
+                        <span className="text-xs text-default-400">
+                          尚未分配
+                        </span>
+                      ) : (
+                        <>
+                          {item.members
+                            .slice(0, MEMBER_PREVIEW_LIMIT)
+                            .map((member) => (
+                              <Chip key={member} size="xs">
+                                {member}
+                              </Chip>
+                            ))}
+                          {hidden > 0 && (
+                            <Chip
+                              color="primary"
+                              size="xs"
+                              title={item.members
+                                .slice(MEMBER_PREVIEW_LIMIT)
+                                .join("、")}
+                            >
+                              +{hidden}
+                            </Chip>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-default-400">
+                      创建于 {formatDate(item.createdTime)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="light"
+                      onPress={() => onAssign(item.id)}
+                    >
+                      {assignLabel}
+                    </Button>
+                    <Tooltip label="编辑">
+                      <ActionIcon
+                        aria-label={`编辑 ${item.name}`}
+                        color="gray"
+                        variant="subtle"
+                        onClick={() => onEdit(item.id)}
+                      >
+                        <SquarePen size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label="删除">
+                      <ActionIcon
+                        aria-label={`删除 ${item.name}`}
+                        color="red"
+                        variant="subtle"
+                        onClick={() => onDelete(item)}
+                      >
+                        <Trash2 size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
 export default function GroupPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin] = useState(getAdminFlag());
@@ -106,6 +266,12 @@ export default function GroupPage() {
   >(null);
 
   const [savingPermission, setSavingPermission] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{
+    kind: "tunnelGroup" | "userGroup" | "permission";
+    id: number;
+    name: string;
+  } | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const {
     isOpen: tunnelGroupModalOpen,
@@ -469,183 +635,107 @@ export default function GroupPage() {
     );
   }
 
+  const confirmPendingDelete = async () => {
+    if (!pendingDelete) return;
+    setConfirmLoading(true);
+    try {
+      if (pendingDelete.kind === "tunnelGroup") {
+        await handleDeleteTunnelGroup(pendingDelete.id);
+      } else if (pendingDelete.kind === "userGroup") {
+        await handleDeleteUserGroup(pendingDelete.id);
+      } else {
+        await handleRemovePermission(pendingDelete.id);
+      }
+    } finally {
+      setConfirmLoading(false);
+      setPendingDelete(null);
+    }
+  };
+
   return (
-    <AnimatedPage className="space-y-6">
+    <AnimatedPage className="space-y-5">
       {loading ? (
         <PageLoadingState message="正在加载..." />
       ) : (
         <>
-          <Card>
-            <CardHeader className="flex flex-row items-center gap-3 pb-2">
-              <h3 className="text-lg font-semibold">隧道分组</h3>
-              <Button
-                className="h-7 px-3 text-xs font-medium min-w-0 shadow-sm"
-                color="primary"
-                size="sm"
-                onPress={openCreateTunnelGroup}
-              >
-                新建
-              </Button>
-            </CardHeader>
-            <CardBody>
-              <Table
-                aria-label="隧道分组列表"
-                classNames={{
-                  wrapper:
-                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-                  td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
-                }}
-              >
-                <TableHeader>
-                  <TableColumn>名称</TableColumn>
-                  <TableColumn>隧道</TableColumn>
-                  <TableColumn>状态</TableColumn>
-                  <TableColumn>创建时间</TableColumn>
-                  <TableColumn>操作</TableColumn>
-                </TableHeader>
-                <TableBody emptyContent="暂无隧道分组" items={tunnelGroups}>
-                  {(item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>
-                        {item.tunnelNames.length > 0
-                          ? item.tunnelNames.join("、")
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          color={item.status === 1 ? "success" : "danger"}
-                          size="sm"
-                        >
-                          {item.status === 1 ? "启用" : "停用"}
-                        </Chip>
-                      </TableCell>
-                      <TableCell>{formatDate(item.createdTime)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="flat"
-                            onPress={() => openAssignTunnels(item)}
-                          >
-                            分配隧道
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            onPress={() => openEditTunnelGroup(item)}
-                          >
-                            编辑
-                          </Button>
-                          <Button
-                            color="danger"
-                            size="sm"
-                            variant="light"
-                            onPress={() => handleDeleteTunnelGroup(item.id)}
-                          >
-                            删除
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardBody>
-          </Card>
+          <div className="grid gap-5 xl:grid-cols-2">
+            <GroupPanel
+              assignLabel="分配隧道"
+              description="把隧道归类，授权时整组生效"
+              emptyText="暂无隧道分组"
+              icon={Network}
+              items={tunnelGroups.map((group) => ({
+                ...group,
+                members: group.tunnelNames,
+              }))}
+              memberUnit="条隧道"
+              title="隧道分组"
+              onAssign={(id) => {
+                const group = tunnelGroups.find((item) => item.id === id);
+
+                if (group) openAssignTunnels(group);
+              }}
+              onCreate={openCreateTunnelGroup}
+              onDelete={(item) =>
+                setPendingDelete({
+                  kind: "tunnelGroup",
+                  id: item.id,
+                  name: item.name,
+                })
+              }
+              onEdit={(id) => {
+                const group = tunnelGroups.find((item) => item.id === id);
+
+                if (group) openEditTunnelGroup(group);
+              }}
+            />
+            <GroupPanel
+              assignLabel="分配用户"
+              description="把用户归类，统一授予隧道分组"
+              emptyText="暂无用户分组"
+              icon={Users}
+              items={userGroups.map((group) => ({
+                ...group,
+                members: group.userNames,
+              }))}
+              memberUnit="位用户"
+              title="用户分组"
+              onAssign={(id) => {
+                const group = userGroups.find((item) => item.id === id);
+
+                if (group) openAssignUsers(group);
+              }}
+              onCreate={openCreateUserGroup}
+              onDelete={(item) =>
+                setPendingDelete({
+                  kind: "userGroup",
+                  id: item.id,
+                  name: item.name,
+                })
+              }
+              onEdit={(id) => {
+                const group = userGroups.find((item) => item.id === id);
+
+                if (group) openEditUserGroup(group);
+              }}
+            />
+          </div>
 
           <Card>
-            <CardHeader className="flex flex-row items-center gap-3 pb-2">
-              <h3 className="text-lg font-semibold">用户分组</h3>
-              <Button
-                className="h-7 px-3 text-xs font-medium min-w-0 shadow-sm"
-                color="primary"
-                size="sm"
-                onPress={openCreateUserGroup}
-              >
-                新建
-              </Button>
+            <CardHeader className="pb-3">
+              <SectionHeader
+                count={permissions.length}
+                description="授权后，用户分组内的用户可以使用隧道分组中的全部隧道"
+                icon={ShieldCheck}
+                title="权限分配"
+              />
             </CardHeader>
-            <CardBody>
-              <Table
-                aria-label="用户分组列表"
-                classNames={{
-                  wrapper:
-                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-                  td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
-                }}
-              >
-                <TableHeader>
-                  <TableColumn>名称</TableColumn>
-                  <TableColumn>用户</TableColumn>
-                  <TableColumn>状态</TableColumn>
-                  <TableColumn>创建时间</TableColumn>
-                  <TableColumn>操作</TableColumn>
-                </TableHeader>
-                <TableBody emptyContent="暂无用户分组" items={userGroups}>
-                  {(item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>
-                        {item.userNames.length > 0
-                          ? item.userNames.join("、")
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          color={item.status === 1 ? "success" : "danger"}
-                          size="sm"
-                        >
-                          {item.status === 1 ? "启用" : "停用"}
-                        </Chip>
-                      </TableCell>
-                      <TableCell>{formatDate(item.createdTime)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="flat"
-                            onPress={() => openAssignUsers(item)}
-                          >
-                            分配用户
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="light"
-                            onPress={() => openEditUserGroup(item)}
-                          >
-                            编辑
-                          </Button>
-                          <Button
-                            color="danger"
-                            size="sm"
-                            variant="light"
-                            onPress={() => handleDeleteUserGroup(item.id)}
-                          >
-                            删除
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold">权限分配</h3>
-            </CardHeader>
-            <CardBody className="space-y-4">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
+            <CardBody className="space-y-4 pt-0">
+              <div className="grid gap-3 rounded-lg bg-default-soft p-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] md:items-end">
                 <Select
                   items={userGroups}
                   label="用户分组"
+                  placeholder="选择用户分组"
                   selectedKeys={
                     selectedUserGroupId ? [String(selectedUserGroupId)] : []
                   }
@@ -657,9 +747,13 @@ export default function GroupPage() {
                 >
                   {(item) => <SelectItem key={item.id}>{item.name}</SelectItem>}
                 </Select>
+                <span className="hidden pb-2 text-xs text-default-500 md:block">
+                  可使用
+                </span>
                 <Select
                   items={tunnelGroups}
                   label="隧道分组"
+                  placeholder="选择隧道分组"
                   selectedKeys={
                     selectedTunnelGroupId ? [String(selectedTunnelGroupId)] : []
                   }
@@ -672,60 +766,81 @@ export default function GroupPage() {
                   {(item) => <SelectItem key={item.id}>{item.name}</SelectItem>}
                 </Select>
                 <Button
-                  className="md:self-end md:justify-self-start whitespace-nowrap px-4"
                   color="primary"
+                  isDisabled={!selectedUserGroupId || !selectedTunnelGroupId}
                   isLoading={savingPermission}
-                  size="sm"
+                  startContent={<Plus size={15} />}
                   onPress={handleAssignPermission}
                 >
-                  分配
+                  授权
                 </Button>
               </div>
 
-              <Table
-                aria-label="分组权限列表"
-                classNames={{
-                  wrapper:
-                    "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-                  td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
-                }}
-              >
-                <TableHeader>
-                  <TableColumn>ID</TableColumn>
-                  <TableColumn>用户分组</TableColumn>
-                  <TableColumn>隧道分组</TableColumn>
-                  <TableColumn>创建时间</TableColumn>
-                  <TableColumn>操作</TableColumn>
-                </TableHeader>
-                <TableBody emptyContent="暂无权限分配记录" items={permissions}>
-                  {(item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.id}</TableCell>
-                      <TableCell>
-                        {item.userGroupName || item.userGroupId}
-                      </TableCell>
-                      <TableCell>
-                        {item.tunnelGroupName || item.tunnelGroupId}
-                      </TableCell>
-                      <TableCell>{formatDate(item.createdTime)}</TableCell>
-                      <TableCell>
-                        <Button
-                          color="danger"
-                          size="sm"
-                          variant="light"
-                          onPress={() => handleRemovePermission(item.id)}
-                        >
-                          回收
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              {permissions.length === 0 ? (
+                <PageEmptyState
+                  className="min-h-32"
+                  message="暂无权限分配记录"
+                />
+              ) : (
+                <ul className="divide-y divide-divider overflow-hidden rounded-lg border border-divider">
+                  {permissions.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 transition-colors hover:bg-default-soft"
+                    >
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm">
+                        <Chip color="secondary" size="sm">
+                          {item.userGroupName || `#${item.userGroupId}`}
+                        </Chip>
+                        <ArrowRight
+                          className="shrink-0 text-default-400"
+                          size={14}
+                        />
+                        <Chip color="primary" size="sm">
+                          {item.tunnelGroupName || `#${item.tunnelGroupId}`}
+                        </Chip>
+                        <span className="text-[11px] text-default-400">
+                          {formatDate(item.createdTime)}
+                        </span>
+                      </div>
+                      <Button
+                        color="danger"
+                        size="sm"
+                        variant="light"
+                        onPress={() =>
+                          setPendingDelete({
+                            kind: "permission",
+                            id: item.id,
+                            name: `${item.userGroupName || item.userGroupId} → ${item.tunnelGroupName || item.tunnelGroupId}`,
+                          })
+                        }
+                      >
+                        回收
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardBody>
           </Card>
+
+          <ConfirmDialog
+            confirmLabel={
+              pendingDelete?.kind === "permission" ? "回收" : "删除"
+            }
+            isOpen={pendingDelete !== null}
+            loading={confirmLoading}
+            message={
+              pendingDelete?.kind === "permission"
+                ? `回收“${pendingDelete.name}”后，该用户分组将不能再使用这些隧道。`
+                : `确定删除“${pendingDelete?.name ?? ""}”吗？此操作无法撤销。`
+            }
+            title={
+              pendingDelete?.kind === "permission" ? "回收权限" : "删除分组"
+            }
+            onClose={() => setPendingDelete(null)}
+            onConfirm={() => void confirmPendingDelete()}
+          />
 
           <Modal
             backdrop="blur"

@@ -5,7 +5,7 @@ import { ChevronRight, TriangleAlert } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { type SemanticColor } from "@/components/ui/shared";
-import { SectionHeader } from "@/pages/dashboard/components/section-header";
+import { SectionHeader } from "@/components/section-header";
 import { type DashboardNodeExpiryItem } from "@/pages/dashboard/use-dashboard-data";
 import {
   getNodeRenewalCycleLabel,

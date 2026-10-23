@@ -12,7 +12,7 @@ import {
 
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageEmptyState } from "@/components/page-state";
-import { SectionHeader } from "@/pages/dashboard/components/section-header";
+import { SectionHeader } from "@/components/section-header";
 import { entryAddresses, splitList } from "@/pages/dashboard/format";
 import { type DashboardForward } from "@/pages/dashboard/use-dashboard-data";
 import { formatTraffic } from "@/utils/traffic";

@@ -4,7 +4,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { PageEmptyState } from "@/components/page-state";
 import { UsageMeter } from "@/pages/dashboard/components/quota-card";
-import { SectionHeader } from "@/pages/dashboard/components/section-header";
+import { SectionHeader } from "@/components/section-header";
 import {
   UNLIMITED,
   formatCount,

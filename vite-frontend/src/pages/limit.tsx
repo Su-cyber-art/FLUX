@@ -1,14 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
-import { CirclePause, LayoutGrid, List, Pencil } from "lucide-react";
+import { ActionIcon, SegmentedControl, Tooltip } from "@mantine/core";
+import {
+  Gauge,
+  LayoutGrid,
+  List,
+  Plus,
+  SearchX,
+  SquarePen,
+  Trash2,
+} from "lucide-react";
 
 import toast from "@/lib/notifications";
-import {
-  AnimatedPage,
-  StaggerList,
-  StaggerItem,
-} from "@/components/animated-page";
+import { AnimatedPage } from "@/components/animated-page";
 import { SearchBar } from "@/components/search-bar";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,20 +25,13 @@ import {
 } from "@/components/ui/modal";
 import { Chip } from "@/components/ui/chip";
 import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
-import {
   createSpeedLimit,
   getSpeedLimitList,
   updateSpeedLimit,
   deleteSpeedLimit,
 } from "@/api";
-import { PageLoadingState } from "@/components/page-state";
+import { EmptyStateCard, PageLoadingState } from "@/components/page-state";
+import { IconTile } from "@/components/ui/icon-tile";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 
 interface SpeedLimitRule {
@@ -230,180 +228,214 @@ export default function LimitPage() {
     return <PageLoadingState message="正在加载..." />;
   }
 
+  const enabledCount = filteredRules.filter((rule) => rule.status === 1).length;
+  const speedLabel = (speed: number) =>
+    `≈ ${(speed / 8).toFixed(speed % 8 === 0 ? 0 : 1)} MB/s`;
+  const ruleActions = (rule: SpeedLimitRule) => (
+    <>
+      <Tooltip label="编辑">
+        <ActionIcon
+          aria-label={`编辑 ${rule.name}`}
+          color="gray"
+          variant="subtle"
+          onClick={() => handleEdit(rule)}
+        >
+          <SquarePen size={16} />
+        </ActionIcon>
+      </Tooltip>
+      <Tooltip label="删除">
+        <ActionIcon
+          aria-label={`删除 ${rule.name}`}
+          color="red"
+          variant="subtle"
+          onClick={() => handleDelete(rule)}
+        >
+          <Trash2 size={16} />
+        </ActionIcon>
+      </Tooltip>
+    </>
+  );
+  const ruleStatus = (rule: SpeedLimitRule) =>
+    rule.status === 1 ? null : (
+      <Chip dot color="warning" size="xs">
+        停用
+      </Chip>
+    );
+
   return (
     <AnimatedPage>
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-6 gap-3">
-        <div className="flex-1 max-w-sm flex items-center gap-2">
-          <SearchBar
-            isVisible={isSearchVisible}
-            placeholder="搜索规则名称"
-            value={searchKeyword}
-            onChange={setSearchKeyword}
-            onClose={() => setIsSearchVisible(false)}
-            onOpen={() => setIsSearchVisible(true)}
-          />
+      <div className="page-toolbar">
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
+          <div className="min-w-40 flex-1 sm:max-w-72">
+            <SearchBar
+              isVisible={isSearchVisible}
+              placeholder="搜索限速策略名称"
+              value={searchKeyword}
+              onChange={setSearchKeyword}
+              onClose={() => setIsSearchVisible(false)}
+              onOpen={() => setIsSearchVisible(true)}
+            />
+          </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            isIconOnly
-            aria-label="切换列表或卡片视图"
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <SegmentedControl
+            aria-label="显示方式"
+            data={[
+              {
+                value: "grid",
+                label: (
+                  <span className="flex items-center gap-1.5">
+                    <LayoutGrid size={15} />
+                    <span className="hidden sm:inline">卡片</span>
+                  </span>
+                ),
+              },
+              {
+                value: "list",
+                label: (
+                  <span className="flex items-center gap-1.5">
+                    <List size={15} />
+                    <span className="hidden sm:inline">列表</span>
+                  </span>
+                ),
+              },
+            ]}
             size="sm"
-            variant="flat"
-            onPress={() => setViewMode(viewMode === "list" ? "grid" : "list")}
+            value={viewMode}
+            onChange={(value) => setViewMode(value as "list" | "grid")}
+          />
+          <Button
+            className="ml-auto sm:ml-0"
+            color="primary"
+            startContent={<Plus size={16} />}
+            onPress={handleAdd}
           >
-            {viewMode === "list" ? (
-              <LayoutGrid className="w-4 h-4" />
-            ) : (
-              <List className="w-4 h-4" />
-            )}
-          </Button>
-          <Button color="primary" size="sm" variant="flat" onPress={handleAdd}>
-            新增
+            新增<span className="hidden sm:inline">策略</span>
           </Button>
         </div>
       </div>
 
-      {/* 统一卡片网格 */}
-      {filteredRules.length > 0 ? (
-        viewMode === "list" ? (
-          <Card>
-            <Table
-              aria-label="限速规则列表"
-              className="overflow-x-auto min-w-full"
-              classNames={{
-                wrapper:
-                  "bg-transparent p-0 shadow-none border-none overflow-auto rounded-xl",
-                th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-                td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
-              }}
-            >
-              <TableHeader>
-                <TableColumn>规则名称</TableColumn>
-                <TableColumn>速度限制</TableColumn>
-                <TableColumn>操作</TableColumn>
-              </TableHeader>
-              <TableBody items={filteredRules}>
-                {(rule) => (
-                  <TableRow key={rule.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`shrink-0 w-2 h-2 rounded-full ${
-                            rule.status === 1 ? "bg-success" : "bg-danger"
-                          }`}
-                        />
-                        <span className="font-medium text-foreground text-sm">
-                          {rule.name}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm font-mono text-default-600">
-                        {rule.speed} Mbps
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap items-center gap-1.5 min-w-max">
-                        <Button
-                          className="h-6 px-2 min-w-0 text-xs"
-                          color="primary"
-                          size="sm"
-                          variant="flat"
-                          onPress={() => handleEdit(rule)}
-                        >
-                          编辑
-                        </Button>
-                        <Button
-                          className="h-6 px-2 min-w-0 text-xs"
-                          color="danger"
-                          size="sm"
-                          variant="flat"
-                          onPress={() => handleDelete(rule)}
-                        >
-                          删除
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </Card>
-        ) : (
-          <StaggerList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-            {filteredRules.map((rule) => (
-              <StaggerItem key={rule.id}>
-                <Card className="shadow-sm overflow-hidden h-full">
-                  <CardHeader className="pb-2 md:pb-2">
-                    <div className="flex justify-between items-start w-full">
-                      <div>
-                        <h3 className="font-semibold text-foreground">
-                          {rule.name}
-                        </h3>
-                      </div>
-                      <Chip
-                        color={rule.status === 1 ? "success" : "danger"}
-                        size="sm"
-                        variant="flat"
-                      >
-                        {rule.status === 1 ? "运行" : "异常"}
-                      </Chip>
-                    </div>
-                  </CardHeader>
-                  <CardBody className="pt-0 pb-3 md:pt-0 md:pb-3">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-small text-default-600">
-                          速度限制
-                        </span>
-                        <Chip color="secondary" size="sm" variant="flat">
-                          {rule.speed} Mbps
-                        </Chip>
-                      </div>
-                    </div>
+      {rules.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
+          <span>
+            共{" "}
+            <span className="font-semibold text-foreground">
+              {filteredRules.length}
+            </span>{" "}
+            条策略
+            {filteredRules.length !== rules.length &&
+              `（已筛选，全部 ${rules.length} 条）`}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+            启用 {enabledCount}
+          </span>
+          {filteredRules.length - enabledCount > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+              停用 {filteredRules.length - enabledCount}
+            </span>
+          )}
+        </div>
+      )}
 
-                    <div className="flex gap-2 mt-4">
-                      <Button
-                        className="flex-1"
-                        color="primary"
-                        size="sm"
-                        startContent={<Pencil className="w-4 h-4" />}
-                        variant="flat"
-                        onPress={() => handleEdit(rule)}
-                      >
-                        编辑
-                      </Button>
-                      <Button
-                        className="flex-1"
-                        color="danger"
-                        size="sm"
-                        startContent={<CirclePause className="w-4 h-4" />}
-                        variant="flat"
-                        onPress={() => handleDelete(rule)}
-                      >
-                        删除
-                      </Button>
-                    </div>
-                  </CardBody>
-                </Card>
-              </StaggerItem>
-            ))}
-          </StaggerList>
+      {filteredRules.length === 0 ? (
+        rules.length > 0 ? (
+          <EmptyStateCard
+            action={
+              <Button onPress={() => setSearchKeyword("")}>清空搜索</Button>
+            }
+            description="换个关键词再试试。"
+            icon={<SearchX size={20} />}
+            title="没有匹配的限速策略"
+          />
+        ) : (
+          <EmptyStateCard
+            action={
+              <Button
+                color="primary"
+                startContent={<Plus size={16} />}
+                onPress={handleAdd}
+              >
+                新增策略
+              </Button>
+            }
+            description="创建带宽上限后，可以在用户、隧道权限和转发规则中选用。"
+            icon={<Gauge size={20} />}
+            title="还没有限速策略"
+          />
         )
+      ) : viewMode === "list" ? (
+        <div className="overflow-hidden rounded-[10px] border border-divider bg-content1">
+          {filteredRules.map((rule) => (
+            <div
+              key={rule.id}
+              className="flex items-center gap-3 border-divider px-4 py-3 transition-colors hover:bg-default-soft [&+&]:border-t"
+            >
+              <IconTile
+                size="sm"
+                tone={rule.status === 1 ? "primary" : "default"}
+              >
+                <Gauge size={15} />
+              </IconTile>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {rule.name}
+                  </span>
+                  {ruleStatus(rule)}
+                </div>
+                <p className="text-xs text-default-500">
+                  {speedLabel(rule.speed)}
+                </p>
+              </div>
+              <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">
+                {rule.speed} Mbps
+              </span>
+              <div className="flex shrink-0 items-center gap-0.5">
+                {ruleActions(rule)}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
-        /* 空状态 */
-        <Card className="shadow-sm bg-default-50/50">
-          <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
-            <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
-              暂无限速规则
-            </h3>
-            <p className="text-default-500 text-sm max-w-xs mx-auto leading-relaxed">
-              还没有创建任何限速规则，点击上方按钮开始创建
-            </p>
-          </CardBody>
-        </Card>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-4">
+          {filteredRules.map((rule) => (
+            <Card key={rule.id} className="h-full gap-4 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <IconTile
+                    size="sm"
+                    tone={rule.status === 1 ? "primary" : "default"}
+                  >
+                    <Gauge size={15} />
+                  </IconTile>
+                  <span
+                    className="truncate text-sm font-semibold text-foreground"
+                    title={rule.name}
+                  >
+                    {rule.name}
+                  </span>
+                </div>
+                {ruleStatus(rule)}
+              </div>
+              <div>
+                <p className="metric-value text-[26px] font-semibold leading-tight text-foreground">
+                  {rule.speed}
+                  <span className="ml-1 text-sm font-medium text-default-500">
+                    Mbps
+                  </span>
+                </p>
+                <p className="mt-0.5 text-xs text-default-500">
+                  {speedLabel(rule.speed)}
+                </p>
+              </div>
+              <div className="mt-auto flex items-center justify-end gap-0.5 border-t border-divider pt-2">
+                {ruleActions(rule)}
+              </div>
+            </Card>
+          ))}
+        </div>
       )}
 
       {/* 新增/编辑模态框 */}

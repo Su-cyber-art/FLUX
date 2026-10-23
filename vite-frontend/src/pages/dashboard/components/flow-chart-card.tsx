@@ -11,7 +11,7 @@ import { ChartLine } from "lucide-react";
 
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageEmptyState } from "@/components/page-state";
-import { SectionHeader } from "@/pages/dashboard/components/section-header";
+import { SectionHeader } from "@/components/section-header";
 
 interface FlowChartPoint {
   time: string;
