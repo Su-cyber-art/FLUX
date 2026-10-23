@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { notifications } from "@mantine/notifications";
-import { Check, Info, X } from "lucide-react";
+import { Check, Info, TriangleAlert, X } from "lucide-react";
 interface ToastOptions {
   id?: string;
   duration?: number;
@@ -21,10 +21,17 @@ let sequence = 0;
 function show(
   message: Message,
   options: ToastOptions = {},
-  tone: "info" | "success" | "error" = "info",
+  tone: "info" | "success" | "warning" | "error" = "info",
 ) {
   const id = options.id || `flvx-notification-${++sequence}`;
-  const Icon = tone === "success" ? Check : tone === "error" ? X : Info;
+  const Icon =
+    tone === "success"
+      ? Check
+      : tone === "error"
+        ? X
+        : tone === "warning"
+          ? TriangleAlert
+          : Info;
 
   notifications.show({
     id,
@@ -32,8 +39,16 @@ function show(
     autoClose:
       options.duration === Infinity
         ? false
-        : (options.duration ?? (tone === "error" ? 5000 : 3000)),
-    color: tone === "success" ? "teal" : tone === "error" ? "red" : "blue",
+        : (options.duration ??
+          (tone === "error" || tone === "warning" ? 5000 : 3000)),
+    color:
+      tone === "success"
+        ? "teal"
+        : tone === "error"
+          ? "red"
+          : tone === "warning"
+            ? "orange"
+            : "blue",
     icon: options.icon ?? <Icon size={16} />,
     position: options.position,
     withCloseButton: true,
@@ -44,6 +59,8 @@ function show(
 export const toast = Object.assign(show, {
   success: (message: Message, options?: ToastOptions) =>
     show(message, options, "success"),
+  warning: (message: Message, options?: ToastOptions) =>
+    show(message, options, "warning"),
   error: (message: Message, options?: ToastOptions) =>
     show(message, options, "error"),
   dismiss: (id?: string) =>

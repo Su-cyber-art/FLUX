@@ -33,7 +33,11 @@ import {
   Wifi,
   WifiOff,
   ArrowRight,
+  ArrowDownUp,
+  ChartLine,
+  Network,
 } from "lucide-react";
+import { ActionIcon, Loader, Tooltip as MantineTooltip } from "@mantine/core";
 
 import toast from "@/lib/notifications";
 import { formatTraffic } from "@/utils/traffic";
@@ -47,6 +51,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
+import { IconTile } from "@/components/ui/icon-tile";
+import { EmptyStateCard } from "@/components/page-state";
+import { SectionHeader } from "@/components/section-header";
 import { Select, SelectItem } from "@/components/ui/select";
 import {
   Table,
@@ -108,9 +115,11 @@ const formatTimestamp = (ts: number, rangeMs?: number): string => {
 function LatencyDisplay({
   value,
   loading,
+  large,
 }: {
   value?: number;
   loading?: boolean;
+  large?: boolean;
 }) {
   if (loading) {
     return <RefreshCw className="w-3 h-3 animate-spin inline text-primary" />;
@@ -126,7 +135,9 @@ function LatencyDisplay({
   else if (value > 50) colorClass = "text-primary";
 
   return (
-    <span className={`font-mono text-xs font-semibold ${colorClass}`}>
+    <span
+      className={`font-semibold ${large ? "metric-value text-lg" : "font-mono text-xs"} ${colorClass}`}
+    >
       {ms}ms
     </span>
   );
@@ -170,7 +181,7 @@ function UptimeHistoryBar({
             return (
               <div
                 key={idx}
-                className="w-1.5 h-4 rounded-full bg-default-200 dark:bg-default-100/50"
+                className="w-1.5 h-4 rounded-full bg-default-soft-hover"
                 title="暂无数据"
               />
             );
@@ -232,7 +243,9 @@ function TimeRangeSelect({
 }) {
   return (
     <Select
-      className="w-36"
+      isRequired
+      aria-label="时间范围"
+      className="w-28"
       selectedKeys={[String(value)]}
       onSelectionChange={(keys) => {
         const v = Number(Array.from(keys)[0]);
@@ -272,28 +285,36 @@ const QualityChartCard = React.memo(function QualityChartCard({
 }: QualityChartCardProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <h3 className="text-lg font-semibold">质量趋势</h3>
-        <div className="flex items-center gap-2">
-          <TimeRangeSelect value={rangeMs} onChange={onRangeChange} />
-          <Button
-            isLoading={loading}
-            size="sm"
-            variant="flat"
-            onPress={() => onRefresh(tunnelId)}
-          >
-            <RefreshCw className="w-4 h-4 mr-1" />
-            刷新
-          </Button>
-        </div>
+      <CardHeader className="pb-3">
+        <SectionHeader
+          actions={
+            <>
+              <TimeRangeSelect value={rangeMs} onChange={onRangeChange} />
+              <MantineTooltip label="刷新">
+                <ActionIcon
+                  aria-label="刷新质量趋势"
+                  color="gray"
+                  loading={loading}
+                  variant="subtle"
+                  onClick={() => onRefresh(tunnelId)}
+                >
+                  <RefreshCw size={16} />
+                </ActionIcon>
+              </MantineTooltip>
+            </>
+          }
+          description="入口到出口、出口到测试目标的延迟变化"
+          icon={ChartLine}
+          title="质量趋势"
+        />
       </CardHeader>
-      <CardBody>
+      <CardBody className="pt-0">
         {loading ? (
           <div className="flex justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin" />
+            <Loader size="sm" />
           </div>
         ) : error ? (
-          <div className="text-center py-8 text-danger text-sm">{error}</div>
+          <p className="monitor-chart-empty text-danger-ink">{error}</p>
         ) : data.length > 0 ? (
           <div className="h-64">
             <ResponsiveContainer height="100%" width="100%">
@@ -355,9 +376,7 @@ const QualityChartCard = React.memo(function QualityChartCard({
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="text-center py-8 text-default-500">
-            暂无质量历史数据
-          </div>
+          <p className="monitor-chart-empty">所选时间范围内还没有质量记录</p>
         )}
       </CardBody>
     </Card>
@@ -396,28 +415,36 @@ const TrafficChartCard = React.memo(function TrafficChartCard({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <h3 className="text-lg font-semibold">流量趋势</h3>
-        <div className="flex items-center gap-2">
-          <TimeRangeSelect value={rangeMs} onChange={onRangeChange} />
-          <Button
-            isLoading={loading}
-            size="sm"
-            variant="flat"
-            onPress={() => onRefresh(tunnelId)}
-          >
-            <RefreshCw className="w-4 h-4 mr-1" />
-            刷新
-          </Button>
-        </div>
+      <CardHeader className="pb-3">
+        <SectionHeader
+          actions={
+            <>
+              <TimeRangeSelect value={rangeMs} onChange={onRangeChange} />
+              <MantineTooltip label="刷新">
+                <ActionIcon
+                  aria-label="刷新流量趋势"
+                  color="gray"
+                  loading={loading}
+                  variant="subtle"
+                  onClick={() => onRefresh(tunnelId)}
+                >
+                  <RefreshCw size={16} />
+                </ActionIcon>
+              </MantineTooltip>
+            </>
+          }
+          description="隧道上下行流量"
+          icon={ArrowDownUp}
+          title="流量趋势"
+        />
       </CardHeader>
-      <CardBody>
+      <CardBody className="pt-0">
         {loading ? (
           <div className="flex justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin" />
+            <Loader size="sm" />
           </div>
         ) : error ? (
-          <div className="text-center py-8 text-danger text-sm">{error}</div>
+          <p className="monitor-chart-empty text-danger-ink">{error}</p>
         ) : data.length > 0 ? (
           <div className="h-64">
             <ResponsiveContainer height="100%" width="100%">
@@ -459,7 +486,7 @@ const TrafficChartCard = React.memo(function TrafficChartCard({
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="text-center py-8 text-default-500">暂无流量数据</div>
+          <p className="monitor-chart-empty">所选时间范围内还没有流量记录</p>
         )}
       </CardBody>
     </Card>
@@ -711,14 +738,15 @@ const ForwardingChainTopology = React.memo(function ForwardingChainTopology({
   if (topologyPaths.length === 0) return null;
 
   return (
-    <Card className="border border-divider/60 shadow-sm transition-shadow bg-gradient-to-br from-background to-default-50/50 mt-4">
-      <CardHeader className="py-3 px-4 flex flex-row items-center justify-between pb-1">
-        <h3 className="text-sm font-semibold flex items-center gap-1.5 text-default-700">
-          <Activity className="w-4 h-4 text-primary" />
-          全链路拓扑状态 (实时)
-        </h3>
+    <Card>
+      <CardHeader className="pb-3">
+        <SectionHeader
+          description="每一跳的实时连通与延迟"
+          icon={Network}
+          title="全链路拓扑"
+        />
       </CardHeader>
-      <CardBody className="py-2 px-4 pb-4">
+      <CardBody className="pt-0">
         <div className="max-h-80 space-y-1 overflow-auto pb-1">
           {topologyPaths.map((path, index) => (
             <div
@@ -1158,18 +1186,17 @@ export function TunnelMonitorView({
 
   if (accessDenied) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <Activity className="w-5 h-5 text-warning" />
-          <h3 className="text-lg font-semibold">监控权限</h3>
-        </CardHeader>
-        <CardBody>
-          <div className="text-sm text-default-600">{accessDenied}</div>
-          <div className="text-xs text-default-500 mt-2">
+      <EmptyStateCard
+        description={
+          <>
+            {accessDenied}
+            <br />
             如需使用监控功能，请联系管理员在用户页面授予监控权限。
-          </div>
-        </CardBody>
-      </Card>
+          </>
+        }
+        icon={<Activity size={20} />}
+        title="暂无监控权限"
+      />
     );
   }
 
@@ -1179,28 +1206,36 @@ export function TunnelMonitorView({
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button
-            size="sm"
-            variant="flat"
-            onPress={() => {
-              setDetailTunnelId(null);
-              setQualityHistory([]);
-              setTunnelMetrics([]);
-            }}
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            返回隧道列表
-          </Button>
-          <div className="flex items-center gap-2">
-            <ArrowRightLeft
-              className={`w-5 h-5 ${detailTunnel.status === 1 ? "text-success" : "text-default-400"}`}
-            />
-            <h3 className="text-lg font-semibold">{detailTunnel.name}</h3>
-            <Chip
-              color={detailTunnel.status === 1 ? "success" : "danger"}
+        <div className="flex flex-wrap items-center gap-3">
+          <MantineTooltip label="返回隧道列表">
+            <ActionIcon
+              aria-label="返回隧道列表"
+              color="gray"
+              size="lg"
+              variant="default"
+              onClick={() => {
+                setDetailTunnelId(null);
+                setQualityHistory([]);
+                setTunnelMetrics([]);
+              }}
+            >
+              <ArrowLeft size={16} />
+            </ActionIcon>
+          </MantineTooltip>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <IconTile
               size="sm"
-              variant="flat"
+              tone={detailTunnel.status === 1 ? "primary" : "default"}
+            >
+              <ArrowRightLeft size={15} />
+            </IconTile>
+            <h2 className="truncate text-base font-semibold text-foreground">
+              {detailTunnel.name}
+            </h2>
+            <Chip
+              dot
+              color={detailTunnel.status === 1 ? "success" : "danger"}
+              size="xs"
             >
               {detailTunnel.status === 1 ? "启用" : "禁用"}
             </Chip>
@@ -1208,69 +1243,65 @@ export function TunnelMonitorView({
         </div>
 
         {/* Quality KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="border border-divider/60 shadow-sm hover:shadow-sm transition-shadow bg-gradient-to-br from-background to-default-50/50">
-            <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span className="text-[11px] text-default-500 mb-1.5 flex items-center gap-1">
-                <Zap className="w-3 h-3" />
-                入口 → 出口 延迟
-              </span>
-              <LatencyDisplay
-                loading={qualityLoading}
-                value={quality?.entryToExitLatency}
-              />
-            </CardBody>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Card className="flex flex-col gap-2 p-4">
+            <span className="flex items-center gap-1.5 text-xs text-default-500">
+              <Zap size={13} />
+              入口 → 出口 延迟
+            </span>
+            <LatencyDisplay
+              large
+              loading={qualityLoading}
+              value={quality?.entryToExitLatency}
+            />
           </Card>
-          <Card className="border border-divider/60 shadow-sm hover:shadow-sm transition-shadow bg-gradient-to-br from-background to-default-50/50">
-            <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span
-                className="text-[11px] text-default-500 mb-1.5 flex items-center gap-1"
-                title={probeTargetLabel(quality)}
-              >
-                <Globe className="w-3 h-3" />
-                出口 → 测试目标 延迟
-              </span>
-              <LatencyDisplay
-                loading={qualityLoading}
-                value={quality?.exitToBingLatency}
-              />
-            </CardBody>
+          <Card className="flex flex-col gap-2 p-4">
+            <span
+              className="flex items-center gap-1.5 truncate text-xs text-default-500"
+              title={probeTargetLabel(quality)}
+            >
+              <Globe size={13} />
+              出口 → 测试目标 延迟
+            </span>
+            <LatencyDisplay
+              large
+              loading={qualityLoading}
+              value={quality?.exitToBingLatency}
+            />
           </Card>
-          <Card className="border border-divider/60 shadow-sm hover:shadow-sm transition-shadow bg-gradient-to-br from-background to-default-50/50">
-            <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span className="text-[11px] text-default-500 mb-1.5">
-                入口 → 出口 丢包
-              </span>
-              <span
-                className={`text-sm font-semibold font-mono ${(quality?.entryToExitLoss ?? 0) > 0 ? "text-warning" : ""}`}
-              >
-                {quality?.entryToExitLoss !== undefined
-                  ? `${quality.entryToExitLoss.toFixed(1)}%`
-                  : "-"}
-              </span>
-            </CardBody>
+          <Card className="flex flex-col gap-2 p-4">
+            <span className="flex items-center gap-1.5 text-xs text-default-500">
+              <Activity size={13} />
+              入口 → 出口 丢包
+            </span>
+            <span
+              className={`metric-value text-lg font-semibold ${(quality?.entryToExitLoss ?? 0) > 0 ? "text-warning-ink" : "text-foreground"}`}
+            >
+              {quality?.entryToExitLoss !== undefined
+                ? `${quality.entryToExitLoss.toFixed(1)}%`
+                : "-"}
+            </span>
           </Card>
-          <Card className="border border-divider/60 shadow-sm hover:shadow-sm transition-shadow bg-gradient-to-br from-background to-default-50/50">
-            <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-              <span
-                className="text-[11px] text-default-500 mb-1.5"
-                title={probeTargetLabel(quality)}
-              >
-                出口 → 测试目标 丢包
-              </span>
-              <span
-                className={`text-sm font-semibold font-mono ${(quality?.exitToBingLoss ?? 0) > 0 ? "text-warning" : ""}`}
-              >
-                {quality?.exitToBingLoss !== undefined
-                  ? `${quality.exitToBingLoss.toFixed(1)}%`
-                  : "-"}
-              </span>
-            </CardBody>
+          <Card className="flex flex-col gap-2 p-4">
+            <span
+              className="flex items-center gap-1.5 truncate text-xs text-default-500"
+              title={probeTargetLabel(quality)}
+            >
+              <Activity size={13} />
+              出口 → 测试目标 丢包
+            </span>
+            <span
+              className={`metric-value text-lg font-semibold ${(quality?.exitToBingLoss ?? 0) > 0 ? "text-warning-ink" : "text-foreground"}`}
+            >
+              {quality?.exitToBingLoss !== undefined
+                ? `${quality.exitToBingLoss.toFixed(1)}%`
+                : "-"}
+            </span>
           </Card>
         </div>
 
         {/* Auto-probe status */}
-        <div className="flex items-center gap-2 text-xs text-default-500">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-default-500">
           {monitorTunnelQualityEnabled ? (
             <>
               <LiveDot />
@@ -1292,7 +1323,7 @@ export function TunnelMonitorView({
             </span>
           )}
           {quality?.errorMessage && (
-            <span className="text-danger ml-2">{quality.errorMessage}</span>
+            <span className="text-danger-ink">{quality.errorMessage}</span>
           )}
         </div>
 
@@ -1384,7 +1415,7 @@ export function TunnelMonitorView({
             return (
               <Card
                 key={tunnel.id}
-                className="group relative overflow-hidden shadow-sm border border-divider dark:border-default-100 hover:-translate-y-1 hover:shadow-sm transition-all duration-300 h-full flex flex-col cursor-pointer bg-background"
+                className="group relative overflow-hidden border border-divider hover:border-primary-line transition-colors h-full flex flex-col cursor-pointer bg-content1"
                 onClick={() => setDetailTunnelId(tunnel.id)}
               >
                 <div
@@ -1397,7 +1428,7 @@ export function TunnelMonitorView({
                 <CardHeader className="pb-2 pt-5 px-5 flex flex-row justify-between items-start gap-4">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 rounded-xl bg-default-100 dark:bg-default-50/10 flex items-center justify-center border border-divider">
+                      <div className="w-10 h-10 rounded-xl bg-default-soft flex items-center justify-center border border-divider">
                         <ArrowRightLeft
                           className={`w-5 h-5 ${isEnabled ? "text-success" : "text-danger"}`}
                         />
@@ -1490,7 +1521,7 @@ export function TunnelMonitorView({
                 "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
               th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
               td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-              tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
+              tr: "hover:bg-default-soft transition-colors",
             }}
           >
             <TableHeader>

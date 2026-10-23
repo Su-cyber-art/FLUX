@@ -14,6 +14,8 @@ interface ConfirmDialogProps {
   title: string;
   message: ReactNode;
   confirmLabel?: string;
+  /** Confirm button color; reversible-but-lossy actions such as resets use warning. */
+  tone?: "danger" | "warning";
   loading?: boolean;
   onConfirm: () => void;
   onClose: () => void;
@@ -25,6 +27,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel = "删除",
+  tone = "danger",
   loading,
   onConfirm,
   onClose,
@@ -40,7 +43,7 @@ export function ConfirmDialog({
           <Button variant="light" onPress={onClose}>
             取消
           </Button>
-          <Button color="danger" isLoading={loading} onPress={onConfirm}>
+          <Button color={tone} isLoading={loading} onPress={onConfirm}>
             {confirmLabel}
           </Button>
         </ModalFooter>

@@ -22,7 +22,6 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import {
-  CircleX,
   LayoutGrid,
   List,
   Network,
@@ -30,11 +29,15 @@ import {
   SearchX,
   Send,
   SquareCheckBig,
+  Stethoscope,
   Trash2,
   X,
 } from "lucide-react";
 
-import { DiagnosisResults } from "@/components/diagnosis-results";
+import {
+  DiagnosisProgressBar,
+  DiagnosisResults,
+} from "@/components/diagnosis-results";
 import {
   ChainTunnel,
   Tunnel,
@@ -2087,7 +2090,7 @@ export default function TunnelPage() {
                       )}
 
                       {getChainGroups().length === 0 && (
-                        <div className="text-center py-8 bg-default-50 dark:bg-default-100/50 rounded border border-dashed border-default-300">
+                        <div className="text-center py-8 rounded-lg border border-dashed border-divider text-default-500">
                           <p className="text-sm text-default-500">
                             还没有添加转发链，点击上方&quot;添加一跳&quot;按钮开始添加
                           </p>
@@ -2827,7 +2830,7 @@ export default function TunnelPage() {
         isOpen={diagnosisModalOpen}
         placement="center"
         scrollBehavior="inside"
-        size="4xl"
+        size="xl"
         onOpenChange={(open) => {
           setDiagnosisModalOpen(open);
           if (!open) {
@@ -2867,20 +2870,10 @@ export default function TunnelPage() {
                 {diagnosisResult ? (
                   <div className="space-y-4">
                     {diagnosisLoading && (
-                      <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
-                        <div className="flex items-center gap-2 text-sm text-primary">
-                          <Spinner size="sm" />
-                          <span>
-                            正在诊断 {diagnosisProgress.completed}/
-                            {diagnosisProgress.total > 0
-                              ? diagnosisProgress.total
-                              : "?"}
-                          </span>
-                        </div>
-                        <Chip color="primary" size="sm" variant="flat">
-                          流式更新中
-                        </Chip>
-                      </div>
+                      <DiagnosisProgressBar
+                        completed={diagnosisProgress.completed}
+                        total={diagnosisProgress.total}
+                      />
                     )}
 
                     {diagnosisProgress.timedOut && (
@@ -2899,17 +2892,14 @@ export default function TunnelPage() {
                     />
                   </div>
                 ) : (
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CircleX className="w-8 h-8 text-default-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground">
-                      暂无诊断数据
-                    </h3>
-                  </div>
+                  <EmptyStateCard
+                    description="点击“重新诊断”开始测试连接。"
+                    icon={<Stethoscope size={20} />}
+                    title="暂无诊断数据"
+                  />
                 )}
               </ModalBody>
-              <ModalFooter className="border-t border-divider">
+              <ModalFooter>
                 <Button variant="light" onPress={onClose}>
                   关闭
                 </Button>

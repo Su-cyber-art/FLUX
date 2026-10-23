@@ -1,4 +1,4 @@
-import { Badge, Loader, Text } from "@mantine/core";
+import { Badge, Loader, Progress, Text } from "@mantine/core";
 import { Check, X } from "lucide-react";
 
 import { uiColor, type SemanticColor } from "@/components/ui/shared";
@@ -204,6 +204,39 @@ export function DiagnosisResults({ results, progress, quality }: Props) {
             </div>
           </section>
         ))}
+    </div>
+  );
+}
+
+/** Streaming progress strip shown above results while a diagnosis runs. */
+export function DiagnosisProgressBar({
+  completed,
+  total,
+}: {
+  completed: number;
+  total: number;
+}) {
+  const known = total > 0;
+
+  return (
+    <div className="rounded-[10px] border border-primary-line bg-primary-soft px-4 py-3">
+      <div className="mb-2 flex items-center justify-between gap-3 text-xs text-primary-ink">
+        <span className="flex items-center gap-2 font-medium">
+          <Loader color="var(--primary-ink)" size={12} />
+          正在诊断，结果实时更新
+        </span>
+        <span className="tabular-nums">
+          {completed}/{known ? total : "?"}
+        </span>
+      </div>
+      <Progress
+        animated={!known}
+        aria-label="诊断进度"
+        radius="xl"
+        size={4}
+        striped={!known}
+        value={known ? Math.min((completed / total) * 100, 100) : 100}
+      />
     </div>
   );
 }

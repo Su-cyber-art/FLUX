@@ -29,8 +29,18 @@ import {
   ArrowLeft,
   ArrowUp,
   ArrowDown,
+  ChartLine,
+  Cpu,
   Eye,
+  HardDrive,
+  MemoryStick,
 } from "lucide-react";
+import {
+  ActionIcon,
+  Loader,
+  SegmentedControl,
+  Tooltip as MantineTooltip,
+} from "@mantine/core";
 
 import toast from "@/lib/notifications";
 import { formatTraffic } from "@/utils/traffic";
@@ -78,6 +88,10 @@ import {
 } from "@/components/ui/dropdown";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { IconTile } from "@/components/ui/icon-tile";
+import { EmptyStateCard } from "@/components/page-state";
+import { SectionHeader } from "@/components/section-header";
+import { UsageBar } from "@/components/usage-meter";
 import { useNodeRealtime } from "@/pages/node/use-node-realtime";
 
 interface MonitorViewProps {
@@ -200,7 +214,7 @@ function ServerCard({
       <CardHeader className="pb-2 pt-5 px-5 flex flex-row justify-between items-start gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative flex-shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-default-100 dark:bg-default-50/10 flex items-center justify-center border border-divider">
+            <div className="w-10 h-10 rounded-xl bg-default-soft flex items-center justify-center border border-divider">
               <DistroIcon
                 className="w-5 h-5"
                 distro={distro}
@@ -253,7 +267,7 @@ function ServerCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between p-2.5 rounded-lg bg-default-50 dark:bg-default-100/30 border border-divider mt-1 w-full">
+        <div className="flex items-center justify-between p-2.5 rounded-lg bg-default-soft border border-divider mt-1 w-full">
           <div className="flex flex-col gap-0.5 min-w-0 flex-1">
             <div className="flex items-center gap-1 text-[10px] text-default-500">
               <span className="text-primary-ink inline-block font-bold">↑</span>
@@ -429,55 +443,66 @@ const NodeMetricsChartCard = React.memo(function NodeMetricsChartCard({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <h3 className="text-lg font-semibold">节点指标图表</h3>
-        <div className="flex items-center gap-2">
-          <Select
-            className="w-36"
-            selectedKeys={[String(rangeMs)]}
-            onSelectionChange={(keys) => {
-              const v = Number(Array.from(keys)[0]);
+      <CardHeader className="pb-3">
+        <SectionHeader
+          actions={
+            <>
+              <Select
+                isRequired
+                aria-label="时间范围"
+                className="w-28"
+                selectedKeys={[String(rangeMs)]}
+                onSelectionChange={(keys) => {
+                  const v = Number(Array.from(keys)[0]);
 
-              if (v > 0) onRangeChange(v);
-            }}
-          >
-            <SelectItem key={String(15 * 60 * 1000)}>15分钟</SelectItem>
-            <SelectItem key={String(60 * 60 * 1000)}>1小时</SelectItem>
-            <SelectItem key={String(6 * 60 * 60 * 1000)}>6小时</SelectItem>
-            <SelectItem key={String(24 * 60 * 60 * 1000)}>24小时</SelectItem>
-          </Select>
-          <Button
-            isLoading={loading}
-            size="sm"
-            variant="flat"
-            onPress={() => nodeId && onRefresh(nodeId)}
-          >
-            <RefreshCw className="w-4 h-4 mr-1" />
-            刷新
-          </Button>
-        </div>
+                  if (v > 0) onRangeChange(v);
+                }}
+              >
+                <SelectItem key={String(15 * 60 * 1000)}>15分钟</SelectItem>
+                <SelectItem key={String(60 * 60 * 1000)}>1小时</SelectItem>
+                <SelectItem key={String(6 * 60 * 60 * 1000)}>6小时</SelectItem>
+                <SelectItem key={String(24 * 60 * 60 * 1000)}>
+                  24小时
+                </SelectItem>
+              </Select>
+              <MantineTooltip label="刷新">
+                <ActionIcon
+                  aria-label="刷新指标"
+                  color="gray"
+                  loading={loading}
+                  variant="subtle"
+                  onClick={() => nodeId && onRefresh(nodeId)}
+                >
+                  <RefreshCw size={16} />
+                </ActionIcon>
+              </MantineTooltip>
+            </>
+          }
+          description="资源占用、网络与连接的历史趋势"
+          icon={ChartLine}
+          title="节点指标"
+        />
       </CardHeader>
-      <CardBody className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          {METRIC_TYPE_BUTTONS.map((item) => (
-            <Button
-              key={item.key}
-              color={activeMetricType === item.key ? "primary" : "default"}
-              size="sm"
-              variant={activeMetricType === item.key ? "solid" : "flat"}
-              onPress={() => onMetricTypeChange(item.key)}
-            >
-              {item.label}
-            </Button>
-          ))}
+      <CardBody className="space-y-4 pt-0">
+        <div className="overflow-x-auto">
+          <SegmentedControl
+            aria-label="指标类型"
+            data={METRIC_TYPE_BUTTONS.map((item) => ({
+              value: item.key,
+              label: item.label,
+            }))}
+            size="sm"
+            value={activeMetricType}
+            onChange={(value) => onMetricTypeChange(value as MetricType)}
+          />
         </div>
 
         {loading ? (
           <div className="flex justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin" />
+            <Loader size="sm" />
           </div>
         ) : error ? (
-          <div className="text-center py-8 text-danger text-sm">{error}</div>
+          <p className="monitor-chart-empty text-danger-ink">{error}</p>
         ) : data.length > 0 ? (
           <>
             <div className="h-64">
@@ -516,7 +541,7 @@ const NodeMetricsChartCard = React.memo(function NodeMetricsChartCard({
             )}
           </>
         ) : (
-          <div className="text-center py-8 text-default-500">暂无指标数据</div>
+          <p className="monitor-chart-empty">所选时间范围内还没有指标记录</p>
         )}
       </CardBody>
     </Card>
@@ -1264,18 +1289,17 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
   return (
     <div className="space-y-6">
       {accessDenied && (
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2">
-            <Activity className="w-5 h-5 text-warning" />
-            <h3 className="text-lg font-semibold">监控权限</h3>
-          </CardHeader>
-          <CardBody>
-            <div className="text-sm text-default-600">{accessDenied}</div>
-            <div className="text-xs text-default-500 mt-2">
+        <EmptyStateCard
+          description={
+            <>
+              {accessDenied}
+              <br />
               如需使用监控功能，请联系管理员在用户页面授予监控权限。
-            </div>
-          </CardBody>
-        </Card>
+            </>
+          }
+          icon={<Activity size={20} />}
+          title="暂无监控权限"
+        />
       )}
 
       {/* ====== GRID/LIST VIEW ====== */}
@@ -1459,30 +1483,40 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
       {!accessDenied && detailNodeId && (
         <>
           {/* Header */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Button
-              size="sm"
-              variant="flat"
-              onPress={() => setDetailNodeId(null)}
-            >
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              返回总览
-            </Button>
-            <div className="flex items-center gap-2">
-              <Server
-                className={`w-5 h-5 ${detailNode?.connectionStatus === "online" ? "text-success" : "text-default-400"}`}
-              />
-              <h3 className="text-lg font-semibold">
+          <div className="flex flex-wrap items-center gap-3">
+            <MantineTooltip label="返回总览">
+              <ActionIcon
+                aria-label="返回总览"
+                color="gray"
+                size="lg"
+                variant="default"
+                onClick={() => setDetailNodeId(null)}
+              >
+                <ArrowLeft size={16} />
+              </ActionIcon>
+            </MantineTooltip>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <IconTile
+                size="sm"
+                tone={
+                  detailNode?.connectionStatus === "online"
+                    ? "success"
+                    : "default"
+                }
+              >
+                <Server size={15} />
+              </IconTile>
+              <h2 className="truncate text-base font-semibold text-foreground">
                 {detailNode?.name || `节点 #${detailNodeId}`}
-              </h3>
+              </h2>
               <Chip
+                dot
                 color={
                   detailNode?.connectionStatus === "online"
                     ? "success"
                     : "danger"
                 }
-                size="sm"
-                variant="flat"
+                size="xs"
               >
                 {detailNode?.connectionStatus === "online" ? "在线" : "离线"}
               </Chip>
@@ -1503,50 +1537,64 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
 
           {/* Realtime KPI cards */}
           {detailRealtimeMetric && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
-              {[
-                {
-                  label: "CPU",
-                  value: `${detailRealtimeMetric.cpuUsage.toFixed(1)}%`,
-                  color: getColorByUsage(detailRealtimeMetric.cpuUsage),
-                },
-                {
-                  label: "内存",
-                  value: `${detailRealtimeMetric.memoryUsage.toFixed(1)}%`,
-                  color: getColorByUsage(detailRealtimeMetric.memoryUsage),
-                },
-                {
-                  label: "磁盘",
-                  value: `${detailRealtimeMetric.diskUsage.toFixed(1)}%`,
-                  color: getColorByUsage(detailRealtimeMetric.diskUsage),
-                },
-                {
-                  label: "↓ 下行速度",
-                  value: formatBytesPerSecond(detailRealtimeMetric.netInSpeed),
-                  color: "success" as const,
-                },
-                {
-                  label: "↑ 上行速度",
-                  value: formatBytesPerSecond(detailRealtimeMetric.netOutSpeed),
-                  color: "primary" as const,
-                },
-                {
-                  label: "运行时间",
-                  value: formatUptime(detailRealtimeMetric.uptime),
-                  color: "default" as const,
-                },
-              ].map((item) => (
-                <Card key={item.label} className="shadow-sm transition-shadow">
-                  <CardBody className="py-3 px-4 flex flex-col items-center justify-center min-h-[5rem]">
-                    <span className="text-[11px] text-default-500 mb-1.5">
-                      {item.label}
-                    </span>
-                    <span
-                      className={`text-sm font-semibold font-mono ${item.color === "danger" ? "text-danger" : item.color === "warning" ? "text-warning" : item.color === "success" ? "text-success" : item.color === "primary" ? "text-primary" : ""}`}
-                    >
-                      {item.value}
-                    </span>
-                  </CardBody>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+              {(
+                [
+                  {
+                    label: "CPU",
+                    icon: Cpu,
+                    value: `${detailRealtimeMetric.cpuUsage.toFixed(1)}%`,
+                    percent: detailRealtimeMetric.cpuUsage,
+                  },
+                  {
+                    label: "内存",
+                    icon: MemoryStick,
+                    value: `${detailRealtimeMetric.memoryUsage.toFixed(1)}%`,
+                    percent: detailRealtimeMetric.memoryUsage,
+                  },
+                  {
+                    label: "磁盘",
+                    icon: HardDrive,
+                    value: `${detailRealtimeMetric.diskUsage.toFixed(1)}%`,
+                    percent: detailRealtimeMetric.diskUsage,
+                  },
+                  {
+                    label: "下行速度",
+                    icon: ArrowDown,
+                    value: formatBytesPerSecond(
+                      detailRealtimeMetric.netInSpeed,
+                    ),
+                  },
+                  {
+                    label: "上行速度",
+                    icon: ArrowUp,
+                    value: formatBytesPerSecond(
+                      detailRealtimeMetric.netOutSpeed,
+                    ),
+                  },
+                  {
+                    label: "运行时间",
+                    icon: Clock,
+                    value: formatUptime(detailRealtimeMetric.uptime),
+                  },
+                ] as {
+                  label: string;
+                  icon: typeof Cpu;
+                  value: string;
+                  percent?: number;
+                }[]
+              ).map((item) => (
+                <Card key={item.label} className="flex flex-col gap-2 p-4">
+                  <span className="flex items-center gap-1.5 text-xs text-default-500">
+                    <item.icon size={13} />
+                    {item.label}
+                  </span>
+                  <span className="metric-value truncate text-lg font-semibold text-foreground">
+                    {item.value}
+                  </span>
+                  {item.percent !== undefined && (
+                    <UsageBar label={item.label} percent={item.percent} />
+                  )}
                 </Card>
               ))}
             </div>
@@ -1596,57 +1644,70 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
 
             return (
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <h3 className="text-lg font-semibold">服务监控图表</h3>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      className="w-36"
-                      selectedKeys={[String(serviceMonitorRangeMs)]}
-                      onSelectionChange={(keys) => {
-                        const v = Number(Array.from(keys)[0]);
+                <CardHeader className="pb-3">
+                  <SectionHeader
+                    actions={
+                      <>
+                        <Select
+                          isRequired
+                          aria-label="时间范围"
+                          className="w-28"
+                          selectedKeys={[String(serviceMonitorRangeMs)]}
+                          onSelectionChange={(keys) => {
+                            const v = Number(Array.from(keys)[0]);
 
-                        if (v > 0) setServiceMonitorRangeMs(v);
-                      }}
-                    >
-                      <SelectItem key={String(60 * 60 * 1000)}>
-                        1小时
-                      </SelectItem>
-                      <SelectItem key={String(6 * 60 * 60 * 1000)}>
-                        6小时
-                      </SelectItem>
-                      <SelectItem key={String(24 * 60 * 60 * 1000)}>
-                        24小时
-                      </SelectItem>
-                    </Select>
-                    {resolvedActiveMonitorId != null && (
-                      <Button
-                        size="sm"
-                        variant="flat"
-                        onPress={() => {
-                          void loadMonitorResults(resolvedActiveMonitorId, {
-                            rangeMs: serviceMonitorRangeMs,
-                          });
-                        }}
-                      >
-                        <RefreshCw className="w-4 h-4 mr-1" />
-                        刷新
-                      </Button>
-                    )}
-                    <Button
-                      color="primary"
-                      size="sm"
-                      variant="flat"
-                      onPress={() => handleOpenEditModal()}
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      添加监控
-                    </Button>
-                  </div>
+                            if (v > 0) setServiceMonitorRangeMs(v);
+                          }}
+                        >
+                          <SelectItem key={String(60 * 60 * 1000)}>
+                            1小时
+                          </SelectItem>
+                          <SelectItem key={String(6 * 60 * 60 * 1000)}>
+                            6小时
+                          </SelectItem>
+                          <SelectItem key={String(24 * 60 * 60 * 1000)}>
+                            24小时
+                          </SelectItem>
+                        </Select>
+                        {resolvedActiveMonitorId != null && (
+                          <MantineTooltip label="刷新">
+                            <ActionIcon
+                              aria-label="刷新监控记录"
+                              color="gray"
+                              variant="subtle"
+                              onClick={() => {
+                                void loadMonitorResults(
+                                  resolvedActiveMonitorId,
+                                  {
+                                    rangeMs: serviceMonitorRangeMs,
+                                  },
+                                );
+                              }}
+                            >
+                              <RefreshCw size={16} />
+                            </ActionIcon>
+                          </MantineTooltip>
+                        )}
+                        <Button
+                          color="primary"
+                          size="sm"
+                          startContent={<Plus size={15} />}
+                          variant="flat"
+                          onPress={() => handleOpenEditModal()}
+                        >
+                          添加监控
+                        </Button>
+                      </>
+                    }
+                    description="TCP / ICMP 可用性与延迟"
+                    icon={Activity}
+                    title="服务监控"
+                  />
                 </CardHeader>
-                <CardBody className="space-y-4">
+                <CardBody className="space-y-4 pt-0">
                   {monitorsLoading ? (
                     <div className="flex justify-center py-8">
-                      <RefreshCw className="w-6 h-6 animate-spin" />
+                      <Loader size="sm" />
                     </div>
                   ) : detailServiceMonitors.length > 0 ? (
                     <>
@@ -1654,26 +1715,22 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                       <div className="flex flex-wrap gap-2">
                         {detailServiceMonitors.map((monitor) => {
                           const lr = getLatestResult(monitor.id);
-                          const statusColor =
-                            monitor.enabled !== 1
-                              ? "default"
-                              : !lr
-                                ? "default"
-                                : lr.success === 1
-                                  ? "success"
-                                  : "danger";
+                          const dot =
+                            monitor.enabled !== 1 || !lr
+                              ? "bg-default-400"
+                              : lr.success === 1
+                                ? "bg-success"
+                                : "bg-danger";
                           const isActive =
                             monitor.id === resolvedActiveMonitorId;
 
                           return (
-                            <Button
+                            <button
                               key={monitor.id}
-                              color={
-                                isActive ? "primary" : (statusColor as any)
-                              }
-                              size="sm"
-                              variant={isActive ? "solid" : "flat"}
-                              onPress={() => {
+                              aria-pressed={isActive}
+                              className="monitor-pill"
+                              type="button"
+                              onClick={() => {
                                 setActiveServiceMonitorId(monitor.id);
                                 // Load results for this monitor if not loaded
                                 if (
@@ -1686,30 +1743,18 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                                 }
                               }}
                             >
-                              <div
-                                className={`w-2 h-2 rounded-full shrink-0 mr-1 ${
-                                  monitor.enabled !== 1
-                                    ? "bg-default-300"
-                                    : !lr
-                                      ? "bg-default-400"
-                                      : lr.success === 1
-                                        ? isActive
-                                          ? "bg-primary-foreground"
-                                          : "bg-success"
-                                        : isActive
-                                          ? "bg-primary-foreground"
-                                          : "bg-danger"
-                                }`}
+                              <span
+                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`}
                               />
                               {monitor.name}
-                            </Button>
+                            </button>
                           );
                         })}
                       </div>
 
                       {/* Active monitor info bar */}
                       {resolvedActiveMonitor && (
-                        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-content1 border border-divider shadow-sm">
+                        <div className="flex items-center justify-between gap-3 rounded-lg bg-default-soft px-3 py-2">
                           <div className="flex items-center gap-3 min-w-0 flex-wrap">
                             <Chip color="primary" size="sm" variant="flat">
                               {resolvedActiveMonitor.type.toUpperCase()}
@@ -1722,7 +1767,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                             </span>
                             {activeLatestResult &&
                             Number.isFinite(activeLatestResult.latencyMs) ? (
-                              <span className="font-mono text-xs font-semibold text-success">
+                              <span className="font-mono text-xs font-semibold text-success-ink">
                                 {activeLatestResult.latencyMs.toFixed(0)}ms
                               </span>
                             ) : null}
@@ -1830,15 +1875,13 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                           </ResponsiveContainer>
                         </div>
                       ) : (
-                        <div className="text-center py-8 text-default-500">
-                          暂无检查记录
-                        </div>
+                        <p className="monitor-chart-empty">暂无检查记录</p>
                       )}
                     </>
                   ) : (
-                    <div className="text-center py-8 text-default-500">
-                      暂无服务监控，点击&quot;添加监控&quot;创建
-                    </div>
+                    <p className="monitor-chart-empty">
+                      还没有服务监控，点击“添加监控”创建
+                    </p>
                   )}
                 </CardBody>
               </Card>
@@ -1937,7 +1980,7 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
                     "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
                   th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
                   td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
+                  tr: "hover:bg-default-soft transition-colors",
                 }}
               >
                 <TableHeader>

@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import {
   CircleArrowUp,
+  Copy,
   CreditCard,
   Download,
   LayoutGrid,
@@ -2446,46 +2447,41 @@ export default function NodePage() {
         isOpen={installCommandModal}
         placement="center"
         scrollBehavior="inside"
-        size="2xl"
+        size="lg"
         onClose={() => setInstallCommandModal(false)}
       >
         <ModalContent>
-          <ModalHeader>安装命令 - {currentNodeName}</ModalHeader>
+          <ModalHeader className="flex flex-col gap-1">
+            <h2>安装节点</h2>
+            <p>{currentNodeName}</p>
+          </ModalHeader>
           <ModalBody>
-            <div className="space-y-4">
-              <p className="text-sm text-default-600">
-                请复制以下安装命令到服务器上执行：
-              </p>
-              <div className="relative">
-                <Textarea
-                  readOnly
-                  className="font-mono text-sm"
-                  classNames={{
-                    input: "font-mono text-sm",
-                  }}
-                  maxRows={10}
-                  minRows={6}
-                  value={installCommand}
-                  variant="bordered"
-                />
+            <ol className="install-steps">
+              <li>以 root 身份登录目标服务器</li>
+              <li>复制下方命令并在终端中执行</li>
+              <li>安装完成后，节点状态会自动变为在线</li>
+            </ol>
+            <div className="code-block">
+              <div className="code-block-head">
+                <span>bash</span>
                 <Button
-                  className="absolute top-2 right-2"
-                  color="primary"
                   size="sm"
-                  variant="flat"
+                  startContent={<Copy size={14} />}
+                  variant="light"
                   onPress={handleManualCopy}
                 >
                   复制
                 </Button>
               </div>
-              <div className="text-xs text-default-500">
-                💡 提示：如果复制按钮失效，请手动选择上方文本进行复制
-              </div>
+              <pre>{installCommand}</pre>
             </div>
+            <p className="text-xs text-default-500">
+              复制按钮不可用时，点击命令区域即可全选后手动复制。
+            </p>
           </ModalBody>
           <ModalFooter>
             <Button
-              variant="flat"
+              variant="light"
               onPress={() => setInstallCommandModal(false)}
             >
               关闭

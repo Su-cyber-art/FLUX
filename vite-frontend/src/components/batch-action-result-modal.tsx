@@ -1,8 +1,9 @@
 import type { BatchOperationFailure } from "@/api/types";
 
+import { CircleX, Copy } from "lucide-react";
+
 import toast from "@/lib/notifications";
 import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import {
   Modal,
   ModalBody,
@@ -10,7 +11,6 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@/components/ui/modal";
-import { Alert } from "@/components/ui/alert";
 
 interface BatchActionResultModalProps {
   failures: BatchOperationFailure[];
@@ -92,48 +92,48 @@ export function BatchActionResultModal({
     <Modal
       isOpen={isOpen}
       scrollBehavior="inside"
-      size="2xl"
+      size="lg"
       onOpenChange={onOpenChange}
     >
       <ModalContent>
         {(onClose) => (
           <>
-            <ModalHeader>{title}</ModalHeader>
-            <ModalBody className="space-y-4">
-              <Alert
-                color="warning"
-                description={summary}
-                title={`共 ${failures.length} 项需要处理`}
-                variant="flat"
-              />
-              <div className="space-y-3">
+            <ModalHeader className="flex flex-col gap-1">
+              <h2>{title}</h2>
+              <p>{summary}</p>
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-xs font-medium text-default-500">
+                {failures.length} 项未完成
+              </p>
+              <div className="overflow-hidden rounded-[10px] border border-divider">
                 {failures.map((failure, index) => (
-                  <details
+                  <div
                     key={`${failure.id ?? "unknown"}-${index}`}
-                    className="group rounded-xl border border-divider bg-content2/40 px-4 py-3"
+                    className="flex items-start gap-3 border-divider px-4 py-3 [&+&]:border-t"
                   >
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {getFailureTitle(failure, index)}
-                        </p>
-                        <p className="mt-1 text-xs text-default-500 group-open:hidden">
-                          点击展开查看失败原因
-                        </p>
-                      </div>
-                      <Chip color="danger" size="sm" variant="flat">
-                        失败
-                      </Chip>
-                    </summary>
-                    <div className="mt-3 rounded-lg bg-background/70 p-3 text-sm leading-6 text-foreground/90">
-                      {getFailureReason(failure)}
+                    <CircleX
+                      className="mt-0.5 shrink-0 text-danger-ink"
+                      size={16}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {getFailureTitle(failure, index)}
+                      </p>
+                      <p className="mt-0.5 text-xs leading-5 text-default-500">
+                        {getFailureReason(failure)}
+                      </p>
                     </div>
-                  </details>
+                  </div>
                 ))}
               </div>
             </ModalBody>
             <ModalFooter>
-              <Button variant="light" onPress={handleCopy}>
+              <Button
+                startContent={<Copy size={14} />}
+                variant="light"
+                onPress={handleCopy}
+              >
                 复制失败原因
               </Button>
               <Button color="primary" onPress={onClose}>

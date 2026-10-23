@@ -5,7 +5,6 @@ import {
   ArrowLeftRight,
   Check,
   ChevronDown,
-  CircleX,
   Clipboard,
   Download,
   LayoutGrid,
@@ -17,6 +16,7 @@ import {
   Send,
   Shuffle,
   SlidersHorizontal,
+  Stethoscope,
   Trash2,
   Upload,
   X,
@@ -46,7 +46,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-import { DiagnosisResults } from "@/components/diagnosis-results";
+import {
+  DiagnosisProgressBar,
+  DiagnosisResults,
+} from "@/components/diagnosis-results";
 import { SearchBar } from "@/components/search-bar";
 import { FormSection } from "@/components/form-section";
 import {
@@ -115,7 +118,6 @@ import {
 } from "@/components/ui/modal";
 import { Chip } from "@/components/ui/chip";
 import { IconTile } from "@/components/ui/icon-tile";
-import { Spinner } from "@/components/ui/spinner";
 import { Alert } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
@@ -160,7 +162,7 @@ import {
   parseNyFormatData,
 } from "@/pages/forward/import-format";
 import { buildForwardOrder, FORWARD_ORDER_KEY } from "@/pages/forward/order";
-import { PageLoadingState } from "@/components/page-state";
+import { PageLoadingState, EmptyStateCard } from "@/components/page-state";
 // import { useMobileBreakpoint } from "@/hooks/useMobileBreakpoint";
 import { saveOrder } from "@/utils/order-storage";
 import { JwtUtil } from "@/utils/jwt";
@@ -1247,7 +1249,7 @@ export default function ForwardPage() {
       } else {
         // 删除失败，询问是否强制删除
         const confirmed = window.confirm(
-          `常规删除失败：${res.msg || "删除失败"}\n\n是否需要强制删除？\n\n⚠️ 注意：强制删除不会去验证节点端是否已经删除对应的规则服务。`,
+          `常规删除失败：${res.msg || "删除失败"}\n\n是否需要强制删除？\n\n注意：强制删除不会去验证节点端是否已经删除对应的规则服务。`,
         );
 
         if (confirmed) {
@@ -1372,20 +1374,15 @@ export default function ForwardPage() {
           : [];
 
         warningItems.forEach((warning: string) => {
-          toast(warning, {
-            icon: "⚠️",
-            duration: 5000,
-          });
+          toast.warning(warning, { duration: 5000 });
         });
         if (speedLimitAutoCleared) {
-          toast("所选限速规则不存在，已自动清除为不限速", {
-            icon: "⚠️",
+          toast.warning("所选限速规则不存在，已自动清除为不限速", {
             duration: 5000,
           });
         }
         if (isAdmin && ipSpeedLimitAutoCleared) {
-          toast("所选每 IP 限速规则不存在，已自动清除为不限速", {
-            icon: "⚠️",
+          toast.warning("所选每 IP 限速规则不存在，已自动清除为不限速", {
             duration: 5000,
           });
         }
@@ -3752,7 +3749,7 @@ export default function ForwardPage() {
               {addressList.map((item) => (
                 <div
                   key={item.id}
-                  className="flex justify-between items-center p-3 border border-default-200 dark:border-default-100 rounded-lg"
+                  className="flex justify-between items-center p-3 border border-divider rounded-lg"
                 >
                   <code className="font-mono text-sm flex-1 min-w-0 break-all mr-3 text-foreground">
                     {item.address}
@@ -4090,7 +4087,7 @@ export default function ForwardPage() {
         isOpen={diagnosisModalOpen}
         placement="center"
         scrollBehavior="inside"
-        size="4xl"
+        size="xl"
         onOpenChange={(open) => {
           setDiagnosisModalOpen(open);
           if (!open) {
@@ -4125,20 +4122,10 @@ export default function ForwardPage() {
                 {diagnosisResult ? (
                   <div className="space-y-4">
                     {diagnosisLoading && (
-                      <div className="flex items-center justify-between rounded-lg border border-primary-line bg-primary-soft px-3 py-2">
-                        <div className="flex items-center gap-2 text-sm text-primary">
-                          <Spinner size="sm" />
-                          <span>
-                            正在诊断 {diagnosisProgress.completed}/
-                            {diagnosisProgress.total > 0
-                              ? diagnosisProgress.total
-                              : "?"}
-                          </span>
-                        </div>
-                        <Chip color="primary" size="sm" variant="flat">
-                          流式更新中
-                        </Chip>
-                      </div>
+                      <DiagnosisProgressBar
+                        completed={diagnosisProgress.completed}
+                        total={diagnosisProgress.total}
+                      />
                     )}
 
                     {diagnosisProgress.timedOut && (
@@ -4157,17 +4144,14 @@ export default function ForwardPage() {
                     />
                   </div>
                 ) : (
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 bg-default-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CircleX className="w-8 h-8 text-default-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground">
-                      暂无诊断数据
-                    </h3>
-                  </div>
+                  <EmptyStateCard
+                    description="点击“重新诊断”开始测试连接。"
+                    icon={<Stethoscope size={20} />}
+                    title="暂无诊断数据"
+                  />
                 )}
               </ModalBody>
-              <ModalFooter className="border-t border-divider">
+              <ModalFooter>
                 <Button variant="light" onPress={onClose}>
                   关闭
                 </Button>
