@@ -40,7 +40,8 @@ FLUX — personally maintained fork of FLVX: Go admin API + Vite/React UI + Go a
 - **Backend DB**: handlers use Repository methods, never `repo.DB()` directly.
 - **GORM models**: always define `TableName()` (GORM pluralizes by default).
 - **GORM tags**: no `type:jsonb` or `type:serial` (SQLite incompatible).
-- **Go versions**: `go.mod` says 1.25.0 for all three modules; CI builds with 1.25.x.
+- **Go versions**: all three modules require Go 1.26.10 or newer (CVE-2026-111943); CI and release read the version from `go.mod`. Do not use Go 1.27.0–1.27.2, which also lack this fix.
+- **Node.js versions**: `.node-version` pins 22.23.4 for CI and the frontend image; local builds also accept patched 24.22.1+ and 26.12.1+ (CVE-2026-111497). `vite-frontend/.npmrc` sets `engine-strict`, so unpatched Node.js refuses to build.
 
 ## Anti-patterns
 

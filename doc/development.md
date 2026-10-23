@@ -2,8 +2,8 @@
 
 ## 环境
 
-- Go 1.25 或更新版本；`go-backend`、`go-gost`、`go-gost/x` 是三个独立模块。
-- Node.js 20.19+，pnpm 10.28.1。
+- Go 1.26.10 或更新版本（使用 Go 1.27 时须为 1.27.3+）；`go-backend`、`go-gost`、`go-gost/x` 是三个独立模块。本地 Go 较旧时，默认的 `GOTOOLCHAIN=auto` 会按 `go.mod` 自动下载所需版本。
+- Node.js 22.23.4（见 `.node-version`），或已修复的 24.22.1+ / 26.12.1+；pnpm 10.28.1。前端开启了 `engine-strict`，未修复的 Node.js 会拒绝安装和构建。
 - 默认数据库为 SQLite；本地开发不依赖 Docker。
 
 ```bash

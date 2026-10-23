@@ -53,7 +53,7 @@ git clone https://github.com/Su-cyber-art/FLUX.git
 cd FLUX
 ```
 
-- **本地开发**：准备 Go 1.25+、Node.js 20.19+ 和 pnpm 10.28.1，按 [开发指南](doc/development.md) 启动 API 与前端。
+- **本地开发**：准备 Go 1.26.10+、Node.js 22.23.4（或 24.22.1+ / 26.12.1+）和 pnpm 10.28.1，按 [开发指南](doc/development.md) 启动 API 与前端。这些最低版本包含 2026 年 10 月的运行时安全修复，见 [运行时漏洞说明](docs/security/2026-10-runtime-updates.md)。
 - **部署发布版本**：使用上面的一键脚本，或下载指定 Release 的镜像包。
 - **从源码部署**：合并 `compose.source.yml` 构建当前代码，详见安装文档。
 - **发布产物**：以 [本仓库 Releases](https://github.com/Su-cyber-art/FLUX/releases) 实际提供的资源为准。仓库继承的标签不代表这个个人版本已发布对应镜像。
