@@ -1646,41 +1646,44 @@ export default function TunnelPage() {
               </ModalHeader>
               <ModalBody>
                 <div className="space-y-4">
-                  <Input
-                    errorMessage={errors.name}
-                    isInvalid={!!errors.name}
-                    label="隧道名称"
-                    placeholder="请输入隧道名称"
-                    value={form.name}
-                    variant="bordered"
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                  />
-
-                  <Select
-                    description={isEdit ? "编辑时无法修改隧道类型" : undefined}
-                    errorMessage={errors.type}
-                    isDisabled={isEdit}
-                    isInvalid={!!errors.type}
-                    label="隧道类型"
-                    placeholder="请选择隧道类型"
-                    selectedKeys={[form.type.toString()]}
-                    variant="bordered"
-                    onSelectionChange={(keys) => {
-                      const selectedKey = Array.from(keys)[0] as string;
-
-                      if (selectedKey) {
-                        handleTypeChange(parseInt(selectedKey));
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                      errorMessage={errors.name}
+                      isInvalid={!!errors.name}
+                      label="隧道名称"
+                      placeholder="请输入隧道名称"
+                      value={form.name}
+                      variant="bordered"
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, name: e.target.value }))
                       }
-                    }}
-                  >
-                    <SelectItem key="1">端口转发</SelectItem>
-                    <SelectItem key="2">隧道转发</SelectItem>
-                  </Select>
+                    />
+
+                    <Select
+                      errorMessage={errors.type}
+                      isDisabled={isEdit}
+                      isInvalid={!!errors.type}
+                      label="隧道类型"
+                      placeholder="请选择隧道类型"
+                      selectedKeys={[form.type.toString()]}
+                      variant="bordered"
+                      onSelectionChange={(keys) => {
+                        const selectedKey = Array.from(keys)[0] as string;
+
+                        if (selectedKey) {
+                          handleTypeChange(parseInt(selectedKey));
+                        }
+                      }}
+                    >
+                      <SelectItem key="1">端口转发</SelectItem>
+                      <SelectItem key="2">隧道转发</SelectItem>
+                    </Select>
+                  </div>
 
                   <Divider />
-                  <h3 className="text-lg font-semibold">入口配置</h3>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    入口配置
+                  </h3>
 
                   <div className="space-y-2">
                     <Select
@@ -1763,7 +1766,9 @@ export default function TunnelPage() {
                     <>
                       <Divider />
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold">转发链配置</h3>
+                        <h3 className="text-sm font-semibold text-foreground">
+                          转发链配置
+                        </h3>
                         <Button
                           color="primary"
                           size="sm"
@@ -2095,7 +2100,9 @@ export default function TunnelPage() {
                   {form.type === 2 && (
                     <>
                       <Divider />
-                      <h3 className="text-lg font-semibold">出口配置</h3>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        出口配置
+                      </h3>
 
                       {(() => {
                         const selectedOutNodeIds = (form.outNodeId || [])

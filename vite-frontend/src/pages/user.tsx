@@ -13,6 +13,7 @@ import {
 import { SegmentedControl } from "@mantine/core";
 
 import { SearchBar } from "@/components/search-bar";
+import { FormSection } from "@/components/form-section";
 import {
   UserCard,
   UserListHeader,
@@ -1083,242 +1084,272 @@ export default function UserPage() {
         isOpen={isUserModalOpen}
         placement="center"
         scrollBehavior="inside"
-        size="2xl"
+        size="xl"
         onClose={onUserModalClose}
       >
         <ModalContent>
-          <ModalHeader>{isEdit ? "编辑用户" : "新增用户"}</ModalHeader>
+          <ModalHeader className="flex flex-col gap-1">
+            <h2 className="text-xl font-bold">
+              {isEdit ? "编辑用户" : "新增用户"}
+            </h2>
+            <p className="text-small text-default-500">
+              {isEdit
+                ? "修改账号、配额与有效期，密码留空则保持不变"
+                : "创建面板账号并设置配额与有效期"}
+            </p>
+          </ModalHeader>
           <ModalBody>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                isRequired
-                label="用户名"
-                value={userForm.user}
-                onChange={(e) =>
-                  setUserForm((prev) => ({ ...prev, user: e.target.value }))
-                }
-              />
-              <Input
-                isRequired={!isEdit}
-                label="密码"
-                placeholder={isEdit ? "留空则不修改密码" : "请输入密码"}
-                type="password"
-                value={userForm.pwd}
-                onChange={(e) =>
-                  setUserForm((prev) => ({ ...prev, pwd: e.target.value }))
-                }
-              />
-              <TrafficLimitField
-                isRequired
-                label="流量限制"
-                unit={userFlowUnit}
-                value={userFlowInput}
-                onChange={(value, unit) => {
-                  setUserFlowInput(value);
-                  setUserFlowUnit(unit);
-                }}
-              />
-              <Input
-                label="最大连接数"
-                min="0"
-                placeholder="0 或空表示不限制"
-                type="number"
-                value={
-                  userForm.maxConn === 0 ? "" : String(userForm.maxConn || "")
-                }
-                onChange={(e) => {
-                  const value = Math.max(Number(e.target.value) || 0, 0);
+            <FormSection title="账号">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Input
+                  isRequired
+                  label="用户名"
+                  value={userForm.user}
+                  onChange={(e) =>
+                    setUserForm((prev) => ({ ...prev, user: e.target.value }))
+                  }
+                />
+                <Input
+                  isRequired={!isEdit}
+                  label="密码"
+                  placeholder={isEdit ? "留空则不修改密码" : "请输入密码"}
+                  type="password"
+                  value={userForm.pwd}
+                  onChange={(e) =>
+                    setUserForm((prev) => ({ ...prev, pwd: e.target.value }))
+                  }
+                />
+              </div>
+            </FormSection>
+            <FormSection
+              description="超出流量或规则数量后，该用户无法继续新增转发"
+              title="配额与限制"
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <TrafficLimitField
+                  isRequired
+                  label="流量限制"
+                  unit={userFlowUnit}
+                  value={userFlowInput}
+                  onChange={(value, unit) => {
+                    setUserFlowInput(value);
+                    setUserFlowUnit(unit);
+                  }}
+                />
+                <Select
+                  label="流量重置日期"
+                  selectedKeys={[userForm.flowResetTime.toString()]}
+                  onSelectionChange={(keys) => {
+                    const value = Array.from(keys)[0] as string;
 
-                  setUserForm((prev) => ({ ...prev, maxConn: value }));
-                }}
-              />
-              <Input
-                isRequired
-                label="规则数量"
-                max="99999"
-                min="1"
-                type="number"
-                value={userForm.num.toString()}
-                onChange={(e) => {
-                  const value = Math.min(
-                    Math.max(Number(e.target.value) || 0, 1),
-                    99999,
-                  );
-
-                  setUserForm((prev) => ({ ...prev, num: value }));
-                }}
-              />
-              <Select
-                label="流量重置日期"
-                selectedKeys={[userForm.flowResetTime.toString()]}
-                onSelectionChange={(keys) => {
-                  const value = Array.from(keys)[0] as string;
-
-                  setUserForm((prev) => ({
-                    ...prev,
-                    flowResetTime: Number(value),
-                  }));
-                }}
-              >
-                <>
-                  <SelectItem key="0" textValue="不重置">
-                    不重置
-                  </SelectItem>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                    <SelectItem
-                      key={day.toString()}
-                      textValue={`每月${day}号（0点重置）`}
-                    >
-                      每月{day}号（0点重置）
+                    setUserForm((prev) => ({
+                      ...prev,
+                      flowResetTime: Number(value),
+                    }));
+                  }}
+                >
+                  <>
+                    <SelectItem key="0" textValue="不重置">
+                      不重置
                     </SelectItem>
-                  ))}
-                </>
-              </Select>
-              <DatePicker
-                isRequired
-                showMonthAndYearPickers
-                label="过期时间"
-                value={
-                  userForm.expTime
-                    ? (parseDate(
-                        userForm.expTime.toISOString().split("T")[0],
-                      ) as any)
-                    : null
-                }
-                onChange={(date) => {
-                  if (date) {
-                    const jsDate = new Date(
-                      date.year,
-                      date.month - 1,
-                      date.day,
-                      23,
-                      59,
-                      59,
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                      <SelectItem
+                        key={day.toString()}
+                        textValue={`每月${day}号（0点重置）`}
+                      >
+                        每月{day}号（0点重置）
+                      </SelectItem>
+                    ))}
+                  </>
+                </Select>
+                <Input
+                  isRequired
+                  label="规则数量"
+                  max="99999"
+                  min="1"
+                  type="number"
+                  value={userForm.num.toString()}
+                  onChange={(e) => {
+                    const value = Math.min(
+                      Math.max(Number(e.target.value) || 0, 1),
+                      99999,
                     );
 
-                    setUserForm((prev) => ({ ...prev, expTime: jsDate }));
-                  } else {
-                    setUserForm((prev) => ({ ...prev, expTime: null }));
+                    setUserForm((prev) => ({ ...prev, num: value }));
+                  }}
+                />
+                <Input
+                  label="最大连接数"
+                  min="0"
+                  placeholder="0 或空表示不限制"
+                  type="number"
+                  value={
+                    userForm.maxConn === 0 ? "" : String(userForm.maxConn || "")
                   }
-                }}
-              />
-            </div>
+                  onChange={(e) => {
+                    const value = Math.max(Number(e.target.value) || 0, 0);
 
-            {isEdit &&
-              editingUser &&
-              ((editingUser.dailyQuotaGB ?? 0) > 0 ||
-                (editingUser.monthlyQuotaGB ?? 0) > 0 ||
-                (editingUser.disabledByQuota ?? 0) > 0) && (
-                <div className="space-y-3 rounded-xl border border-default-200 bg-default-50/60 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground">
-                        当前配额状态
-                      </h3>
-                      <p className="text-xs text-default-500">
-                        配额超额后会自动暂停该用户的转发，重置后可恢复
-                      </p>
+                    setUserForm((prev) => ({ ...prev, maxConn: value }));
+                  }}
+                />
+              </div>
+              {isEdit &&
+                editingUser &&
+                ((editingUser.dailyQuotaGB ?? 0) > 0 ||
+                  (editingUser.monthlyQuotaGB ?? 0) > 0 ||
+                  (editingUser.disabledByQuota ?? 0) > 0) && (
+                  <div className="space-y-3 rounded-[10px] border border-divider bg-default-soft p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground">
+                          当前配额状态
+                        </h3>
+                        <p className="text-xs text-default-500">
+                          配额超额后会自动暂停该用户的转发，重置后可恢复
+                        </p>
+                      </div>
+                      {editingUser.disabledByQuota ? (
+                        <Chip color="danger" size="sm" variant="flat">
+                          配额已触发禁用
+                        </Chip>
+                      ) : (
+                        <Chip color="success" size="sm" variant="flat">
+                          配额正常
+                        </Chip>
+                      )}
                     </div>
-                    {editingUser.disabledByQuota ? (
-                      <Chip color="danger" size="sm" variant="flat">
-                        配额已触发禁用
-                      </Chip>
-                    ) : (
-                      <Chip color="success" size="sm" variant="flat">
-                        配额正常
-                      </Chip>
-                    )}
-                  </div>
 
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div className="rounded-lg bg-background p-3">
-                      <div className="text-xs text-default-500">每日用量</div>
-                      <div className="mt-1 text-sm font-semibold text-foreground">
-                        {formatFlow(Number(editingUser.dailyUsedBytes ?? 0))} /{" "}
-                        {formatQuotaLimit(editingUser.dailyQuotaGB)}
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className="rounded-lg bg-content1 p-3">
+                        <div className="text-xs text-default-500">每日用量</div>
+                        <div className="mt-1 text-sm font-semibold text-foreground">
+                          {formatFlow(Number(editingUser.dailyUsedBytes ?? 0))}{" "}
+                          / {formatQuotaLimit(editingUser.dailyQuotaGB)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-content1 p-3">
+                        <div className="text-xs text-default-500">每月用量</div>
+                        <div className="mt-1 text-sm font-semibold text-foreground">
+                          {formatFlow(
+                            Number(editingUser.monthlyUsedBytes ?? 0),
+                          )}{" "}
+                          / {formatQuotaLimit(editingUser.monthlyQuotaGB)}
+                        </div>
                       </div>
                     </div>
-                    <div className="rounded-lg bg-background p-3">
-                      <div className="text-xs text-default-500">每月用量</div>
-                      <div className="mt-1 text-sm font-semibold text-foreground">
-                        {formatFlow(Number(editingUser.monthlyUsedBytes ?? 0))}{" "}
-                        / {formatQuotaLimit(editingUser.monthlyQuotaGB)}
-                      </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        color="warning"
+                        isLoading={quotaResetLoading}
+                        size="sm"
+                        variant="flat"
+                        onPress={() => handleQuotaReset("daily")}
+                      >
+                        重置每日配额
+                      </Button>
+                      <Button
+                        color="warning"
+                        isLoading={quotaResetLoading}
+                        size="sm"
+                        variant="flat"
+                        onPress={() => handleQuotaReset("monthly")}
+                      >
+                        重置每月配额
+                      </Button>
+                      <Button
+                        color="primary"
+                        isLoading={quotaResetLoading}
+                        size="sm"
+                        variant="flat"
+                        onPress={() => handleQuotaReset("all")}
+                      >
+                        全部重置并恢复
+                      </Button>
                     </div>
                   </div>
+                )}
+            </FormSection>
+            <FormSection title="有效期与状态">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <DatePicker
+                  isRequired
+                  showMonthAndYearPickers
+                  label="过期时间"
+                  value={
+                    userForm.expTime
+                      ? (parseDate(
+                          userForm.expTime.toISOString().split("T")[0],
+                        ) as any)
+                      : null
+                  }
+                  onChange={(date) => {
+                    if (date) {
+                      const jsDate = new Date(
+                        date.year,
+                        date.month - 1,
+                        date.day,
+                        23,
+                        59,
+                        59,
+                      );
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      color="warning"
-                      isLoading={quotaResetLoading}
-                      size="sm"
-                      variant="flat"
-                      onPress={() => handleQuotaReset("daily")}
-                    >
-                      重置每日配额
-                    </Button>
-                    <Button
-                      color="warning"
-                      isLoading={quotaResetLoading}
-                      size="sm"
-                      variant="flat"
-                      onPress={() => handleQuotaReset("monthly")}
-                    >
-                      重置每月配额
-                    </Button>
-                    <Button
-                      color="primary"
-                      isLoading={quotaResetLoading}
-                      size="sm"
-                      variant="flat"
-                      onPress={() => handleQuotaReset("all")}
-                    >
-                      全部重置并恢复
-                    </Button>
-                  </div>
+                      setUserForm((prev) => ({ ...prev, expTime: jsDate }));
+                    } else {
+                      setUserForm((prev) => ({ ...prev, expTime: null }));
+                    }
+                  }}
+                />
+                <div className="flex flex-col justify-end">
+                  <RadioGroup
+                    label="状态"
+                    orientation="horizontal"
+                    value={userForm.status.toString()}
+                    onValueChange={(value: string) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        status: Number(value),
+                      }))
+                    }
+                  >
+                    <Radio value="1">正常</Radio>
+                    <Radio value="0">禁用</Radio>
+                  </RadioGroup>
                 </div>
+              </div>
+              {userGroups.length > 0 && (
+                <Select
+                  label="用户分组（可选）"
+                  placeholder="选择要加入的分组"
+                  selectedKeys={new Set((userForm.groupIds ?? []).map(String))}
+                  selectionMode="multiple"
+                  onSelectionChange={(keys) => {
+                    const selected = Array.from(keys as Set<string>).map(
+                      Number,
+                    );
+
+                    setUserForm((prev) => ({ ...prev, groupIds: selected }));
+                  }}
+                >
+                  {userGroups.map((g) => (
+                    <SelectItem key={g.id.toString()} textValue={g.name}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                </Select>
               )}
-
-            <RadioGroup
-              label="状态"
-              orientation="horizontal"
-              value={userForm.status.toString()}
-              onValueChange={(value: string) =>
-                setUserForm((prev) => ({ ...prev, status: Number(value) }))
-              }
-            >
-              <Radio value="1">正常</Radio>
-              <Radio value="0">禁用</Radio>
-            </RadioGroup>
-
-            {userGroups.length > 0 && (
-              <Select
-                label="用户分组（可选）"
-                placeholder="选择要加入的分组"
-                selectedKeys={new Set((userForm.groupIds ?? []).map(String))}
-                selectionMode="multiple"
-                onSelectionChange={(keys) => {
-                  const selected = Array.from(keys as Set<string>).map(Number);
-
-                  setUserForm((prev) => ({ ...prev, groupIds: selected }));
-                }}
-              >
-                {userGroups.map((g) => (
-                  <SelectItem key={g.id.toString()} textValue={g.name}>
-                    {g.name}
-                  </SelectItem>
-                ))}
-              </Select>
-            )}
+            </FormSection>
           </ModalBody>
           <ModalFooter>
-            <Button onPress={onUserModalClose}>取消</Button>
+            <Button variant="light" onPress={onUserModalClose}>
+              取消
+            </Button>
             <Button
               color="primary"
               isLoading={userFormLoading}
               onPress={handleSubmitUser}
             >
-              确定
+              {isEdit ? "保存修改" : "创建用户"}
             </Button>
           </ModalFooter>
         </ModalContent>

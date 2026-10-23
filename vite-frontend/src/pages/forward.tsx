@@ -48,6 +48,7 @@ import {
 
 import { DiagnosisResults } from "@/components/diagnosis-results";
 import { SearchBar } from "@/components/search-bar";
+import { FormSection } from "@/components/form-section";
 import {
   Forward,
   Tunnel,
@@ -3265,7 +3266,7 @@ export default function ForwardPage() {
         isOpen={modalOpen}
         placement="center"
         scrollBehavior="inside"
-        size="2xl"
+        size="xl"
         onOpenChange={setModalOpen}
       >
         <ModalContent>
@@ -3280,312 +3281,344 @@ export default function ForwardPage() {
                 </p>
               </ModalHeader>
               <ModalBody>
-                <div className="space-y-4 pb-4">
-                  <Input
-                    errorMessage={errors.name}
-                    isInvalid={!!errors.name}
-                    label="规则名称"
-                    placeholder="请输入规则名称"
-                    value={form.name}
-                    variant="bordered"
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                  />
+                <div className="pb-2">
+                  <FormSection title="基本信息">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Input
+                        errorMessage={errors.name}
+                        isInvalid={!!errors.name}
+                        label="规则名称"
+                        placeholder="请输入规则名称"
+                        value={form.name}
+                        variant="bordered"
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, name: e.target.value }))
+                        }
+                      />
 
-                  <Select
-                    description={
-                      isEdit
-                        ? "更改隧道将释放原端口并在新隧道分配端口"
-                        : undefined
-                    }
-                    errorMessage={errors.tunnelId}
-                    isInvalid={!!errors.tunnelId}
-                    label="选择隧道"
-                    placeholder="请选择关联的隧道"
-                    selectedKeys={
-                      form.tunnelId ? [form.tunnelId.toString()] : []
-                    }
-                    variant="bordered"
-                    onSelectionChange={(keys) => {
-                      const selectedKey = Array.from(keys)[0] as string;
+                      <Select
+                        description={
+                          isEdit
+                            ? "更改隧道将释放原端口并在新隧道分配端口"
+                            : undefined
+                        }
+                        errorMessage={errors.tunnelId}
+                        isInvalid={!!errors.tunnelId}
+                        label="选择隧道"
+                        placeholder="请选择关联的隧道"
+                        selectedKeys={
+                          form.tunnelId ? [form.tunnelId.toString()] : []
+                        }
+                        variant="bordered"
+                        onSelectionChange={(keys) => {
+                          const selectedKey = Array.from(keys)[0] as string;
 
-                      if (selectedKey) {
-                        handleTunnelChange(selectedKey);
-                      }
-                    }}
+                          if (selectedKey) {
+                            handleTunnelChange(selectedKey);
+                          }
+                        }}
+                      >
+                        {tunnels.map((tunnel) => (
+                          <SelectItem key={tunnel.id}>{tunnel.name}</SelectItem>
+                        ))}
+                      </Select>
+                    </div>
+                  </FormSection>
+
+                  <FormSection
+                    description="外部客户端连接的端口与监听地址"
+                    title="入口"
                   >
-                    {tunnels.map((tunnel) => (
-                      <SelectItem key={tunnel.id}>{tunnel.name}</SelectItem>
-                    ))}
-                  </Select>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Input
+                        description={
+                          currentTunnelPortRange
+                            ? `指定入口端口，留空自动分配 (允许范围: ${currentTunnelPortRange.min}-${currentTunnelPortRange.max})`
+                            : "指定入口端口，留空则从节点可用端口中自动分配"
+                        }
+                        errorMessage={errors.inPort}
+                        isInvalid={!!errors.inPort}
+                        label="入口端口"
+                        placeholder="留空则自动分配可用端口"
+                        type="number"
+                        value={
+                          form.inPort !== null ? form.inPort.toString() : ""
+                        }
+                        variant="bordered"
+                        onChange={(e) => {
+                          const value = e.target.value;
 
-                  <Input
-                    description={
-                      currentTunnelPortRange
-                        ? `指定入口端口，留空自动分配 (允许范围: ${currentTunnelPortRange.min}-${currentTunnelPortRange.max})`
-                        : "指定入口端口，留空则从节点可用端口中自动分配"
-                    }
-                    errorMessage={errors.inPort}
-                    isInvalid={!!errors.inPort}
-                    label="入口端口"
-                    placeholder="留空则自动分配可用端口"
-                    type="number"
-                    value={form.inPort !== null ? form.inPort.toString() : ""}
-                    variant="bordered"
-                    onChange={(e) => {
-                      const value = e.target.value;
+                          setForm((prev) => ({
+                            ...prev,
+                            inPort: value ? parseInt(value) : null,
+                          }));
+                        }}
+                      />
 
-                      setForm((prev) => ({
-                        ...prev,
-                        inPort: value ? parseInt(value) : null,
-                      }));
-                    }}
-                  />
+                      <Select
+                        description={
+                          isCurrentTunnelMultiEntrance
+                            ? "多入口隧道不支持自定义监听IP，使用各节点默认IP"
+                            : "从入口节点IP中选择，留空使用默认"
+                        }
+                        isDisabled={
+                          !form.tunnelId ||
+                          currentTunnelIpOptions.length === 0 ||
+                          isCurrentTunnelMultiEntrance
+                        }
+                        label="监听IP"
+                        placeholder={
+                          isCurrentTunnelMultiEntrance
+                            ? "多入口隧道使用节点默认IP"
+                            : form.tunnelId
+                              ? currentTunnelIpOptions.length > 0
+                                ? "选择入口监听IP"
+                                : "当前隧道入口节点暂无可选IP"
+                              : "请先选择隧道"
+                        }
+                        selectedKeys={[form.inIp || "__default__"]}
+                        variant="bordered"
+                        onSelectionChange={(keys) => {
+                          const selectedKey = Array.from(keys)[0] as string;
 
-                  <Select
-                    description={
-                      isCurrentTunnelMultiEntrance
-                        ? "多入口隧道不支持自定义监听IP，使用各节点默认IP"
-                        : "从入口节点IP中选择，留空使用默认"
-                    }
-                    isDisabled={
-                      !form.tunnelId ||
-                      currentTunnelIpOptions.length === 0 ||
-                      isCurrentTunnelMultiEntrance
-                    }
-                    label="监听IP"
-                    placeholder={
-                      isCurrentTunnelMultiEntrance
-                        ? "多入口隧道使用节点默认IP"
-                        : form.tunnelId
-                          ? currentTunnelIpOptions.length > 0
-                            ? "选择入口监听IP"
-                            : "当前隧道入口节点暂无可选IP"
-                          : "请先选择隧道"
-                    }
-                    selectedKeys={[form.inIp || "__default__"]}
-                    variant="bordered"
-                    onSelectionChange={(keys) => {
-                      const selectedKey = Array.from(keys)[0] as string;
+                          setInIpTouched(true);
 
-                      setInIpTouched(true);
+                          setForm((prev) => ({
+                            ...prev,
+                            inIp:
+                              selectedKey === "__default__" ? "" : selectedKey,
+                          }));
+                        }}
+                      >
+                        <SelectItem key="__default__">默认入口IP</SelectItem>
+                        {currentTunnelIpOptions.map((ip) => (
+                          <SelectItem key={ip}>{ip}</SelectItem>
+                        ))}
+                      </Select>
+                    </div>
+                  </FormSection>
 
-                      setForm((prev) => ({
-                        ...prev,
-                        inIp: selectedKey === "__default__" ? "" : selectedKey,
-                      }));
-                    }}
-                  >
-                    <SelectItem key="__default__">默认入口IP</SelectItem>
-                    {currentTunnelIpOptions.map((ip) => (
-                      <SelectItem key={ip}>{ip}</SelectItem>
-                    ))}
-                  </Select>
-
-                  <Textarea
-                    description="格式: IP:端口 或 域名:端口，支持多个地址（每行一个）"
-                    errorMessage={errors.remoteAddr}
-                    isInvalid={!!errors.remoteAddr}
-                    label="落地地址"
-                    maxRows={6}
-                    minRows={3}
-                    placeholder="请输入落地地址，多个地址用换行分隔，例如:&#10;192.168.1.100:10000&#10;[2001:db8::10]:10086&#10;test.example.com:10010"
-                    value={form.remoteAddr}
-                    variant="bordered"
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        remoteAddr: e.target.value,
-                      }))
-                    }
-                  />
-
-                  {getAddressCount(form.remoteAddr) > 1 && (
-                    <Select
-                      description="多个目标地址的负载均衡策略"
-                      label="负载策略"
-                      placeholder="请选择负载均衡策略"
-                      selectedKeys={[form.strategy]}
+                  <FormSection description="流量最终转发到的地址" title="目标">
+                    <Textarea
+                      description="格式: IP:端口 或 域名:端口，支持多个地址（每行一个）"
+                      errorMessage={errors.remoteAddr}
+                      isInvalid={!!errors.remoteAddr}
+                      label="落地地址"
+                      maxRows={6}
+                      minRows={3}
+                      placeholder="请输入落地地址，多个地址用换行分隔，例如:&#10;192.168.1.100:10000&#10;[2001:db8::10]:10086&#10;test.example.com:10010"
+                      value={form.remoteAddr}
                       variant="bordered"
-                      onSelectionChange={(keys) => {
-                        const selectedKey = Array.from(keys)[0] as string;
-
-                        setForm((prev) => ({ ...prev, strategy: selectedKey }));
-                      }}
-                    >
-                      <SelectItem key="fifo">主备模式 - 自上而下</SelectItem>
-                      <SelectItem key="round">轮询模式 - 依次轮换</SelectItem>
-                      <SelectItem key="rand">随机模式 - 随机选择</SelectItem>
-                      <SelectItem key="hash">哈希模式 - IP哈希</SelectItem>
-                    </Select>
-                  )}
-                  <Accordion className="px-0" variant="light">
-                    <AccordionItem
-                      key="advanced"
-                      aria-label="高级设置"
-                      className="border-b-0 [&_[data-slot=accordion-trigger]]:no-underline [&_[data-slot=accordion-trigger]]:hover:no-underline"
-                      title={
-                        <span className="text-small text-default-500 font-medium">
-                          高级设置
-                        </span>
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          remoteAddr: e.target.value,
+                        }))
                       }
-                    >
-                      <div className="space-y-4 pb-2">
-                        <Input
-                          description="大于 0 时优先于用户全局限制；0 或空表示使用用户全局限制，用户也为 0 时不限制。"
-                          label="最大连接数"
-                          min="0"
-                          placeholder="0 或空表示使用用户全局限制"
-                          type="number"
-                          value={
-                            form.maxConn === 0 ? "" : String(form.maxConn || "")
-                          }
-                          variant="bordered"
-                          onChange={(e) => {
-                            const value = Math.max(
-                              Number(e.target.value) || 0,
-                              0,
-                            );
+                    />
 
-                            setForm((prev) => ({ ...prev, maxConn: value }));
-                          }}
-                        />
-                        <Input
-                          description="每个客户端 IP 可同时建立的最大连接数；0 或空表示不限制。"
-                          label="每 IP 最大连接数"
-                          min="0"
-                          placeholder="0 或空表示不限制"
-                          type="number"
-                          value={
-                            form.ipMaxConn === 0
-                              ? ""
-                              : String(form.ipMaxConn || "")
-                          }
-                          variant="bordered"
-                          onChange={(e) => {
-                            const value = Math.max(
-                              Number(e.target.value) || 0,
-                              0,
-                            );
+                    {getAddressCount(form.remoteAddr) > 1 && (
+                      <Select
+                        description="多个目标地址的负载均衡策略"
+                        label="负载策略"
+                        placeholder="请选择负载均衡策略"
+                        selectedKeys={[form.strategy]}
+                        variant="bordered"
+                        onSelectionChange={(keys) => {
+                          const selectedKey = Array.from(keys)[0] as string;
 
-                            setForm((prev) => ({ ...prev, ipMaxConn: value }));
-                          }}
-                        />
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                          <Select
-                            description="入口监听接收 PROXY protocol，用于读取上游传入的真实客户端 IP。"
-                            label="Proxy Protocol 接收"
-                            placeholder="禁用"
-                            selectedKeys={[
-                              String(form.proxyProtocolReceive || 0),
-                            ]}
+                          setForm((prev) => ({
+                            ...prev,
+                            strategy: selectedKey,
+                          }));
+                        }}
+                      >
+                        <SelectItem key="fifo">主备模式 - 自上而下</SelectItem>
+                        <SelectItem key="round">轮询模式 - 依次轮换</SelectItem>
+                        <SelectItem key="rand">随机模式 - 随机选择</SelectItem>
+                        <SelectItem key="hash">哈希模式 - IP哈希</SelectItem>
+                      </Select>
+                    )}
+                  </FormSection>
+                  <section className="form-section">
+                    <Accordion className="px-0" variant="light">
+                      <AccordionItem
+                        key="advanced"
+                        aria-label="高级设置"
+                        className="border-b-0 [&_[data-slot=accordion-trigger]]:no-underline [&_[data-slot=accordion-trigger]]:hover:no-underline"
+                        title={
+                          <span className="text-small text-default-500 font-medium">
+                            高级设置
+                          </span>
+                        }
+                      >
+                        <div className="space-y-4 pb-2">
+                          <Input
+                            description="大于 0 时优先于用户全局限制；0 或空表示使用用户全局限制，用户也为 0 时不限制。"
+                            label="最大连接数"
+                            min="0"
+                            placeholder="0 或空表示使用用户全局限制"
+                            type="number"
+                            value={
+                              form.maxConn === 0
+                                ? ""
+                                : String(form.maxConn || "")
+                            }
                             variant="bordered"
-                            onSelectionChange={(keys) => {
-                              const selectedKey = Array.from(keys)[0] as string;
+                            onChange={(e) => {
+                              const value = Math.max(
+                                Number(e.target.value) || 0,
+                                0,
+                              );
+
+                              setForm((prev) => ({ ...prev, maxConn: value }));
+                            }}
+                          />
+                          <Input
+                            description="每个客户端 IP 可同时建立的最大连接数；0 或空表示不限制。"
+                            label="每 IP 最大连接数"
+                            min="0"
+                            placeholder="0 或空表示不限制"
+                            type="number"
+                            value={
+                              form.ipMaxConn === 0
+                                ? ""
+                                : String(form.ipMaxConn || "")
+                            }
+                            variant="bordered"
+                            onChange={(e) => {
+                              const value = Math.max(
+                                Number(e.target.value) || 0,
+                                0,
+                              );
 
                               setForm((prev) => ({
                                 ...prev,
-                                proxyProtocolReceive: Number(selectedKey),
+                                ipMaxConn: value,
                               }));
                             }}
-                          >
-                            <SelectItem key="0">禁用</SelectItem>
-                            <SelectItem key="1">Version 1</SelectItem>
-                            <SelectItem key="2">Version 2</SelectItem>
-                          </Select>
-                          <Select
-                            description="连接目标地址时发送 PROXY protocol，用于向下游透传客户端真实 IP。"
-                            label="Proxy Protocol 发送"
-                            placeholder="禁用"
-                            selectedKeys={[String(form.proxyProtocolSend || 0)]}
-                            variant="bordered"
-                            onSelectionChange={(keys) => {
-                              const selectedKey = Array.from(keys)[0] as string;
-                              const proxyProtocolSend = Number(selectedKey);
+                          />
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <Select
+                              description="入口监听接收 PROXY protocol，用于读取上游传入的真实客户端 IP。"
+                              label="Proxy Protocol 接收"
+                              placeholder="禁用"
+                              selectedKeys={[
+                                String(form.proxyProtocolReceive || 0),
+                              ]}
+                              variant="bordered"
+                              onSelectionChange={(keys) => {
+                                const selectedKey = Array.from(
+                                  keys,
+                                )[0] as string;
 
-                              setForm((prev) => ({
-                                ...prev,
-                                proxyProtocol: proxyProtocolSend,
-                                proxyProtocolSend,
-                              }));
-                            }}
-                          >
-                            <SelectItem key="0">禁用</SelectItem>
-                            <SelectItem key="1">Version 1</SelectItem>
-                            <SelectItem key="2">Version 2</SelectItem>
-                          </Select>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  proxyProtocolReceive: Number(selectedKey),
+                                }));
+                              }}
+                            >
+                              <SelectItem key="0">禁用</SelectItem>
+                              <SelectItem key="1">Version 1</SelectItem>
+                              <SelectItem key="2">Version 2</SelectItem>
+                            </Select>
+                            <Select
+                              description="连接目标地址时发送 PROXY protocol，用于向下游透传客户端真实 IP。"
+                              label="Proxy Protocol 发送"
+                              placeholder="禁用"
+                              selectedKeys={[
+                                String(form.proxyProtocolSend || 0),
+                              ]}
+                              variant="bordered"
+                              onSelectionChange={(keys) => {
+                                const selectedKey = Array.from(
+                                  keys,
+                                )[0] as string;
+                                const proxyProtocolSend = Number(selectedKey);
+
+                                setForm((prev) => ({
+                                  ...prev,
+                                  proxyProtocol: proxyProtocolSend,
+                                  proxyProtocolSend,
+                                }));
+                              }}
+                            >
+                              <SelectItem key="0">禁用</SelectItem>
+                              <SelectItem key="1">Version 1</SelectItem>
+                              <SelectItem key="2">Version 2</SelectItem>
+                            </Select>
+                          </div>
+                          {isAdmin && (
+                            <Select
+                              label="规则限速"
+                              placeholder="不限速"
+                              selectedKeys={
+                                selectedSpeedId !== null
+                                  ? [selectedSpeedId.toString()]
+                                  : []
+                              }
+                              variant="bordered"
+                              onSelectionChange={(keys) => {
+                                const selectedKey = Array.from(keys)[0] as
+                                  | string
+                                  | undefined;
+
+                                setForm((prev) => ({
+                                  ...prev,
+                                  speedId: selectedKey
+                                    ? Number(selectedKey)
+                                    : null,
+                                }));
+                              }}
+                            >
+                              {availableSpeedLimits.map((speedLimit) => (
+                                <SelectItem
+                                  key={speedLimit.id.toString()}
+                                  textValue={speedLimit.name}
+                                >
+                                  {speedLimit.name}
+                                </SelectItem>
+                              ))}
+                            </Select>
+                          )}
+                          {isAdmin && (
+                            <Select
+                              description="每个客户端 IP 独享该限速规则；不选择表示不限制。"
+                              label="每 IP 限速"
+                              placeholder="不限速"
+                              selectedKeys={
+                                selectedIPSpeedId !== null
+                                  ? [selectedIPSpeedId.toString()]
+                                  : []
+                              }
+                              variant="bordered"
+                              onSelectionChange={(keys) => {
+                                const selectedKey = Array.from(keys)[0] as
+                                  | string
+                                  | undefined;
+
+                                setForm((prev) => ({
+                                  ...prev,
+                                  ipSpeedId: selectedKey
+                                    ? Number(selectedKey)
+                                    : null,
+                                }));
+                              }}
+                            >
+                              {availableSpeedLimits.map((speedLimit) => (
+                                <SelectItem
+                                  key={speedLimit.id.toString()}
+                                  textValue={speedLimit.name}
+                                >
+                                  {speedLimit.name}
+                                </SelectItem>
+                              ))}
+                            </Select>
+                          )}
                         </div>
-                        {isAdmin && (
-                          <Select
-                            label="规则限速"
-                            placeholder="不限速"
-                            selectedKeys={
-                              selectedSpeedId !== null
-                                ? [selectedSpeedId.toString()]
-                                : []
-                            }
-                            variant="bordered"
-                            onSelectionChange={(keys) => {
-                              const selectedKey = Array.from(keys)[0] as
-                                | string
-                                | undefined;
-
-                              setForm((prev) => ({
-                                ...prev,
-                                speedId: selectedKey
-                                  ? Number(selectedKey)
-                                  : null,
-                              }));
-                            }}
-                          >
-                            {availableSpeedLimits.map((speedLimit) => (
-                              <SelectItem
-                                key={speedLimit.id.toString()}
-                                textValue={speedLimit.name}
-                              >
-                                {speedLimit.name}
-                              </SelectItem>
-                            ))}
-                          </Select>
-                        )}
-                        {isAdmin && (
-                          <Select
-                            description="每个客户端 IP 独享该限速规则；不选择表示不限制。"
-                            label="每 IP 限速"
-                            placeholder="不限速"
-                            selectedKeys={
-                              selectedIPSpeedId !== null
-                                ? [selectedIPSpeedId.toString()]
-                                : []
-                            }
-                            variant="bordered"
-                            onSelectionChange={(keys) => {
-                              const selectedKey = Array.from(keys)[0] as
-                                | string
-                                | undefined;
-
-                              setForm((prev) => ({
-                                ...prev,
-                                ipSpeedId: selectedKey
-                                  ? Number(selectedKey)
-                                  : null,
-                              }));
-                            }}
-                          >
-                            {availableSpeedLimits.map((speedLimit) => (
-                              <SelectItem
-                                key={speedLimit.id.toString()}
-                                textValue={speedLimit.name}
-                              >
-                                {speedLimit.name}
-                              </SelectItem>
-                            ))}
-                          </Select>
-                        )}
-                      </div>
-                    </AccordionItem>
-                  </Accordion>
+                      </AccordionItem>
+                    </Accordion>
+                  </section>
                 </div>
               </ModalBody>
               <ModalFooter>
