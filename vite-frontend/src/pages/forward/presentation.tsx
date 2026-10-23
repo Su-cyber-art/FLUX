@@ -902,7 +902,7 @@ export const ForwardCard = ({
   return (
     <Card
       className={cn(
-        "h-full p-4 transition-shadow hover:shadow-sm",
+        "h-full gap-4 p-4 transition-shadow hover:shadow-sm",
         selected && "border-primary-line bg-primary-soft",
       )}
     >
@@ -938,7 +938,7 @@ export const ForwardCard = ({
         {dragListeners && <DragHandle {...dragListeners} />}
       </div>
 
-      <dl className="mt-4 space-y-2 text-xs">
+      <dl className="space-y-2 text-xs">
         <div className="flex min-w-0 items-center gap-2">
           <dt className="w-8 shrink-0 text-default-500">入口</dt>
           <dd className="min-w-0">
