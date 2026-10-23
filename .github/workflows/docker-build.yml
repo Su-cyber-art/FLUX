@@ -147,8 +147,6 @@ jobs:
           load: true
           platforms: linux/${{ matrix.arch }}
           tags: ${{ env.FLUX_IMAGE_PREFIX }}/backend:${{ env.FLUX_RELEASE_VERSION }}
-          build-args: |
-            KEYGEN_ACCOUNT_ID=${{ secrets.KEYGEN_ACCOUNT_ID }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ needs.prepare.outputs.sha }}

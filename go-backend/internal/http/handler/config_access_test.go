@@ -42,19 +42,21 @@ func TestPublicConfigGetAllowsBrandKeys(t *testing.T) {
 	}
 }
 
-func TestPublicBrandConfigFallsBackWithoutCommercialLicense(t *testing.T) {
+// Branding is freely editable in FLUX; panels upgraded from licensed builds may
+// still carry is_commercial=false, which must no longer hide saved values.
+func TestPublicBrandConfigReturnsSavedValues(t *testing.T) {
 	router, r := setupConfigAccessTestRouter(t)
-	seedConfigValue(t, r, "app_name", "Paid Brand")
+	seedConfigValue(t, r, "app_name", "My Panel")
 	seedConfigValue(t, r, "app_logo", "logo-data")
 	seedConfigValue(t, r, "app_favicon", "favicon-data")
 	seedConfigValue(t, r, "hide_footer_brand", "true")
 	seedConfigValue(t, r, "is_commercial", "false")
 
 	for name, want := range map[string]string{
-		"app_name":          "FLVX",
-		"app_logo":          "",
-		"app_favicon":       "",
-		"hide_footer_brand": "false",
+		"app_name":          "My Panel",
+		"app_logo":          "logo-data",
+		"app_favicon":       "favicon-data",
+		"hide_footer_brand": "true",
 	} {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/public/config/get", bytes.NewBufferString(`{"name":"`+name+`"}`))
 		req.Header.Set("Content-Type", "application/json")
@@ -64,16 +66,31 @@ func TestPublicBrandConfigFallsBackWithoutCommercialLicense(t *testing.T) {
 	}
 }
 
-func TestPublicBrandConfigUsesSavedValuesWithCommercialLicense(t *testing.T) {
+func TestConfigUpdateAllowsBrandKeysWithoutLicense(t *testing.T) {
 	router, r := setupConfigAccessTestRouter(t)
-	seedConfigValue(t, r, "app_name", "Paid Brand")
-	seedConfigValue(t, r, "is_commercial", "true")
+	adminToken := mustGenerateConfigAccessToken(t, 1, "admin_user", 0)
+	seedConfigValue(t, r, "is_commercial", "false")
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/public/config/get", bytes.NewBufferString(`{"name":"app_name"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/config/update", bytes.NewBufferString(`{"app_name":"My Panel","hide_footer_brand":"true"}`))
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", adminToken)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
-	assertHandlerConfigValue(t, resp, "app_name", "Paid Brand")
+	assertHandlerCode(t, resp, 0)
+
+	req = httptest.NewRequest(http.MethodPost, "/api/v1/config/update-single", bytes.NewBufferString(`{"name":"app_favicon","value":""}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", adminToken)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	assertHandlerCode(t, resp, 0)
+
+	for name, want := range map[string]string{"app_name": "My Panel", "hide_footer_brand": "true"} {
+		cfg, err := r.GetConfigByName(name)
+		if err != nil || cfg == nil || cfg.Value != want {
+			t.Fatalf("expected %s=%q to be saved, got %#v err=%v", name, want, cfg, err)
+		}
+	}
 }
 
 func TestPublicConfigGetRejectsSensitiveKeys(t *testing.T) {

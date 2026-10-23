@@ -475,11 +475,14 @@ func seedData(db *gorm.DB) {
 		}
 	}
 
-	appNameConfig := model.ViteConfig{ID: 1, Name: "app_name", Value: "flux", Time: 1755147963000}
+	appNameConfig := model.ViteConfig{ID: 1, Name: "app_name", Value: "FLVX", Time: 1755147963000}
 	db.Where("id = ?", 1).FirstOrCreate(&appNameConfig)
+	// Older panels were seeded with "flux" and could not rename without a
+	// commercial license, which also made them display "FLVX". Keep that name
+	// now that branding is freely editable.
+	db.Model(&model.ViteConfig{}).Where("name = ? AND value = ?", "app_name", "flux").Update("value", "FLVX")
 	now := time.Now().UnixMilli()
 	for name, value := range map[string]string{
-		"is_commercial":     "false",
 		"hide_footer_brand": "false",
 	} {
 		cfg := model.ViteConfig{Name: name, Value: value, Time: now}

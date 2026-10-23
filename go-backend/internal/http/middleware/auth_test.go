@@ -197,13 +197,7 @@ func TestShouldSkipBypassesPublicConfigGet(t *testing.T) {
 	}
 }
 
-func TestLicenseActivateRequiresAdmin(t *testing.T) {
-	if !requiresAdmin("/api/v1/license/activate") {
-		t.Fatal("expected license activation to require admin")
-	}
-}
-
-func TestJWTRejectsNonAdminLicenseActivation(t *testing.T) {
+func TestJWTRejectsNonAdminConfigUpdate(t *testing.T) {
 	secret := "unit-test-secret"
 	token, err := auth.GenerateToken(2, "regular_user", 1, secret)
 	if err != nil {
@@ -223,7 +217,7 @@ func TestJWTRejectsNonAdminLicenseActivation(t *testing.T) {
 		response.WriteJSON(w, response.OK("pass"))
 	}))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/license/activate", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/config/update", nil)
 	req.Header.Set("Authorization", token)
 	res := httptest.NewRecorder()
 	wrapped.ServeHTTP(res, req)
