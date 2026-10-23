@@ -5,6 +5,7 @@ import type {
 } from "@/api/types";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { SegmentedControl } from "@mantine/core";
 import {
   DndContext,
   KeyboardSensor,
@@ -19,22 +20,17 @@ import {
   arrayMove,
   rectSortingStrategy,
   sortableKeyboardCoordinates,
-  useSortable,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import {
-  ChevronRight,
-  CircleArrowUp,
-  CirclePause,
   CircleX,
-  GripVertical,
   LayoutGrid,
-  Link,
   List,
-  Pencil,
+  Network,
   Plus,
-  Square,
-  TriangleAlert,
+  SearchX,
+  Send,
+  SquareCheckBig,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -53,14 +49,19 @@ import {
   EMPTY_BATCH_RESULT_MODAL_STATE,
   DEFAULT_TUNNEL_DELETE_ACTION,
   TUNNEL_ORDER_KEY,
-  renderBestExitState,
   mapTunnelApiItems,
 } from "@/pages/tunnel/presentation";
 import toast from "@/lib/notifications";
 import { SearchBar } from "@/components/search-bar";
+import {
+  SortableTunnelItem,
+  TunnelCard,
+  TunnelListHeader,
+  TunnelRow,
+  type TunnelItemHandlers,
+} from "@/pages/tunnel/tunnel-items";
 import { AnimatedPage } from "@/components/animated-page";
 import { BatchActionResultModal } from "@/components/batch-action-result-modal";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Select, SelectItem } from "@/components/ui/select";
@@ -75,18 +76,9 @@ import { Chip } from "@/components/ui/chip";
 import { Spinner } from "@/components/ui/spinner";
 import { Divider } from "@/components/ui/divider";
 import { Alert } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Radio, RadioGroup } from "@/components/ui/radio";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
-import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
 import {
   createTunnel,
   batchDeleteTunnelsWithForwards,
@@ -100,18 +92,14 @@ import {
   previewBatchTunnelDelete,
   previewTunnelDelete,
 } from "@/api";
-import { PageLoadingState } from "@/components/page-state";
+import { EmptyStateCard, PageLoadingState } from "@/components/page-state";
 import {
   buildDiagnosisFallbackResult,
   getDiagnosisQualityDisplay,
   type DiagnosisResult,
 } from "@/pages/tunnel/diagnosis";
 import { diagnoseTunnelStream } from "@/api/diagnosis-stream";
-import {
-  getTunnelFlowDisplay,
-  getTunnelTypeDisplay,
-  validateTunnelForm,
-} from "@/pages/tunnel/form";
+import { validateTunnelForm } from "@/pages/tunnel/form";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { loadStoredOrder, saveOrder } from "@/utils/order-storage";
 import {
@@ -1391,149 +1379,155 @@ export default function TunnelPage() {
       : `删除规则并删除 ${selectedTunnelIdList.length} 条隧道`
     : `删除这 ${selectedTunnelIdList.length} 条隧道`;
 
-  const SortableItem = ({
-    id,
-    children,
-  }: {
-    id: number;
-    children: (listeners: any) => any;
-  }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id });
-
-    const style: React.CSSProperties = {
-      transform: transform
-        ? CSS.Transform.toString({
-            ...transform,
-            x: Math.round(transform.x),
-            y: Math.round(transform.y),
-          })
-        : undefined,
-      transition: isDragging ? undefined : transition || undefined,
-      opacity: isDragging ? 0.5 : 1,
-      willChange: isDragging ? "transform" : undefined,
-    };
-
-    return (
-      <div ref={setNodeRef} style={style} {...attributes}>
-        {children(listeners)}
-      </div>
-    );
-  };
+  const nodeMap = useMemo(
+    () => new Map(nodes.map((node) => [node.id, node] as const)),
+    [nodes],
+  );
 
   if (loading) {
     return <PageLoadingState message="正在加载..." />;
   }
 
+  const tunnelHandlers: TunnelItemHandlers = {
+    onEdit: handleEdit,
+    onDiagnose: handleDiagnose,
+    onDelete: handleDelete,
+    onToggleSelect: (tunnelId) => {
+      setSelectMode(true);
+      toggleSelect(tunnelId);
+    },
+  };
+  const chainTunnelCount = sortedTunnels.filter(
+    (tunnel) => tunnel.type === 2,
+  ).length;
+  const disabledTunnelCount = sortedTunnels.filter(
+    (tunnel) => tunnel.status !== 1,
+  ).length;
+  const allDisplayedSelected =
+    sortedTunnels.length > 0 && selectedIds.size === sortedTunnels.length;
+
   return (
     <AnimatedPage>
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-6 gap-3">
-        <div className="flex-1 max-w-sm flex items-center gap-2">
-          <SearchBar
-            isVisible={isSearchVisible}
-            placeholder="搜索隧道名称或IP"
-            value={searchKeyword}
-            onChange={setSearchKeyword}
-            onClose={() => setIsSearchVisible(false)}
-            onOpen={() => setIsSearchVisible(true)}
-          />
-        </div>
-
-        <div className="min-h-9 min-w-0 max-w-full overflow-x-auto touch-pan-x">
-          <div className="flex min-h-9 w-max min-w-full items-center justify-end gap-2 whitespace-nowrap [&>*]:shrink-0">
-            {selectMode ? (
-              <>
-                <span className="text-sm text-default-600 shrink-0">
-                  已选择 {selectedIds.size} 项
-                </span>
-                <Button
-                  color="primary"
-                  size="sm"
-                  variant="flat"
-                  onPress={selectAll}
-                >
-                  全选
-                </Button>
-                <Button
-                  color="secondary"
-                  size="sm"
-                  variant="flat"
-                  onPress={deselectAll}
-                >
-                  清空
-                </Button>
-                <Button
-                  color="danger"
-                  isDisabled={selectedIds.size === 0}
-                  size="sm"
-                  variant="flat"
-                  onPress={handleOpenBatchDeleteModal}
-                >
-                  删除
-                </Button>
-                <Button
-                  color="primary"
-                  isDisabled={selectedIds.size === 0}
-                  isLoading={batchLoading}
-                  size="sm"
-                  variant="flat"
-                  onPress={handleBatchRedeploy}
-                >
-                  下发
-                </Button>
-                <Button
-                  color="secondary"
-                  size="sm"
-                  variant="solid"
-                  onPress={toggleSelectMode}
-                >
-                  退出
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  color="info"
-                  size="sm"
-                  variant="flat"
-                  onPress={toggleSelectMode}
-                >
-                  批量
-                </Button>
-                <Button
-                  isIconOnly
-                  aria-label="切换列表或卡片视图"
-                  size="sm"
-                  variant="flat"
-                  onPress={() =>
-                    setViewMode(viewMode === "list" ? "grid" : "list")
-                  }
-                >
-                  {viewMode === "list" ? (
-                    <LayoutGrid className="w-4 h-4" />
-                  ) : (
-                    <List className="w-4 h-4" />
-                  )}
-                </Button>
-                <Button
-                  color="primary"
-                  size="sm"
-                  variant="flat"
-                  onPress={handleAdd}
-                >
-                  新增
-                </Button>
-              </>
-            )}
+      <div className="page-toolbar">
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
+          <div className="min-w-40 flex-1 sm:max-w-72">
+            <SearchBar
+              isVisible={isSearchVisible}
+              placeholder="搜索隧道名称或入口IP"
+              value={searchKeyword}
+              onChange={setSearchKeyword}
+              onClose={() => setIsSearchVisible(false)}
+              onOpen={() => setIsSearchVisible(true)}
+            />
           </div>
         </div>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <SegmentedControl
+            aria-label="显示方式"
+            data={[
+              {
+                value: "grid",
+                label: (
+                  <span className="flex items-center gap-1.5">
+                    <LayoutGrid size={15} />
+                    <span className="hidden sm:inline">卡片</span>
+                  </span>
+                ),
+              },
+              {
+                value: "list",
+                label: (
+                  <span className="flex items-center gap-1.5">
+                    <List size={15} />
+                    <span className="hidden sm:inline">列表</span>
+                  </span>
+                ),
+              },
+            ]}
+            size="sm"
+            value={viewMode}
+            onChange={(value) => setViewMode(value as "list" | "grid")}
+          />
+          <Button
+            aria-label={selectMode ? "完成批量操作" : "批量操作"}
+            startContent={<SquareCheckBig size={15} />}
+            onPress={toggleSelectMode}
+          >
+            <span className="hidden sm:inline">
+              {selectMode ? "完成" : "批量"}
+            </span>
+          </Button>
+          <Button
+            className="ml-auto sm:ml-0"
+            color="primary"
+            startContent={<Plus size={16} />}
+            onPress={handleAdd}
+          >
+            新增<span className="hidden sm:inline">隧道</span>
+          </Button>
+        </div>
       </div>
+
+      {tunnels.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
+          <span>
+            共{" "}
+            <span className="font-semibold text-foreground">
+              {sortedTunnels.length}
+            </span>{" "}
+            条隧道
+            {sortedTunnels.length !== tunnels.length &&
+              `（已筛选，全部 ${tunnels.length} 条）`}
+          </span>
+          <span>隧道转发 {chainTunnelCount}</span>
+          <span>端口转发 {sortedTunnels.length - chainTunnelCount}</span>
+          {disabledTunnelCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-warning-ink">
+              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+              停用 {disabledTunnelCount}
+            </span>
+          )}
+        </div>
+      )}
+
+      {selectMode && (
+        <div className="app-batch-bar">
+          <span className="text-sm font-medium text-primary-ink">
+            已选择 {selectedIds.size} 项
+          </span>
+          <Button size="sm" variant="light" onPress={selectAll}>
+            全选
+          </Button>
+          <Button size="sm" variant="light" onPress={deselectAll}>
+            取消选择
+          </Button>
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <Button
+              isDisabled={selectedIds.size === 0}
+              isLoading={batchLoading}
+              size="sm"
+              startContent={<Send size={14} />}
+              variant="flat"
+              onPress={handleBatchRedeploy}
+            >
+              重新下发
+            </Button>
+            <Button
+              color="danger"
+              isDisabled={selectedIds.size === 0}
+              size="sm"
+              startContent={<Trash2 size={14} />}
+              variant="flat"
+              onPress={handleOpenBatchDeleteModal}
+            >
+              删除
+            </Button>
+            <Button size="sm" variant="flat" onPress={toggleSelectMode}>
+              完成
+            </Button>
+          </div>
+        </div>
+      )}
 
       {batchProgress.active && (
         <div className="mb-4">
@@ -1552,368 +1546,80 @@ export default function TunnelPage() {
         </div>
       )}
 
-      {/* 隧道卡片网格 */}
-      {tunnels.length > 0 ? (
-        viewMode === "list" ? (
-          <Card className="bg-content1 border border-divider shadow-sm">
-            <Table
-              aria-label="隧道列表"
-              className="overflow-x-auto min-w-full"
-              classNames={{
-                wrapper:
-                  "bg-transparent p-0 shadow-none border-none overflow-auto rounded-xl",
-                th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-                td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
-              }}
-            >
-              <TableHeader>
-                {selectMode ? (
-                  <TableColumn className="w-12 px-4 whitespace-nowrap overflow-hidden">
-                    <Checkbox
-                      isSelected={
-                        selectedIds.size === sortedTunnels.length &&
-                        sortedTunnels.length > 0
-                      }
-                      onValueChange={(checked) =>
-                        checked ? selectAll() : deselectAll()
-                      }
-                    />
-                  </TableColumn>
-                ) : (
-                  <TableColumn className="w-0 p-0 overflow-hidden text-[0px]" />
-                )}
-                <TableColumn>隧道名称</TableColumn>
-                <TableColumn>类型</TableColumn>
-                <TableColumn>拓扑</TableColumn>
-                <TableColumn>流量统计</TableColumn>
-                <TableColumn>操作</TableColumn>
-              </TableHeader>
-              <TableBody items={sortedTunnels}>
-                {(tunnel) => {
-                  const typeDisplay = getTunnelTypeDisplay(tunnel.type);
-                  const tunnelTypeChipClassName =
-                    tunnel.type === 1
-                      ? "text-[10px] h-5 bg-primary-soft text-primary-ink border-primary-line"
-                      : "text-[10px] h-5 bg-success-soft text-success-ink border-success-line";
-                  const bestExitStateContent = renderBestExitState(
-                    tunnel.bestExitState,
-                  );
-
-                  return (
-                    <TableRow key={tunnel.id}>
-                      {selectMode ? (
-                        <TableCell className="px-4">
-                          <Checkbox
-                            isSelected={selectedIds.has(tunnel.id)}
-                            onValueChange={() => toggleSelect(tunnel.id)}
-                          />
-                        </TableCell>
-                      ) : (
-                        <TableCell className="w-0 p-0 overflow-hidden text-[0px]" />
-                      )}
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`shrink-0 w-2 h-2 rounded-full ${
-                              tunnel.status === 1 ? "bg-success" : "bg-danger"
-                            }`}
-                          />
-                          <span className="font-medium text-foreground text-sm">
-                            {tunnel.name}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          className={tunnelTypeChipClassName}
-                          color={typeDisplay.color as any}
-                          size="sm"
-                          variant="flat"
-                        >
-                          {typeDisplay.text}
-                        </Chip>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex min-w-0 flex-col gap-1.5">
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <span className="font-semibold text-primary-ink">
-                              {tunnel.inNodeId?.length || 0}入口
-                            </span>
-                            <span className="text-default-400">→</span>
-                            <span className="font-semibold text-secondary-ink">
-                              {tunnel.type === 2
-                                ? tunnel.chainNodes?.length || 0
-                                : 0}
-                              跳
-                            </span>
-                            <span className="text-default-400">→</span>
-                            <span className="font-semibold text-success-ink">
-                              {tunnel.type === 2
-                                ? tunnel.outNodeId?.length || 0
-                                : tunnel.inNodeId?.length || 0}
-                              出口
-                            </span>
-                          </div>
-                          {bestExitStateContent}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="text-default-500">
-                            {getTunnelFlowDisplay(tunnel.flow)}
-                          </span>
-                          <span className="text-default-300">|</span>
-                          <span className="text-default-500">
-                            {tunnel.trafficRatio}x
-                          </span>
-                          {tunnel.type === 2 && tunnel.ipPreference && (
-                            <>
-                              <span className="text-default-300">|</span>
-                              <span className="text-default-500">
-                                {tunnel.ipPreference === "v4" ? "IPv4" : "IPv6"}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap items-center gap-1.5 min-w-max">
-                          <Button
-                            className="h-6 px-2 min-w-0 text-xs"
-                            color="primary"
-                            size="sm"
-                            variant="flat"
-                            onPress={() => handleEdit(tunnel)}
-                          >
-                            编辑
-                          </Button>
-                          <Button
-                            className="h-6 px-2 min-w-0 text-xs"
-                            color="warning"
-                            size="sm"
-                            variant="flat"
-                            onPress={() => handleDiagnose(tunnel)}
-                          >
-                            诊断
-                          </Button>
-                          <Button
-                            className="h-6 px-2 min-w-0 text-xs"
-                            color="danger"
-                            size="sm"
-                            variant="flat"
-                            onPress={() => handleDelete(tunnel)}
-                          >
-                            删除
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                }}
-              </TableBody>
-            </Table>
-          </Card>
+      {sortedTunnels.length === 0 ? (
+        tunnels.length > 0 ? (
+          <EmptyStateCard
+            action={
+              <Button onPress={() => setSearchKeyword("")}>清空搜索</Button>
+            }
+            description="换个关键词再试试。"
+            icon={<SearchX size={20} />}
+            title="没有匹配的隧道"
+          />
         ) : (
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <SortableContext
-              items={sortableTunnelIds}
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                {sortedTunnels.map((tunnel) => {
-                  const typeDisplay = getTunnelTypeDisplay(tunnel.type);
-                  const tunnelTypeChipClassName =
-                    tunnel.type === 1
-                      ? "text-xs bg-primary-soft text-primary-ink border-primary-line"
-                      : "text-xs bg-success-soft text-success-ink border-success-line";
-                  const bestExitStateContent = renderBestExitState(
-                    tunnel.bestExitState,
-                  );
-
-                  return (
-                    <SortableItem key={tunnel.id} id={tunnel.id}>
-                      {(listeners) => (
-                        <Card
-                          key={tunnel.id}
-                          className="group overflow-hidden bg-content1 border border-divider shadow-sm"
-                        >
-                          <CardHeader className="pb-2 md:pb-2">
-                            <div className="flex justify-between items-start w-full">
-                              {selectMode && (
-                                <Checkbox
-                                  className="mr-2"
-                                  isSelected={selectedIds.has(tunnel.id)}
-                                  onValueChange={() => toggleSelect(tunnel.id)}
-                                />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-foreground truncate text-sm">
-                                  {tunnel.name}
-                                </h3>
-                                <div className="flex items-center gap-1.5 mt-1">
-                                  <Chip
-                                    className={tunnelTypeChipClassName}
-                                    color={typeDisplay.color as any}
-                                    size="sm"
-                                    variant="flat"
-                                  >
-                                    {typeDisplay.text}
-                                  </Chip>
-                                </div>
-                              </div>
-                              <div
-                                className="cursor-grab active:cursor-grabbing p-1 -mr-1 text-default-400 hover:text-default-600 transition-colors touch-manipulation flex-shrink-0"
-                                {...listeners}
-                                style={{ touchAction: "none" }}
-                                title="拖拽排序"
-                              >
-                                <GripVertical className="w-4 h-4" />
-                              </div>
-                            </div>
-                          </CardHeader>
-
-                          <CardBody className="pt-0 pb-3 md:pt-0 md:pb-3">
-                            <div className="space-y-3">
-                              {/* 拓扑结构 */}
-                              <div className="pt-2 border-t border-divider">
-                                <div className="flex items-center justify-center gap-2 text-xs">
-                                  {/* 入口节点 */}
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-primary-soft rounded border border-primary-line">
-                                    <Square className="w-3 h-3 text-primary-ink" />
-                                    <span className="font-semibold text-primary-ink">
-                                      {tunnel.inNodeId?.length || 0}入口
-                                    </span>
-                                  </div>
-
-                                  {/* 箭头 */}
-                                  <ChevronRight className="w-4 h-4 text-default-400" />
-
-                                  {/* 转发链 */}
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-secondary-soft rounded border border-secondary-line">
-                                    <Link className="w-3 h-3 text-secondary-ink" />
-                                    <span className="font-semibold text-secondary-ink">
-                                      {tunnel.type === 2
-                                        ? tunnel.chainNodes?.length || 0
-                                        : 0}
-                                      跳
-                                    </span>
-                                  </div>
-
-                                  {/* 箭头 */}
-                                  <ChevronRight className="w-4 h-4 text-default-400" />
-
-                                  {/* 出口节点 */}
-                                  <div className="flex items-center gap-1 px-2 py-1 bg-success-soft rounded border border-success-line">
-                                    <CircleArrowUp className="w-3 h-3 text-success-ink" />
-                                    <span className="font-semibold text-success-ink">
-                                      {tunnel.type === 2
-                                        ? tunnel.outNodeId?.length || 0
-                                        : tunnel.inNodeId?.length || 0}
-                                      出口
-                                    </span>
-                                  </div>
-                                </div>
-                                {bestExitStateContent && (
-                                  <div className="mt-2 flex min-w-0 justify-center">
-                                    {bestExitStateContent}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* 流量配置 */}
-                              <div
-                                className={`grid gap-2 ${tunnel.type === 2 && tunnel.ipPreference ? "grid-cols-3" : "grid-cols-2"}`}
-                              >
-                                <div className="text-center p-1.5 bg-content1 rounded-lg border border-divider">
-                                  <div className="text-xs text-default-500">
-                                    流量计算
-                                  </div>
-                                  <div className="text-sm font-semibold text-foreground mt-0.5">
-                                    {getTunnelFlowDisplay(tunnel.flow)}
-                                  </div>
-                                </div>
-                                <div className="text-center p-1.5 bg-content1 rounded-lg border border-divider">
-                                  <div className="text-xs text-default-500">
-                                    流量倍率
-                                  </div>
-                                  <div className="text-sm font-semibold text-foreground mt-0.5">
-                                    {tunnel.trafficRatio}x
-                                  </div>
-                                </div>
-                                {tunnel.type === 2 && tunnel.ipPreference && (
-                                  <div className="text-center p-1.5 bg-content1 rounded-lg border border-divider">
-                                    <div className="text-xs text-default-500">
-                                      连接偏好
-                                    </div>
-                                    <div className="text-sm font-semibold text-foreground mt-0.5">
-                                      {tunnel.ipPreference === "v4"
-                                        ? "IPv4"
-                                        : "IPv6"}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex gap-1.5 mt-3">
-                              <Button
-                                className="flex-1"
-                                color="primary"
-                                size="sm"
-                                startContent={<Pencil className="w-3 h-3" />}
-                                variant="flat"
-                                onPress={() => handleEdit(tunnel)}
-                              >
-                                编辑
-                              </Button>
-                              <Button
-                                className="flex-1"
-                                color="warning"
-                                size="sm"
-                                startContent={
-                                  <TriangleAlert className="w-3 h-3" />
-                                }
-                                variant="flat"
-                                onPress={() => handleDiagnose(tunnel)}
-                              >
-                                诊断
-                              </Button>
-                              <Button
-                                className="flex-1"
-                                color="danger"
-                                size="sm"
-                                startContent={
-                                  <CirclePause className="w-3 h-3" />
-                                }
-                                variant="flat"
-                                onPress={() => handleDelete(tunnel)}
-                              >
-                                删除
-                              </Button>
-                            </div>
-                          </CardBody>
-                        </Card>
-                      )}
-                    </SortableItem>
-                  );
-                })}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <EmptyStateCard
+            action={
+              <Button
+                color="primary"
+                startContent={<Plus size={16} />}
+                onPress={handleAdd}
+              >
+                新增隧道
+              </Button>
+            }
+            description="隧道定义入口、中转与出口节点，转发规则通过隧道转发流量。"
+            icon={<Network size={20} />}
+            title="还没有隧道"
+          />
         )
+      ) : viewMode === "list" ? (
+        <div className="tunnel-list">
+          <TunnelListHeader
+            isAllSelected={allDisplayedSelected}
+            isIndeterminate={selectedIds.size > 0 && !allDisplayedSelected}
+            onToggleAll={(checked) => {
+              if (checked) {
+                setSelectMode(true);
+                selectAll();
+              } else {
+                deselectAll();
+              }
+            }}
+          />
+          {sortedTunnels.map((tunnel) => (
+            <TunnelRow
+              key={tunnel.id}
+              handlers={tunnelHandlers}
+              nodeMap={nodeMap}
+              selected={selectedIds.has(tunnel.id)}
+              tunnel={tunnel}
+            />
+          ))}
+        </div>
       ) : (
-        /* 空状态 */
-        <Card className="bg-content1 border border-divider shadow-sm">
-          <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
-            <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
-              暂无隧道配置
-            </h3>
-            <p className="text-default-500 text-sm max-w-xs mx-auto leading-relaxed">
-              还没有创建任何隧道配置，点击上方按钮开始创建
-            </p>
-          </CardBody>
-        </Card>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <SortableContext
+            items={sortableTunnelIds}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(290px,1fr))] gap-4">
+              {sortedTunnels.map((tunnel) => (
+                <SortableTunnelItem key={tunnel.id} id={tunnel.id}>
+                  {(listeners) => (
+                    <TunnelCard
+                      dragListeners={listeners}
+                      handlers={tunnelHandlers}
+                      nodeMap={nodeMap}
+                      selectMode={selectMode}
+                      selected={selectedIds.has(tunnel.id)}
+                      tunnel={tunnel}
+                    />
+                  )}
+                </SortableTunnelItem>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* 新增/编辑模态框 */}

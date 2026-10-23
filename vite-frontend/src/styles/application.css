@@ -170,6 +170,37 @@
     .node-row-lead, .node-row-actions { align-self: center; padding-top: 0; }
   }
   .mantine-Button-root[data-variant="subtle"]:where(:disabled, [data-disabled]) { background: transparent; opacity: .6; }
+  .tunnel-route { position: relative; margin: 0; padding: 10px 12px; list-style: none; border-radius: 8px; background: var(--default-soft); display: grid; gap: 8px; }
+  .tunnel-route-step { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; padding-left: 14px; }
+  .tunnel-route-step::before { content: ""; position: absolute; left: 0; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: var(--content1); border: 2px solid var(--primary); }
+  .tunnel-route-step:not(:last-child)::after { content: ""; position: absolute; left: 3px; top: calc(50% + 5px); height: calc(100% + 3px); border-left: 1px dashed var(--default-400); }
+  .tunnel-route-step:last-child::before { background: var(--primary); }
+  .tunnel-route-role { width: 44px; flex-shrink: 0; font-size: 11px; color: var(--default-500); }
+  .tunnel-route .rounded-md.bg-default-soft { background: var(--content1); }
+  .tunnel-list { container: tunnel-list / inline-size; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--content1); }
+  .tunnel-list-head { display: none; }
+  .tunnel-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "lead name actions" "lead route route";
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px 12px 12px 14px;
+    background: var(--content1);
+    transition: background-color .12s ease;
+  }
+  .tunnel-row + .tunnel-row { border-top: 1px solid var(--border); }
+  .tunnel-row:hover { background: var(--default-soft); }
+  .tunnel-row[data-selected] { background: var(--primary-soft); }
+  .tunnel-row-lead { grid-area: lead; align-self: start; padding-top: 2px; }
+  .tunnel-row-name { grid-area: name; }
+  .tunnel-row-route { grid-area: route; }
+  .tunnel-row-actions { grid-area: actions; display: flex; align-items: center; justify-content: flex-end; gap: 2px; align-self: start; }
+  @container tunnel-list (min-width: 760px) {
+    .tunnel-list-head, .tunnel-row { grid-template-columns: 36px minmax(200px, 1fr) minmax(0, 1.6fr) 112px; grid-template-areas: "lead name route actions"; column-gap: 18px; }
+    .tunnel-list-head { display: grid; align-items: center; padding: 8px 12px 8px 14px; font-size: 12px; font-weight: 600; color: var(--default-500); background: var(--default-50); border-bottom: 1px solid var(--border); }
+    .tunnel-row-lead, .tunnel-row-actions { align-self: center; padding-top: 0; }
+  }
   .app-batch-bar { position: sticky; top: calc(var(--app-shell-header-height, 64px) + 12px); z-index: 30; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 16px; padding: 8px 10px 8px 14px; border: 1px solid var(--primary-line); border-radius: 10px; background: var(--primary-soft); box-shadow: 0 4px 16px #0f172a14; }
   .accent-choice { display: flex; align-items: center; gap: 7px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 7px; }
   .accent-choice[aria-pressed="true"] { border-color: var(--primary); }
