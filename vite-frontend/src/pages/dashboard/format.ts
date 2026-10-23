@@ -12,12 +12,7 @@ export const formatCount = (value?: number): string =>
 export const usagePercent = (used: number, limit: number): number =>
   limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
 
-export const usageTone = (percent: number): SemanticColor => {
-  if (percent >= 90) return "danger";
-  if (percent >= 70) return "warning";
-
-  return "primary";
-};
+export { usageTone } from "@/components/ui/shared";
 
 export interface ExpiryStatus {
   tone: SemanticColor;

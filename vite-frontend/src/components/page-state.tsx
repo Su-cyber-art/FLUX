@@ -1,4 +1,4 @@
-import { Loader, Stack, Text, ThemeIcon } from "@mantine/core";
+import { Loader, Paper, Stack, Text, ThemeIcon } from "@mantine/core";
 import { Inbox, CircleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -51,4 +51,36 @@ export const PageErrorState = ({ message, className }: StateProps) => (
       {message}
     </Text>
   </Stack>
+);
+
+/** Empty state with a title, a hint and an optional call to action. */
+export const EmptyStateCard = ({
+  icon,
+  title,
+  description,
+  action,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description?: React.ReactNode;
+  action?: React.ReactNode;
+}) => (
+  <Paper
+    withBorder
+    className="flex flex-col items-center px-6 py-14 text-center"
+    radius="md"
+  >
+    <ThemeIcon color="gray" radius="xl" size={44} variant="light">
+      {icon}
+    </ThemeIcon>
+    <Text fw={600} mt="md" size="md">
+      {title}
+    </Text>
+    {description && (
+      <Text c="dimmed" maw={380} mt={6} size="sm">
+        {description}
+      </Text>
+    )}
+    {action && <div className="mt-5">{action}</div>}
+  </Paper>
 );

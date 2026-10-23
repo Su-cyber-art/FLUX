@@ -29,6 +29,13 @@ export const uiVariant = (variant?: string) =>
     shadow: "filled",
     faded: "light",
   })[variant as string] ?? variant;
+/** Tone for a usage percentage: warning from 70%, danger from 90%. */
+export const usageTone = (percent: number): SemanticColor => {
+  if (percent >= 90) return "danger";
+  if (percent >= 70) return "warning";
+
+  return "primary";
+};
 export interface FieldMetaProps {
   label?: React.ReactNode;
   description?: React.ReactNode;

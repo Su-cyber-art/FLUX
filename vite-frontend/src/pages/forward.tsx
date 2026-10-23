@@ -2935,7 +2935,7 @@ export default function ForwardPage() {
       )}
 
       {selectedIds.size > 0 && (
-        <div className="forward-batch-bar">
+        <div className="app-batch-bar">
           <span className="text-sm font-medium text-primary-ink">
             已选择 {selectedIds.size} 项
           </span>
