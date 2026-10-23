@@ -98,6 +98,46 @@
     .diagnosis-metrics { margin: 0; padding: 0 0 0 18px; border-top: 0; border-left: 1px solid var(--border); }
     .diagnosis-message { margin: 0; padding: 0 0 0 18px; border-top: 0; border-left: 1px solid var(--border); }
   }
+  .forward-group { border: 1px solid var(--border); border-radius: 10px; background: var(--content1); overflow: hidden; }
+  .forward-group[data-dragging] { position: relative; z-index: 5; box-shadow: var(--mantine-shadow-md); }
+  .forward-group-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 10px 14px; }
+  .forward-group-head:not([data-collapsed]) { border-bottom: 1px solid var(--border); }
+  .forward-drag-handle { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 28px; border-radius: 6px; color: var(--default-400); cursor: grab; touch-action: none; }
+  .forward-drag-handle:hover { color: var(--default-600); background: var(--default-soft); }
+  .forward-drag-handle:active { cursor: grabbing; }
+  .forward-list { container: forward-list / inline-size; }
+  .forward-list-head { display: none; }
+  .forward-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "lead name status" "lead route route" "lead flow actions";
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px 12px 12px 14px;
+    background: var(--content1);
+    transition: background-color .12s ease;
+  }
+  .forward-row + .forward-row { border-top: 1px solid var(--border); }
+  .forward-row:hover { background: var(--default-soft); }
+  .forward-row[data-selected] { background: var(--primary-soft); }
+  .forward-row[data-dragging] { position: relative; z-index: 5; background: var(--content1); box-shadow: var(--mantine-shadow-md); }
+  .forward-row-lead { grid-area: lead; display: flex; align-items: center; gap: 2px; align-self: start; }
+  .forward-row-name { grid-area: name; min-width: 0; }
+  .forward-row-route { grid-area: route; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+  .forward-row-flow { grid-area: flow; min-width: 0; }
+  .forward-row-status { grid-area: status; display: flex; align-items: center; justify-content: flex-end; }
+  .forward-row-actions { grid-area: actions; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+  @container forward-list (min-width: 820px) {
+    .forward-list-head, .forward-row {
+      grid-template-columns: 56px minmax(150px, 1.15fr) minmax(0, 2.4fr) 156px 52px 108px;
+      grid-template-areas: "lead name route flow status actions";
+      column-gap: 16px;
+    }
+    .forward-list-head { display: grid; align-items: center; padding: 8px 12px 8px 14px; font-size: 12px; font-weight: 600; color: var(--default-500); background: var(--default-50); border-bottom: 1px solid var(--border); }
+    .forward-row-lead { align-self: center; }
+    .forward-row-route { flex-wrap: nowrap; }
+  }
+  .forward-batch-bar { position: sticky; top: calc(var(--app-shell-header-height, 64px) + 12px); z-index: 30; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 16px; padding: 8px 10px 8px 14px; border: 1px solid var(--primary-line); border-radius: 10px; background: var(--primary-soft); box-shadow: 0 4px 16px #0f172a14; }
   .accent-choice { display: flex; align-items: center; gap: 7px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 7px; }
   .accent-choice[aria-pressed="true"] { border-color: var(--primary); }
   .auth-layout { min-height: 100dvh; background: var(--background); }

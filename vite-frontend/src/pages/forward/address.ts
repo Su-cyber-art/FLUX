@@ -24,6 +24,26 @@ const formatAddressWithPort = (ip: string, port: number): string => {
   return `${ip}:${port}`;
 };
 
+/** First address to display and how many more follow; port is null for target addresses. */
+export const addressPreview = (
+  addressString: string,
+  port: number | null,
+): { first: string; more: number } => {
+  const items = splitAddressEntries(addressString || "");
+
+  if (items.length === 0) {
+    return { first: "", more: 0 };
+  }
+
+  let first = items[0];
+
+  if (port !== null && !/:\d+$/.test(first)) {
+    first = port ? formatAddressWithPort(first, port) : "";
+  }
+
+  return { first, more: items.length - 1 };
+};
+
 export const formatInAddress = (ipString: string, port: number): string => {
   if (!ipString) {
     return "";

@@ -1,21 +1,28 @@
 import type { BatchOperationFailure, ForwardApiItem } from "@/api/types";
 
 import {
+  ArrowRight,
   ChevronDown,
-  ClipboardCheck,
+  Copy,
+  Ellipsis,
   GripVertical,
-  RefreshCw,
+  Network,
+  RotateCcw,
   SquarePen,
+  Stethoscope,
   Trash2,
 } from "lucide-react";
+import { ActionIcon, Menu, Tooltip } from "@mantine/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { Button } from "@/components/ui/button";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { type SemanticColor } from "@/components/ui/shared";
+import { cn } from "@/lib/utils";
+import { addressPreview } from "@/pages/forward/address";
 
 export interface Forward {
   id: number;
@@ -145,19 +152,8 @@ export const FORWARD_GROUP_COLLAPSED_LOCAL_STORAGE_PREFIX =
 
 export const FORWARD_TUNNEL_GROUP_SORTABLE_PREFIX = "forward-tunnel-group";
 
-export const FORWARD_GROUPED_TABLE_MIN_WIDTH_CLASS = "min-w-[1320px]";
-
-export const FORWARD_GROUPED_TABLE_COLUMN_CLASS = {
-  select: "w-14",
-  drag: "w-10 pl-4",
-  name: "w-[200px]",
-  inbound: "w-[280px]",
-  target: "w-[280px]",
-  strategy: "w-[100px]",
-  totalFlow: "w-[120px]",
-  status: "w-[100px]",
-  actions: "w-[176px] text-right",
-} as const;
+export const FORWARD_CARD_GRID_CLASS =
+  "grid grid-cols-[repeat(auto-fill,minmax(272px,1fr))] gap-4";
 
 export const normalizeForwardUserName = (userName?: string): string => {
   const normalized = (userName || UNKNOWN_FORWARD_USER_NAME).trim();
@@ -551,480 +547,529 @@ export const mapForwardApiItems = (items: ForwardApiItem[]): Forward[] => {
   }));
 };
 
+export interface ForwardItemHandlers {
+  formatFlow: (bytes: number) => string;
+  getStrategyDisplay: (strategy: string) => { color: string; text: string };
+  onSelect: (id: number, selected: boolean) => void;
+  onToggleService: (forward: Forward) => void;
+  onEdit: (forward: Forward) => void;
+  onDiagnose: (forward: Forward) => void;
+  onResetFlow: (forward: Forward) => void;
+  onDelete: (forward: Forward) => void;
+  onAddresses: (
+    addressString: string,
+    port: number | null,
+    title: string,
+  ) => void;
+  onCopyName: (name: string) => void;
+}
+
+const forwardStatus = (
+  forward: Forward,
+): { tone: SemanticColor; text: string } => {
+  switch (forward.status) {
+    case 1:
+      return { tone: "success", text: "运行中" };
+    case 0:
+      return { tone: "warning", text: "已暂停" };
+    case -1:
+      return { tone: "danger", text: "异常" };
+    default:
+      return { tone: "default", text: "未知" };
+  }
+};
+
+const hasForwardFlow = (forward: Forward) =>
+  (forward.inFlow || 0) + (forward.outFlow || 0) > 0;
+
+const useSortableStyle = (id: number | string) => {
+  const sortable = useSortable({ id });
+  const { transform, transition, isDragging } = sortable;
+  const style: React.CSSProperties = {
+    transform: transform
+      ? CSS.Transform.toString({
+          ...transform,
+          x: Math.round(transform.x),
+          y: Math.round(transform.y),
+        })
+      : undefined,
+    transition: isDragging ? undefined : transition || undefined,
+    willChange: isDragging ? "transform" : undefined,
+  };
+
+  return { ...sortable, style };
+};
+
+/** First address in mono with "+N"; a click copies it or lists all addresses. */
+export const AddressPill = ({
+  addressString,
+  port,
+  title,
+  onAddresses,
+}: {
+  addressString: string;
+  port: number | null;
+  title: string;
+  onAddresses: ForwardItemHandlers["onAddresses"];
+}) => {
+  const { first, more } = addressPreview(addressString, port);
+
+  if (!first) {
+    return <span className="text-xs text-default-400">-</span>;
+  }
+
+  return (
+    <button
+      className="group inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md bg-default-soft px-2 py-1 font-mono text-xs text-default-700 transition-colors hover:bg-default-soft-hover"
+      title={more > 0 ? `查看全部${title}` : `复制${title}：${first}`}
+      type="button"
+      onClick={() => onAddresses(addressString, port, title)}
+    >
+      <span className="truncate">{first}</span>
+      {more > 0 ? (
+        <span className="shrink-0 rounded bg-primary-soft px-1 font-sans text-[10px] font-semibold text-primary-ink">
+          +{more}
+        </span>
+      ) : (
+        <Copy
+          className="shrink-0 opacity-50 transition-opacity group-hover:opacity-100"
+          size={12}
+        />
+      )}
+    </button>
+  );
+};
+
+const RouteAddresses = ({
+  forward,
+  onAddresses,
+}: {
+  forward: Forward;
+  onAddresses: ForwardItemHandlers["onAddresses"];
+}) => (
+  <>
+    <AddressPill
+      addressString={forward.inIp}
+      port={forward.inPort}
+      title="入口地址"
+      onAddresses={onAddresses}
+    />
+    <ArrowRight className="shrink-0 text-default-400" size={14} />
+    <AddressPill
+      addressString={forward.remoteAddr}
+      port={null}
+      title="目标地址"
+      onAddresses={onAddresses}
+    />
+  </>
+);
+
+const FlowSummary = ({
+  forward,
+  formatFlow,
+  align = "start",
+}: {
+  forward: Forward;
+  formatFlow: ForwardItemHandlers["formatFlow"];
+  align?: "start" | "end";
+}) => {
+  const shared =
+    !hasForwardFlow(forward) && (forward.federationShareFlow || 0) > 0;
+
+  return (
+    <div className={cn("min-w-0", align === "end" && "text-right")}>
+      <p className="truncate text-sm font-medium tabular-nums text-foreground">
+        {formatFlow(getForwardDisplayFlow(forward))}
+      </p>
+      <p className="truncate text-[11px] tabular-nums text-default-500">
+        {shared
+          ? "面板共享流量"
+          : `↑ ${formatFlow(forward.inFlow || 0)} · ↓ ${formatFlow(forward.outFlow || 0)}`}
+      </p>
+    </div>
+  );
+};
+
+const ServiceSwitch = ({
+  forward,
+  onToggleService,
+}: {
+  forward: Forward;
+  onToggleService: ForwardItemHandlers["onToggleService"];
+}) => (
+  <Tooltip
+    label={forward.serviceRunning ? "运行中，点击暂停" : "已暂停，点击启用"}
+  >
+    <span className="inline-flex">
+      <Switch
+        aria-label={forward.serviceRunning ? "暂停规则" : "启用规则"}
+        color="success"
+        isDisabled={forward.status !== 1 && forward.status !== 0}
+        isSelected={forward.serviceRunning}
+        size="sm"
+        onValueChange={() => onToggleService(forward)}
+      />
+    </span>
+  </Tooltip>
+);
+
+const ForwardActions = ({
+  forward,
+  handlers,
+}: {
+  forward: Forward;
+  handlers: ForwardItemHandlers;
+}) => (
+  <>
+    <Tooltip label="编辑">
+      <ActionIcon
+        aria-label="编辑规则"
+        color="gray"
+        variant="subtle"
+        onClick={() => handlers.onEdit(forward)}
+      >
+        <SquarePen size={16} />
+      </ActionIcon>
+    </Tooltip>
+    <Tooltip label="诊断">
+      <ActionIcon
+        aria-label="诊断规则"
+        color="gray"
+        variant="subtle"
+        onClick={() => handlers.onDiagnose(forward)}
+      >
+        <Stethoscope size={16} />
+      </ActionIcon>
+    </Tooltip>
+    <Menu withinPortal position="bottom-end" shadow="md" width={160}>
+      <Menu.Target>
+        <ActionIcon aria-label="更多操作" color="gray" variant="subtle">
+          <Ellipsis size={16} />
+        </ActionIcon>
+      </Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Item
+          disabled={!hasForwardFlow(forward)}
+          leftSection={<RotateCcw size={14} />}
+          onClick={() => handlers.onResetFlow(forward)}
+        >
+          流量清零
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item
+          color="red"
+          leftSection={<Trash2 size={14} />}
+          onClick={() => handlers.onDelete(forward)}
+        >
+          删除规则
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
+  </>
+);
+
+const DragHandle = (props: React.HTMLAttributes<HTMLButtonElement>) => (
+  <button
+    aria-label="拖拽排序"
+    className="forward-drag-handle"
+    title="拖拽排序"
+    type="button"
+    {...props}
+  >
+    <GripVertical size={15} />
+  </button>
+);
+
+/** Column labels for the responsive rule list (shown once the list is wide enough). */
+export const ForwardListHeader = ({
+  isAllSelected,
+  isIndeterminate,
+  onToggleAll,
+}: {
+  isAllSelected: boolean;
+  isIndeterminate: boolean;
+  onToggleAll: (selected: boolean) => void;
+}) => (
+  <div className="forward-list-head" role="presentation">
+    <div className="forward-row-lead">
+      <Checkbox
+        aria-label="全选"
+        isIndeterminate={isIndeterminate}
+        isSelected={isAllSelected}
+        onValueChange={onToggleAll}
+      />
+    </div>
+    <div className="forward-row-name">规则</div>
+    <div className="forward-row-route">入口 → 目标</div>
+    <div className="forward-row-flow">流量</div>
+    <div className="forward-row-status">状态</div>
+    <div className="forward-row-actions">操作</div>
+  </div>
+);
+
+export const SortableForwardRow = ({
+  forward,
+  selected,
+  showTunnel,
+  handlers,
+}: {
+  forward: Forward;
+  selected: boolean;
+  showTunnel?: boolean;
+  handlers: ForwardItemHandlers;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging, style } =
+    useSortableStyle(forward.id);
+  const strategy = handlers.getStrategyDisplay(forward.strategy);
+  const status = forwardStatus(forward);
+  const ratio = normalizeTunnelTrafficRatio(forward.tunnelTrafficRatio);
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="forward-row"
+      data-dragging={isDragging || undefined}
+      data-selected={selected || undefined}
+      style={style}
+    >
+      <div className="forward-row-lead">
+        <Checkbox
+          aria-label={`选择 ${forward.name}`}
+          isSelected={selected}
+          onValueChange={(checked) => handlers.onSelect(forward.id, checked)}
+        />
+        <DragHandle {...attributes} {...listeners} />
+      </div>
+      <div className="forward-row-name">
+        <button
+          className="block max-w-full truncate text-left text-sm font-medium text-foreground transition-colors hover:text-primary"
+          title="复制规则名"
+          type="button"
+          onClick={() => handlers.onCopyName(forward.name)}
+        >
+          {forward.name}
+        </button>
+        <div className="mt-1 flex min-w-0 items-center gap-1.5">
+          <Chip color={strategy.color as SemanticColor} size="xs">
+            {strategy.text}
+          </Chip>
+          {forward.status === -1 && (
+            <Chip dot color={status.tone} size="xs">
+              {status.text}
+            </Chip>
+          )}
+          {showTunnel && (
+            <span className="truncate text-xs text-default-500">
+              {forward.tunnelName}
+              {ratio !== 1 ? ` · ${formatTunnelTrafficRatio(ratio)}` : ""}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="forward-row-route">
+        <RouteAddresses forward={forward} onAddresses={handlers.onAddresses} />
+      </div>
+      <div className="forward-row-flow">
+        <FlowSummary formatFlow={handlers.formatFlow} forward={forward} />
+      </div>
+      <div className="forward-row-status">
+        <ServiceSwitch
+          forward={forward}
+          onToggleService={handlers.onToggleService}
+        />
+      </div>
+      <div className="forward-row-actions">
+        <ForwardActions forward={forward} handlers={handlers} />
+      </div>
+    </div>
+  );
+};
+
+export const ForwardCard = ({
+  forward,
+  selected,
+  dragListeners,
+  handlers,
+}: {
+  forward: Forward;
+  selected: boolean;
+  dragListeners?: React.HTMLAttributes<HTMLButtonElement>;
+  handlers: ForwardItemHandlers;
+}) => {
+  const strategy = handlers.getStrategyDisplay(forward.strategy);
+  const status = forwardStatus(forward);
+
+  return (
+    <Card
+      className={cn(
+        "h-full p-4 transition-shadow hover:shadow-sm",
+        selected && "border-primary-line bg-primary-soft",
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        <Checkbox
+          aria-label={`选择 ${forward.name}`}
+          className="mt-0.5"
+          isSelected={selected}
+          onValueChange={(checked) => handlers.onSelect(forward.id, checked)}
+        />
+        <div className="min-w-0 flex-1">
+          <button
+            className="block max-w-full truncate text-left text-sm font-semibold text-foreground transition-colors hover:text-primary"
+            title={`复制规则名：${forward.name}`}
+            type="button"
+            onClick={() => handlers.onCopyName(forward.name)}
+          >
+            {forward.name}
+          </button>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <Chip dot color={status.tone} size="xs">
+              {status.text}
+            </Chip>
+            <Chip color={strategy.color as SemanticColor} size="xs">
+              {strategy.text}
+            </Chip>
+          </div>
+        </div>
+        <ServiceSwitch
+          forward={forward}
+          onToggleService={handlers.onToggleService}
+        />
+        {dragListeners && <DragHandle {...dragListeners} />}
+      </div>
+
+      <dl className="mt-4 space-y-2 text-xs">
+        <div className="flex min-w-0 items-center gap-2">
+          <dt className="w-8 shrink-0 text-default-500">入口</dt>
+          <dd className="min-w-0">
+            <AddressPill
+              addressString={forward.inIp}
+              port={forward.inPort}
+              title="入口地址"
+              onAddresses={handlers.onAddresses}
+            />
+          </dd>
+        </div>
+        <div className="flex min-w-0 items-center gap-2">
+          <dt className="w-8 shrink-0 text-default-500">目标</dt>
+          <dd className="min-w-0">
+            <AddressPill
+              addressString={forward.remoteAddr}
+              port={null}
+              title="目标地址"
+              onAddresses={handlers.onAddresses}
+            />
+          </dd>
+        </div>
+      </dl>
+
+      <div className="mt-auto flex items-end justify-between gap-3 border-t border-divider pt-3">
+        <FlowSummary formatFlow={handlers.formatFlow} forward={forward} />
+        <div className="flex shrink-0 items-center">
+          <ForwardActions forward={forward} handlers={handlers} />
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 export const SortableTunnelGroupContainer = ({
   groupUserId,
   tunnel,
   collapsed,
   onToggleCollapsed,
-  wrapperClassName,
-  headerClassName,
-  titleClassName,
-  countClassName,
-  bodyClassName,
   children,
 }: {
   groupUserId: number;
   tunnel: ForwardTunnelGroup;
   collapsed: boolean;
   onToggleCollapsed: () => void;
-  wrapperClassName: string;
-  headerClassName: string;
-  titleClassName: string;
-  countClassName: string;
-  bodyClassName: string;
   children: React.ReactNode;
 }) => {
-  const sortableId = buildTunnelGroupSortableId(groupUserId, tunnel.tunnelKey);
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: sortableId });
-
-  const style: React.CSSProperties = {
-    transform: transform
-      ? CSS.Transform.toString({
-          ...transform,
-          x: Math.round(transform.x),
-          y: Math.round(transform.y),
-        })
-      : undefined,
-    transition: isDragging ? undefined : transition || undefined,
-    opacity: isDragging ? 0.55 : 1,
-    willChange: isDragging ? "transform" : undefined,
-    zIndex: isDragging ? 1 : undefined,
-  };
+  const { attributes, listeners, setNodeRef, isDragging, style } =
+    useSortableStyle(buildTunnelGroupSortableId(groupUserId, tunnel.tunnelKey));
+  const ratio = normalizeTunnelTrafficRatio(tunnel.tunnelTrafficRatio);
 
   return (
-    <div ref={setNodeRef} className={wrapperClassName} style={style}>
-      <div className={headerClassName}>
-        <div className="flex items-center gap-2 min-w-0">
-          <Button
-            isIconOnly
-            aria-label={collapsed ? "展开分组" : "折叠分组"}
-            className="h-7 w-7"
-            size="sm"
-            variant="light"
-            onPress={onToggleCollapsed}
-          >
-            <ChevronDown
-              className={`h-4 w-4 transition-transform ${collapsed ? "-rotate-90" : "rotate-0"}`}
-            />
-          </Button>
-          {/* 倍率 */}
-          <span className={titleClassName}>{tunnel.tunnelName}</span>
-          <span className="text-default-500 font-semibold text-[10px] mr-1.5">
-            [{formatTunnelTrafficRatio(tunnel.tunnelTrafficRatio)}]
+    <section
+      ref={setNodeRef}
+      className="forward-group"
+      data-dragging={isDragging || undefined}
+      style={style}
+    >
+      <div
+        className="forward-group-head"
+        data-collapsed={collapsed || undefined}
+      >
+        <button
+          aria-expanded={!collapsed}
+          className="flex min-w-0 items-center gap-2 text-left"
+          type="button"
+          onClick={onToggleCollapsed}
+        >
+          <ChevronDown
+            className={cn(
+              "shrink-0 text-default-500 transition-transform",
+              collapsed && "-rotate-90",
+            )}
+            size={16}
+          />
+          <Network className="shrink-0 text-primary" size={15} />
+          <span className="truncate text-sm font-semibold text-foreground">
+            {tunnel.tunnelName}
           </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={countClassName}>{tunnel.items.length} 条规则</span>
-          <div
-            className="cursor-grab active:cursor-grabbing p-1 text-default-400 hover:text-default-600 transition-colors"
+          {ratio !== 1 && (
+            <Chip color="success" size="xs" title="流量倍率">
+              {formatTunnelTrafficRatio(ratio)}
+            </Chip>
+          )}
+        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="text-xs text-default-500">
+            {tunnel.items.length} 条
+          </span>
+          <button
+            aria-label="拖拽分组排序"
+            className="forward-drag-handle"
             title="拖拽分组排序"
+            type="button"
             {...attributes}
             {...listeners}
           >
-            <GripVertical className="w-4 h-4" />
-          </div>
+            <GripVertical size={15} />
+          </button>
         </div>
       </div>
-      {!collapsed && <div className={bodyClassName}>{children}</div>}
-    </div>
+      {!collapsed && children}
+    </section>
   );
 };
 
-export const SortableForwardCard = ({ forward, renderCard }: any) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: forward.id });
-
-  const style: React.CSSProperties = {
-    transform: transform
-      ? CSS.Transform.toString({
-          ...transform,
-          x: Math.round(transform.x),
-          y: Math.round(transform.y),
-        })
-      : undefined,
-    transition: isDragging ? undefined : transition || undefined,
-    opacity: isDragging ? 0.5 : 1,
-    willChange: isDragging ? "transform" : undefined,
-  };
-
-  return (
-    <div ref={setNodeRef} className="h-full" style={style} {...attributes}>
-      {renderCard(forward, listeners)}
-    </div>
-  );
-};
-
-export const SortableTableRow = ({
-  copyToClipboard,
+export const SortableForwardCard = ({
   forward,
-  selectedIds,
-  toggleSelect,
-  getStrategyDisplay,
-  formatInAddress,
-  formatRemoteAddress,
-  handleServiceToggle,
-  handleEdit,
-  handleDelete,
-  handleDiagnose,
-  handleResetFlow,
-  showAddressModal,
-  formatFlow,
-}: any) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: forward.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: isDragging ? "none" : transition,
-    opacity: isDragging ? 0.6 : 1,
-    zIndex: isDragging ? 50 : undefined,
-    position: isDragging ? ("relative" as const) : undefined,
-    willChange: "transform",
-    backgroundColor: isDragging ? "var(--default-100)" : undefined,
-  };
-
-  const strategyDisplay = getStrategyDisplay(forward.strategy);
+  renderCard,
+}: {
+  forward: Forward;
+  renderCard: (
+    forward: Forward,
+    listeners?: React.HTMLAttributes<HTMLButtonElement>,
+  ) => React.ReactNode;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging, style } =
+    useSortableStyle(forward.id);
 
   return (
-    <TableRow key={forward.id} ref={setNodeRef} style={style}>
-      {true && (
-        <TableCell className={FORWARD_GROUPED_TABLE_COLUMN_CLASS.select}>
-          <Checkbox
-            isSelected={selectedIds.has(forward.id)}
-            onValueChange={(checked) => toggleSelect(forward.id, checked)}
-          />
-        </TableCell>
+    <div
+      ref={setNodeRef}
+      className="h-full"
+      style={{ ...style, opacity: isDragging ? 0.6 : 1 }}
+      {...attributes}
+    >
+      {renderCard(
+        forward,
+        listeners as React.HTMLAttributes<HTMLButtonElement>,
       )}
-      <TableCell className={FORWARD_GROUPED_TABLE_COLUMN_CLASS.drag}>
-        <div
-          className="cursor-grab active:cursor-grabbing p-1 text-default-400 hover:text-default-600 transition-colors"
-          {...attributes}
-          {...listeners}
-          title="拖拽排序"
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
-      </TableCell>
-      <TableCell
-        className={`${FORWARD_GROUPED_TABLE_COLUMN_CLASS.name} whitespace-nowrap text-foreground cursor-pointer hover:text-primary transition-colors`}
-        onClick={() => copyToClipboard(forward.name, "规则名")}
-      >
-        {forward.name}
-      </TableCell>
-      <TableCell
-        className={`${FORWARD_GROUPED_TABLE_COLUMN_CLASS.inbound} max-w-[280px]`}
-      >
-        <button
-          className="w-full truncate rounded-md bg-default-100/50 px-2.5 py-1.5 text-left font-mono text-xs font-medium text-default-700 transition-all hover:bg-default-200 hover:shadow-sm cursor-pointer"
-          title={formatInAddress(forward.inIp, forward.inPort)}
-          type="button"
-          onClick={() =>
-            showAddressModal(forward.inIp, forward.inPort, "入口端口")
-          }
-        >
-          {formatInAddress(forward.inIp, forward.inPort)}
-        </button>
-      </TableCell>
-      <TableCell
-        className={`${FORWARD_GROUPED_TABLE_COLUMN_CLASS.target} max-w-[280px]`}
-      >
-        <button
-          className="w-full truncate rounded-md bg-default-100/50 px-2.5 py-1.5 text-left font-mono text-xs font-medium text-default-700 transition-all hover:bg-default-200 hover:shadow-sm cursor-pointer"
-          title={formatRemoteAddress(forward.remoteAddr)}
-          type="button"
-          onClick={() => showAddressModal(forward.remoteAddr, null, "目标地址")}
-        >
-          {formatRemoteAddress(forward.remoteAddr)}
-        </button>
-      </TableCell>
-      <TableCell className={FORWARD_GROUPED_TABLE_COLUMN_CLASS.strategy}>
-        <Chip
-          className="text-xs font-medium shrink-0 whitespace-nowrap"
-          color={strategyDisplay.color as any}
-          size="sm"
-          variant="flat"
-        >
-          {strategyDisplay.text}
-        </Chip>
-      </TableCell>
-      <TableCell
-        className={`${FORWARD_GROUPED_TABLE_COLUMN_CLASS.totalFlow} whitespace-nowrap`}
-      >
-        <span className="text-sm font-medium text-default-600 font-mono">
-          {formatFlow(getForwardDisplayFlow(forward))}
-        </span>
-      </TableCell>
-      <TableCell className={FORWARD_GROUPED_TABLE_COLUMN_CLASS.status}>
-        <div className="flex items-center gap-2.5 whitespace-nowrap">
-          <Switch
-            color="success"
-            isDisabled={forward.status !== 1 && forward.status !== 0}
-            isSelected={forward.serviceRunning}
-            size="sm"
-            onValueChange={() => handleServiceToggle(forward)}
-          />
-        </div>
-      </TableCell>
-      <TableCell className={FORWARD_GROUPED_TABLE_COLUMN_CLASS.actions}>
-        <div className="flex justify-start gap-2 pl-2">
-          <Button
-            isIconOnly
-            className="bg-primary/10 text-primary hover:bg-primary/20"
-            size="sm"
-            title="编辑"
-            onPress={() => handleEdit(forward)}
-          >
-            <SquarePen className="h-4 w-4" />
-          </Button>
-          <Button
-            isIconOnly
-            className="bg-warning/10 text-warning hover:bg-warning/20"
-            size="sm"
-            title="诊断"
-            onPress={() => handleDiagnose(forward)}
-          >
-            <ClipboardCheck className="h-4 w-4" />
-          </Button>
-          <Button
-            isIconOnly
-            className="bg-secondary/10 text-secondary hover:bg-secondary/20"
-            isDisabled={(forward.inFlow || 0) + (forward.outFlow || 0) <= 0}
-            size="sm"
-            title="流量清零"
-            onPress={() => handleResetFlow(forward)}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button
-            isIconOnly
-            className="bg-danger/10 text-danger hover:bg-danger/20"
-            size="sm"
-            title="删除"
-            onPress={() => handleDelete(forward)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-};
-
-export const SortableCompactTableRow = ({
-  copyToClipboard,
-  forward,
-  selectedIds,
-  toggleSelect,
-  getStrategyDisplay,
-  formatInAddress,
-  formatRemoteAddress,
-  handleServiceToggle,
-  handleEdit,
-  handleDelete,
-  handleDiagnose,
-  handleResetFlow,
-  showAddressModal,
-  hasMultipleAddresses,
-  formatFlow,
-}: any) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: forward.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: isDragging ? "none" : transition,
-    opacity: isDragging ? 0.6 : 1,
-    zIndex: isDragging ? 50 : undefined,
-    position: isDragging ? ("relative" as const) : undefined,
-    willChange: "transform",
-    backgroundColor: isDragging ? "var(--default-100)" : undefined,
-  };
-
-  const strategyDisplay = getStrategyDisplay(forward.strategy);
-
-  return (
-    <TableRow key={forward.id} ref={setNodeRef} style={style}>
-      {true && (
-        <TableCell>
-          <Checkbox
-            isSelected={selectedIds.has(forward.id)}
-            onValueChange={(checked) => toggleSelect(forward.id, checked)}
-          />
-        </TableCell>
-      )}
-      <TableCell
-        className={`${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
-      >
-        <div
-          className="cursor-grab active:cursor-grabbing p-1 text-default-400 hover:text-default-600 transition-colors"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
-      </TableCell>
-      <TableCell
-        className={`whitespace-nowrap text-foreground ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
-      >
-        <button
-          className="cursor-pointer hover:text-primary transition-colors text-left bg-transparent border-none p-0 outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-sm"
-          type="button"
-          onClick={() => copyToClipboard(forward.name, "规则名")}
-        >
-          {forward.name}
-        </button>
-      </TableCell>
-      <TableCell
-        className={`whitespace-nowrap ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
-      >
-        <div className="flex items-center">
-          <span className="font-medium text-default-700 text-sm">
-            {forward.tunnelName}
-          </span>
-          {forward.tunnelTrafficRatio !== undefined &&
-            normalizeTunnelTrafficRatio(forward.tunnelTrafficRatio) !== 1 && (
-              <span className="text-success font-bold text-[12px] ml-1.5 border border-success/30 rounded px-1 bg-success/10">
-                {formatTunnelTrafficRatio(forward.tunnelTrafficRatio)}
-              </span>
-            )}
-        </div>
-      </TableCell>
-      <TableCell
-        className={`max-w-[220px] ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
-      >
-        <button
-          className={`w-full truncate rounded-md bg-default-100/50 px-2.5 py-1.5 text-left font-mono text-xs font-medium text-default-700 transition-all ${
-            hasMultipleAddresses(forward.inIp)
-              ? "hover:bg-default-200 hover:shadow-sm cursor-pointer"
-              : "cursor-default"
-          }`}
-          title={formatInAddress(forward.inIp, forward.inPort)}
-          type="button"
-          onClick={() =>
-            showAddressModal(forward.inIp, forward.inPort, "入口端口")
-          }
-        >
-          {formatInAddress(forward.inIp, forward.inPort)}
-        </button>
-      </TableCell>
-      <TableCell
-        className={`max-w-[240px] ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
-      >
-        <button
-          className={`w-full truncate rounded-md bg-default-100/50 px-2.5 py-1.5 text-left font-mono text-xs font-medium text-default-700 transition-all ${
-            hasMultipleAddresses(forward.remoteAddr)
-              ? "hover:bg-default-200 hover:shadow-sm cursor-pointer"
-              : "cursor-default"
-          }`}
-          title={formatRemoteAddress(forward.remoteAddr)}
-          type="button"
-          onClick={() => showAddressModal(forward.remoteAddr, null, "目标地址")}
-        >
-          {formatRemoteAddress(forward.remoteAddr)}
-        </button>
-      </TableCell>
-
-      <TableCell
-        className={`${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
-      >
-        <Chip
-          className="text-sm font-medium shrink-0 whitespace-nowrap"
-          color={strategyDisplay.color as any}
-          size="sm"
-          variant="flat"
-        >
-          {strategyDisplay.text}
-        </Chip>
-      </TableCell>
-      <TableCell
-        className={`whitespace-nowrap ${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
-      >
-        <span className="text-sm font-medium text-default-600 font-mono">
-          {formatFlow(getForwardDisplayFlow(forward))}
-        </span>
-      </TableCell>
-      <TableCell
-        className={`${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
-      >
-        <div className="flex items-center gap-2.5 whitespace-nowrap">
-          <Switch
-            color="success"
-            isDisabled={forward.status !== 1 && forward.status !== 0}
-            isSelected={forward.serviceRunning}
-            size="sm"
-            onValueChange={() => handleServiceToggle(forward)}
-          />
-        </div>
-      </TableCell>
-      <TableCell
-        className={`${selectedIds.has(forward.id) ? "bg-primary-soft" : ""}`}
-      >
-        <div className="flex justify-start gap-2 pl-2">
-          <Button
-            isIconOnly
-            aria-label="编辑规则"
-            className="bg-primary/10 text-primary hover:bg-primary/20"
-            size="sm"
-            onPress={() => handleEdit(forward)}
-          >
-            <SquarePen className="h-4 w-4" />
-          </Button>
-          <Button
-            isIconOnly
-            aria-label="诊断规则"
-            className="bg-warning/10 text-warning hover:bg-warning/20"
-            size="sm"
-            onPress={() => handleDiagnose(forward)}
-          >
-            <ClipboardCheck className="h-4 w-4" />
-          </Button>
-          <Button
-            isIconOnly
-            className="bg-secondary/10 text-secondary hover:bg-secondary/20"
-            isDisabled={(forward.inFlow || 0) + (forward.outFlow || 0) <= 0}
-            size="sm"
-            title="流量清零"
-            onPress={() => handleResetFlow(forward)}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button
-            isIconOnly
-            aria-label="删除规则"
-            className="bg-danger/10 text-danger hover:bg-danger/20"
-            size="sm"
-            onPress={() => handleDelete(forward)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
+    </div>
   );
 };
 

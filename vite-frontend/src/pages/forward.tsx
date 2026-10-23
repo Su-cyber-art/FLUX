@@ -1,22 +1,33 @@
 import type { BatchOperationFailure, SpeedLimitApiItem } from "@/api/types";
 
 import {
+  ArrowDownUp,
+  ArrowLeftRight,
   Check,
-  CirclePause,
+  ChevronDown,
   CircleX,
   Clipboard,
-  Copy,
-  GripVertical,
+  Download,
   LayoutGrid,
   List,
-  Pencil,
-  RefreshCw,
-  Search,
-  TriangleAlert,
+  Pause,
+  Play,
+  Plus,
+  SearchX,
+  Send,
+  Shuffle,
+  SlidersHorizontal,
+  Trash2,
   Upload,
   X,
 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import {
+  Avatar,
+  Button as MantineButton,
+  Menu,
+  SegmentedControl,
+} from "@mantine/core";
 import {
   DndContext,
   pointerWithin,
@@ -55,8 +66,6 @@ import {
   FORWARD_COMPACT_MODE_EVENT,
   FORWARD_GROUP_ORDER_CONFIG_KEY,
   FORWARD_GROUP_COLLAPSED_CONFIG_KEY,
-  FORWARD_GROUPED_TABLE_MIN_WIDTH_CLASS,
-  FORWARD_GROUPED_TABLE_COLUMN_CLASS,
   normalizeForwardUserName,
   compareForwardUserNameAsc,
   normalizeForwardTunnelName,
@@ -80,24 +89,22 @@ import {
   mapForwardApiItems,
   SortableTunnelGroupContainer,
   SortableForwardCard,
-  SortableTableRow,
-  SortableCompactTableRow,
+  SortableForwardRow,
+  FORWARD_CARD_GRID_CLASS,
+  ForwardListHeader,
+  ForwardCard,
+  getForwardDisplayFlow,
+  type ForwardItemHandlers,
 } from "@/pages/forward/presentation";
 import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
 import { formatTraffic } from "@/utils/traffic";
 import { BatchActionResultModal } from "@/components/batch-action-result-modal";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/input";
 import { Select, SelectItem } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableColumn,
-  TableHeader,
-} from "@/components/ui/table";
 import {
   Modal,
   ModalContent,
@@ -106,11 +113,10 @@ import {
   ModalFooter,
 } from "@/components/ui/modal";
 import { Chip } from "@/components/ui/chip";
+import { IconTile } from "@/components/ui/icon-tile";
 import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
 import { Alert } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionItem } from "@/components/ui/accordion";
 import {
   createForward,
@@ -134,9 +140,6 @@ import {
 } from "@/api";
 import {
   type ForwardAddressItem,
-  formatInAddress,
-  formatRemoteAddress,
-  hasMultipleAddresses,
   resolveForwardAddressAction,
 } from "@/pages/forward/address";
 import {
@@ -348,7 +351,6 @@ export default function ForwardPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // 批量操作相关状态
-  const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [batchDeleteModalOpen, setBatchDeleteModalOpen] = useState(false);
   const [batchChangeTunnelModalOpen, setBatchChangeTunnelModalOpen] =
@@ -2004,20 +2006,6 @@ export default function ForwardPage() {
     }
   };
 
-  // 获取状态显示
-  const getStatusDisplay = (status: number) => {
-    switch (status) {
-      case 1:
-        return { color: "success", text: "正常" };
-      case 0:
-        return { color: "warning", text: "暂停" };
-      case -1:
-        return { color: "danger", text: "异常" };
-      default:
-        return { color: "default", text: "未知" };
-    }
-  };
-
   // 获取策略显示
   const getStrategyDisplay = (strategy: string) => {
     switch (strategy) {
@@ -2240,7 +2228,6 @@ export default function ForwardPage() {
           percent: outcome.progressPercent ?? 75,
         });
         setSelectedIds(new Set());
-        setSelectMode(false);
         if (outcome.closeDeleteModal) {
           setBatchDeleteModalOpen(false);
         }
@@ -2279,7 +2266,6 @@ export default function ForwardPage() {
           percent: outcome.progressPercent ?? 75,
         });
         setSelectedIds(new Set());
-        setSelectMode(false);
         await refreshForwardList(false);
       }
     } finally {
@@ -2314,7 +2300,6 @@ export default function ForwardPage() {
           percent: outcome.progressPercent ?? 75,
         });
         setSelectedIds(new Set());
-        setSelectMode(false);
         await refreshForwardList(false);
       }
     } finally {
@@ -2350,7 +2335,6 @@ export default function ForwardPage() {
           percent: outcome.progressPercent ?? 75,
         });
         setSelectedIds(new Set());
-        setSelectMode(false);
         if (outcome.closeChangeTunnelModal) {
           setBatchChangeTunnelModalOpen(false);
         }
@@ -2782,218 +2766,39 @@ export default function ForwardPage() {
     return users;
   }, [forwards, isAdmin, tokenUserId]);
 
-  // 渲染规则卡片
-  const renderForwardCard = (forward: Forward, listeners?: any) => {
-    const statusDisplay = getStatusDisplay(forward.status);
-    const strategyDisplay = getStrategyDisplay(forward.strategy);
-
-    return (
-      <Card
-        key={forward.id}
-        className="group h-full flex flex-col overflow-hidden bg-content1 border border-divider shadow-sm"
-      >
-        <CardHeader className="pb-2 md:pb-2">
-          <div className="flex justify-between items-start w-full">
-            {true && (
-              <Checkbox
-                className="mr-2"
-                isSelected={selectedIds.has(forward.id)}
-                onValueChange={(checked) => toggleSelect(forward.id, checked)}
-              />
-            )}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground truncate text-sm">
-                {forward.name}
-              </h3>
-            </div>
-            <div className="flex items-center gap-1.5 ml-2">
-              <Switch
-                isDisabled={forward.status !== 1 && forward.status !== 0}
-                isSelected={forward.serviceRunning}
-                size="sm"
-                onValueChange={() => handleServiceToggle(forward)}
-              />
-              <Chip
-                className="text-xs"
-                color={statusDisplay.color as any}
-                size="sm"
-                variant="flat"
-              >
-                {statusDisplay.text}
-              </Chip>
-              {viewMode === "direct" && (
-                <div
-                  className="cursor-grab active:cursor-grabbing p-1 -mr-1 text-default-400 hover:text-default-600 transition-colors touch-manipulation flex-shrink-0"
-                  {...listeners}
-                  style={{ touchAction: "none" }}
-                  title="拖拽排序"
-                >
-                  <GripVertical className="w-4 h-4" />
-                </div>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardBody className="flex flex-1 flex-col pt-0 pb-3 md:pt-0 md:pb-3">
-          <div className="space-y-2 flex-1">
-            {/* 地址信息 */}
-            <div className="space-y-1">
-              <button
-                className={`w-full min-w-0 max-w-full cursor-pointer px-2 py-2 text-left bg-content1 rounded border border-default-200 dark:border-default-300 transition-colors duration-200 ${
-                  hasMultipleAddresses(forward.inIp)
-                    ? "hover:bg-default-100 dark:hover:bg-default-200/50"
-                    : ""
-                }`}
-                title={formatInAddress(forward.inIp, forward.inPort)}
-                type="button"
-                onClick={() =>
-                  showAddressModal(forward.inIp, forward.inPort, "入口端口")
-                }
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <span className="text-xs font-medium text-default-600 flex-shrink-0">
-                      入口:
-                    </span>
-                    <code className="text-xs font-mono text-foreground truncate min-w-0">
-                      {formatInAddress(forward.inIp, forward.inPort)}
-                    </code>
-                  </div>
-                  {hasMultipleAddresses(forward.inIp) && (
-                    <Copy className="w-3 h-3 text-default-400 flex-shrink-0" />
-                  )}
-                </div>
-              </button>
-
-              <button
-                className={`w-full min-w-0 max-w-full cursor-pointer px-2 py-2 text-left bg-content1 rounded border border-default-200 dark:border-default-300 transition-colors duration-200 ${
-                  hasMultipleAddresses(forward.remoteAddr)
-                    ? "hover:bg-default-100 dark:hover:bg-default-200/50"
-                    : ""
-                }`}
-                title={formatRemoteAddress(forward.remoteAddr)}
-                type="button"
-                onClick={() =>
-                  showAddressModal(forward.remoteAddr, null, "目标地址")
-                }
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <span className="text-xs font-medium text-default-600 flex-shrink-0">
-                      目标:
-                    </span>
-                    <code className="text-xs font-mono text-foreground truncate min-w-0">
-                      {formatRemoteAddress(forward.remoteAddr)}
-                    </code>
-                  </div>
-                  {hasMultipleAddresses(forward.remoteAddr) && (
-                    <Copy className="w-3 h-3 text-default-400 flex-shrink-0" />
-                  )}
-                </div>
-              </button>
-            </div>
-
-            {/* 统计信息 */}
-            <div className="flex flex-wrap items-center justify-between pt-2 border-t border-divider gap-1">
-              <Chip
-                className="text-xs whitespace-nowrap shrink-0"
-                color={strategyDisplay.color as any}
-                size="sm"
-                variant="flat"
-              >
-                {strategyDisplay.text}
-              </Chip>
-              {(forward.inFlow || 0) + (forward.outFlow || 0) > 0 ? (
-                <>
-                  <div className="flex items-center gap-1">
-                    <Chip
-                      className="text-xs whitespace-nowrap"
-                      color="primary"
-                      size="sm"
-                      variant="flat"
-                    >
-                      ↑{formatFlow(forward.inFlow || 0)}
-                    </Chip>
-                  </div>
-                  <Chip
-                    className="text-xs whitespace-nowrap"
-                    color="success"
-                    size="sm"
-                    variant="flat"
-                  >
-                    ↓{formatFlow(forward.outFlow || 0)}
-                  </Chip>
-                </>
-              ) : (forward.federationShareFlow || 0) > 0 ? (
-                <Chip
-                  className="text-xs whitespace-nowrap"
-                  color="secondary"
-                  size="sm"
-                  variant="flat"
-                >
-                  共享 {formatFlow(forward.federationShareFlow || 0)}
-                </Chip>
-              ) : (
-                <Chip
-                  className="text-xs whitespace-nowrap"
-                  color="default"
-                  size="sm"
-                  variant="flat"
-                >
-                  总流量 {formatFlow(0)}
-                </Chip>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-1.5 mt-3">
-            <Button
-              className="flex-1"
-              color="primary"
-              size="sm"
-              startContent={<Pencil className="w-3 h-3" />}
-              variant="flat"
-              onPress={() => handleEdit(forward)}
-            >
-              编辑
-            </Button>
-            <Button
-              className="flex-1"
-              color="warning"
-              size="sm"
-              startContent={<TriangleAlert className="w-3 h-3" />}
-              variant="flat"
-              onPress={() => handleDiagnose(forward)}
-            >
-              诊断
-            </Button>
-            <Button
-              className="flex-1"
-              color="secondary"
-              isDisabled={(forward.inFlow || 0) + (forward.outFlow || 0) <= 0}
-              size="sm"
-              startContent={<RefreshCw className="w-3 h-3" />}
-              variant="flat"
-              onPress={() => handleResetFlow(forward)}
-            >
-              清零
-            </Button>
-            <Button
-              className="flex-1"
-              color="danger"
-              size="sm"
-              startContent={<CirclePause className="w-3 h-3" />}
-              variant="flat"
-              onPress={() => handleDelete(forward)}
-            >
-              删除
-            </Button>
-          </div>
-        </CardBody>
-      </Card>
-    );
+  const forwardHandlers: ForwardItemHandlers = {
+    formatFlow,
+    getStrategyDisplay,
+    onSelect: toggleSelect,
+    onToggleService: handleServiceToggle,
+    onEdit: handleEdit,
+    onDiagnose: handleDiagnose,
+    onResetFlow: handleResetFlow,
+    onDelete: handleDelete,
+    onAddresses: showAddressModal,
+    onCopyName: (name) => copyToClipboard(name, "规则名"),
   };
+  const runningCount = sortedForwards.filter(
+    (forward) => forward.serviceRunning,
+  ).length;
+  const totalFlow = sortedForwards.reduce(
+    (sum, forward) => sum + getForwardDisplayFlow(forward),
+    0,
+  );
+
+  // 渲染规则卡片
+  const renderForwardCard = (
+    forward: Forward,
+    listeners?: React.HTMLAttributes<HTMLButtonElement>,
+  ) => (
+    <ForwardCard
+      key={forward.id}
+      dragListeners={listeners}
+      forward={forward}
+      handlers={forwardHandlers}
+      selected={selectedIds.has(forward.id)}
+    />
+  );
 
   if (loading || !groupPreferenceHydrated) {
     return <PageLoadingState message="正在加载..." />;
@@ -3001,10 +2806,9 @@ export default function ForwardPage() {
 
   return (
     <AnimatedPage>
-      {/* 页面头部 */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between mb-6 gap-3">
-        <div className="flex-1 flex flex-wrap items-center gap-2">
-          <div className="w-48 max-w-full">
+      <div className="page-toolbar">
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
+          <div className="min-w-40 flex-1 sm:max-w-64">
             <SearchBar
               isVisible
               placeholder="搜索规则名称"
@@ -3017,11 +2821,17 @@ export default function ForwardPage() {
             />
           </div>
           <Button
-            className="bg-default-100 dark:bg-default-100 text-default-700 font-semibold hover:bg-default-200 dark:hover:bg-default-200"
-            startContent={<Search className="w-4 h-4" />}
+            endContent={
+              activeFilterCount > 0 ? (
+                <Chip color="primary" size="xs" variant="solid">
+                  {activeFilterCount}
+                </Chip>
+              ) : undefined
+            }
+            startContent={<SlidersHorizontal size={15} />}
             onPress={() => setIsSearchModalOpen(true)}
           >
-            高级筛选 {activeFilterCount > 0 ? `(${activeFilterCount})` : ""}
+            筛选
           </Button>
           {activeFilterCount > 0 && (
             <Button
@@ -3034,136 +2844,157 @@ export default function ForwardPage() {
             </Button>
           )}
         </div>
-        <div className="min-h-9 min-w-0 max-w-full overflow-x-auto touch-pan-x">
-          <div className="flex min-h-9 w-max min-w-full items-center justify-end gap-2 whitespace-nowrap sm:gap-3 [&>*]:shrink-0">
-            {selectedIds.size > 0 ? (
-              <>
-                <span className="text-sm text-default-600 shrink-0">
-                  已选择 {selectedIds.size} 项
-                </span>
-                <Button
-                  color="primary"
-                  size="sm"
-                  variant="flat"
-                  onPress={selectAll}
-                >
-                  全选
-                </Button>
-                <Button
-                  color="secondary"
-                  size="sm"
-                  variant="flat"
-                  onPress={deselectAll}
-                >
-                  清空
-                </Button>
-                <Button
-                  color="danger"
-                  isDisabled={selectedIds.size === 0}
-                  size="sm"
-                  variant="flat"
-                  onPress={() => setBatchDeleteModalOpen(true)}
-                >
-                  删除
-                </Button>
-                <Button
-                  color="warning"
-                  isDisabled={selectedIds.size === 0}
-                  isLoading={batchLoading}
-                  size="sm"
-                  variant="flat"
-                  onPress={() => handleBatchToggleService(false)}
-                >
-                  停用
-                </Button>
-                <Button
-                  color="success"
-                  isDisabled={selectedIds.size === 0}
-                  isLoading={batchLoading}
-                  size="sm"
-                  variant="flat"
-                  onPress={() => handleBatchToggleService(true)}
-                >
-                  启用
-                </Button>
-                <Button
-                  color="primary"
-                  isDisabled={selectedIds.size === 0}
-                  isLoading={batchLoading}
-                  size="sm"
-                  variant="flat"
-                  onPress={handleBatchRedeploy}
-                >
-                  下发
-                </Button>
-                <Button
-                  color="secondary"
-                  isDisabled={selectedIds.size === 0}
-                  size="sm"
-                  variant="flat"
-                  onPress={() => setBatchChangeTunnelModalOpen(true)}
-                >
-                  隧道
-                </Button>
-              </>
-            ) : (
-              <>
-                {/* 显示模式切换按钮 */}
-                <Button
-                  isIconOnly
-                  aria-label={
-                    viewMode === "grouped" ? "切换到直接显示" : "切换到分类显示"
-                  }
-                  className="text-sm"
-                  color="default"
-                  size="sm"
-                  title={
-                    viewMode === "grouped" ? "切换到直接显示" : "切换到分类显示"
-                  }
-                  variant="flat"
-                  onPress={handleViewModeChange}
-                >
-                  {viewMode === "grouped" ? (
-                    <List className="w-4 h-4" />
-                  ) : (
-                    <LayoutGrid className="w-4 h-4" />
-                  )}
-                </Button>
-
-                {/* 导入按钮 */}
-                <Button
-                  color="warning"
-                  size="sm"
-                  variant="flat"
-                  onPress={handleImport}
-                >
-                  导入
-                </Button>
-
-                {/* 导出按钮 */}
-                <Button
-                  color="success"
-                  isLoading={exportLoading}
-                  size="sm"
-                  variant="flat"
-                  onPress={handleExport}
-                >
-                  导出
-                </Button>
-
-                <Button
-                  color="primary"
-                  size="sm"
-                  variant="flat"
-                  onPress={handleAdd}
-                >
-                  新增
-                </Button>
-              </>
-            )}
-          </div>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <SegmentedControl
+            aria-label="显示方式"
+            data={[
+              {
+                value: "grouped",
+                label: (
+                  <span className="flex items-center gap-1.5">
+                    <List size={15} />
+                    列表
+                  </span>
+                ),
+              },
+              {
+                value: "direct",
+                label: (
+                  <span className="flex items-center gap-1.5">
+                    <LayoutGrid size={15} />
+                    卡片
+                  </span>
+                ),
+              },
+            ]}
+            size="sm"
+            value={viewMode}
+            onChange={(value) => {
+              if (value !== viewMode) handleViewModeChange();
+            }}
+          />
+          <Menu withinPortal position="bottom-end" shadow="md" width={160}>
+            <Menu.Target>
+              <MantineButton
+                aria-label="导入或导出规则"
+                leftSection={<ArrowDownUp size={15} />}
+                loading={exportLoading}
+                rightSection={<ChevronDown size={14} />}
+                variant="default"
+              >
+                <span className="hidden sm:inline">导入 / 导出</span>
+              </MantineButton>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item
+                leftSection={<Upload size={14} />}
+                onClick={handleImport}
+              >
+                导入规则
+              </Menu.Item>
+              <Menu.Item
+                leftSection={<Download size={14} />}
+                onClick={handleExport}
+              >
+                导出规则
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+          <Button
+            className="ml-auto sm:ml-0"
+            color="primary"
+            startContent={<Plus size={16} />}
+            onPress={handleAdd}
+          >
+            新增<span className="hidden sm:inline">规则</span>
+          </Button>
         </div>
       </div>
+
+      {forwards.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
+          <span>
+            共{" "}
+            <span className="font-semibold text-foreground">
+              {sortedForwards.length}
+            </span>{" "}
+            条规则
+            {sortedForwards.length !== forwards.length &&
+              `（已筛选，全部 ${forwards.length} 条）`}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+            运行中 {runningCount}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-default-400" />
+            未运行 {sortedForwards.length - runningCount}
+          </span>
+          <span>累计流量 {formatFlow(totalFlow)}</span>
+        </div>
+      )}
+
+      {selectedIds.size > 0 && (
+        <div className="forward-batch-bar">
+          <span className="text-sm font-medium text-primary-ink">
+            已选择 {selectedIds.size} 项
+          </span>
+          <Button size="sm" variant="light" onPress={selectAll}>
+            全选
+          </Button>
+          <Button size="sm" variant="light" onPress={deselectAll}>
+            取消选择
+          </Button>
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <Button
+              color="success"
+              isLoading={batchLoading}
+              size="sm"
+              startContent={<Play size={14} />}
+              variant="flat"
+              onPress={() => handleBatchToggleService(true)}
+            >
+              启用
+            </Button>
+            <Button
+              color="warning"
+              isLoading={batchLoading}
+              size="sm"
+              startContent={<Pause size={14} />}
+              variant="flat"
+              onPress={() => handleBatchToggleService(false)}
+            >
+              暂停
+            </Button>
+            <Button
+              isLoading={batchLoading}
+              size="sm"
+              startContent={<Send size={14} />}
+              variant="flat"
+              onPress={handleBatchRedeploy}
+            >
+              重新下发
+            </Button>
+            <Button
+              size="sm"
+              startContent={<Shuffle size={14} />}
+              variant="flat"
+              onPress={() => setBatchChangeTunnelModalOpen(true)}
+            >
+              更换隧道
+            </Button>
+            <Button
+              color="danger"
+              size="sm"
+              startContent={<Trash2 size={14} />}
+              variant="flat"
+              onPress={() => setBatchDeleteModalOpen(true)}
+            >
+              删除
+            </Button>
+          </div>
+        </div>
+      )}
 
       {batchProgress.active && (
         <div className="mb-4">
@@ -3182,423 +3013,91 @@ export default function ForwardPage() {
         </div>
       )}
 
-      {/* 根据显示模式渲染不同内容 */}
-      {compactMode ? (
-        viewMode === "grouped" ? (
-          sortedForwards.length > 0 ? (
-            <>
-              <div className="flex items-center justify-between px-1 mb-3">
-                <span className="text-sm font-semibold text-foreground">
-                  全部规则
-                </span>
-                <span className="text-xs text-default-600">
-                  {sortedForwards.length} 条规则
-                </span>
-              </div>
-              <Card className="rounded-lg border border-divider bg-content1 shadow-sm">
-                <DndContext
-                  collisionDetection={pointerWithin}
-                  sensors={sensors}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={sortableForwardIds}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <Table
-                      aria-label="全部规则列表"
-                      className="table-fixed min-w-[1160px]"
-                      classNames={{
-                        wrapper:
-                          "bg-transparent p-0 shadow-none border-none overflow-auto rounded-xl",
-                        th: "bg-default-100/50 text-default-600 font-semibold text-sm border-b border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-                        td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                        tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors group",
-                      }}
-                    >
-                      <TableHeader>
-                        {true && (
-                          <TableColumn className="w-14">
-                            {/* @ts-ignore */}
-                            <Checkbox
-                              aria-label="全选"
-                              isIndeterminate={isIndeterminate}
-                              isSelected={isAllSelected}
-                              onValueChange={handleSelectAllToggle}
-                            />
-                          </TableColumn>
-                        )}
-                        <TableColumn className="w-16 pl-2 whitespace-nowrap min-w-[60px]">
-                          排序
-                        </TableColumn>
-                        <TableColumn className="w-[180px]">规则名</TableColumn>
-                        <TableColumn className="w-[180px]">
-                          隧道
-                          <sup className="text-success font-bold text-[10px] mr-1">
-                            ‾倍率
-                          </sup>
-                        </TableColumn>
-                        <TableColumn className="w-[180px]">入口</TableColumn>
-                        <TableColumn className="w-[180px]">目标</TableColumn>
-                        <TableColumn className="w-[80px]">策略</TableColumn>
-                        <TableColumn className="w-[100px]">用量</TableColumn>
-                        <TableColumn className="w-[80px]">状态</TableColumn>
-                        <TableColumn align="left" className="w-[160px] pl-4">
-                          操作
-                        </TableColumn>
-                      </TableHeader>
-                      <TableBody
-                        emptyContent="暂无规则配置"
-                        items={sortedForwards}
-                      >
-                        {(forward) => (
-                          <SortableCompactTableRow
-                            copyToClipboard={copyToClipboard}
-                            formatFlow={formatFlow}
-                            formatInAddress={formatInAddress}
-                            formatRemoteAddress={formatRemoteAddress}
-                            forward={forward}
-                            getStrategyDisplay={getStrategyDisplay}
-                            handleDelete={handleDelete}
-                            handleDiagnose={handleDiagnose}
-                            handleEdit={handleEdit}
-                            handleResetFlow={handleResetFlow}
-                            handleServiceToggle={handleServiceToggle}
-                            hasMultipleAddresses={hasMultipleAddresses}
-                            selectMode={selectMode}
-                            selectedIds={selectedIds}
-                            showAddressModal={showAddressModal}
-                            toggleSelect={toggleSelect}
-                          />
-                        )}
-                      </TableBody>
-                    </Table>
-                  </SortableContext>
-                </DndContext>
-              </Card>
-            </>
-          ) : (
-            <Card className="bg-content1 border border-divider shadow-sm">
-              <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
-                <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
-                  暂无规则配置
-                </h3>
-                <p className="text-default-500 text-sm max-w-xs mx-auto leading-relaxed">
-                  还没有创建任何规则配置，点击上方按钮开始创建
-                </p>
-              </CardBody>
-            </Card>
-          )
-        ) : sortedForwards.length > 0 ? (
-          <>
-            <div className="flex items-center justify-between px-1 mb-3">
-              <span className="text-sm font-semibold text-foreground">
-                全部规则
-              </span>
-              <span className="text-xs text-default-600">
-                {sortedForwards.length} 条规则
-              </span>
-            </div>
-            <DndContext
-              collisionDetection={pointerWithin}
-              sensors={sensors}
-              onDragEnd={handleDragEnd}
-              onDragStart={() => {}}
-            >
-              <SortableContext
-                items={sortableForwardIds}
-                strategy={rectSortingStrategy}
+      {sortedForwards.length === 0 ? (
+        <Card className="items-center px-6 py-14 text-center">
+          <IconTile
+            round
+            size="lg"
+            tone={forwards.length > 0 ? "default" : "primary"}
+          >
+            {forwards.length > 0 ? (
+              <SearchX size={20} />
+            ) : (
+              <ArrowLeftRight size={20} />
+            )}
+          </IconTile>
+          <h3 className="mt-4 text-base font-semibold text-foreground">
+            {forwards.length > 0 ? "没有符合条件的规则" : "还没有转发规则"}
+          </h3>
+          <p className="mt-1.5 max-w-sm text-sm text-default-500">
+            {forwards.length > 0
+              ? "调整或清空筛选条件后再试。"
+              : "新增一条规则，把入口端口的流量转发到目标地址。"}
+          </p>
+          <div className="mt-5">
+            {forwards.length > 0 ? (
+              <Button onPress={resetSearchParams}>清空筛选条件</Button>
+            ) : (
+              <Button
+                color="primary"
+                startContent={<Plus size={16} />}
+                onPress={handleAdd}
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                  {sortedForwards.map((forward) =>
-                    forward && forward.id ? (
-                      <SortableForwardCard
-                        key={forward.id}
-                        forward={forward}
-                        renderCard={renderForwardCard}
-                      />
-                    ) : null,
-                  )}
-                </div>
-              </SortableContext>
-            </DndContext>
-          </>
-        ) : (
-          <Card className="bg-content1 border border-divider shadow-sm">
-            <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
-              <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
-                暂无规则配置
-              </h3>
-              <p className="text-default-500 text-sm max-w-xs mx-auto leading-relaxed">
-                还没有创建任何规则配置，点击上方按钮开始创建
-              </p>
-            </CardBody>
-          </Card>
-        )
-      ) : viewMode === "grouped" ? (
-        sortedForwards.length > 0 ? (
-          <div className="space-y-4">
-            {groupedForwards.map((group) => {
-              const isSelfGroup =
-                isAdmin && tokenUserId !== null && group.userId === tokenUserId;
-              const groupForwardCount = group.tunnels.reduce(
-                (total, tunnel) => total + tunnel.items.length,
-                0,
-              );
-
-              return (
-                <div
-                  key={`grouped-table-${group.userId}-${group.userName}`}
-                  className="rounded-lg border border-divider bg-content1 shadow-sm"
-                >
-                  <div className="flex items-center justify-between border-b border-divider bg-content1 px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">
-                        {group.userName}
-                      </span>
-                      {isSelfGroup && (
-                        <Chip color="primary" size="sm" variant="flat">
-                          管理员本人
-                        </Chip>
-                      )}
-                    </div>
-                    <span className="text-xs text-default-600">
-                      {groupForwardCount} 条规则
-                    </span>
-                  </div>
-
-                  <div className="space-y-4 p-4">
-                    <DndContext
-                      collisionDetection={pointerWithin}
-                      sensors={sensors}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={group.tunnels.map((tunnel) =>
-                          buildTunnelGroupSortableId(
-                            group.userId,
-                            tunnel.tunnelKey,
-                          ),
-                        )}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {group.tunnels.map((tunnel) => {
-                          const tunnelSortableForwardIds = tunnel.items
-                            .map((item) => item.id)
-                            .filter((id) => id > 0);
-                          const tunnelSelectedCount =
-                            tunnelSortableForwardIds.reduce(
-                              (count, id) =>
-                                count + (selectedIds.has(id) ? 1 : 0),
-                              0,
-                            );
-                          const isTunnelAllSelected =
-                            tunnelSortableForwardIds.length > 0 &&
-                            tunnelSelectedCount ===
-                              tunnelSortableForwardIds.length;
-                          const isTunnelIndeterminate =
-                            tunnelSelectedCount > 0 &&
-                            tunnelSelectedCount <
-                              tunnelSortableForwardIds.length;
-
-                          const handleTunnelSelectAllToggle = (
-                            isSelected: boolean,
-                          ) => {
-                            setSelectedIds((prev) => {
-                              const next = new Set(prev);
-
-                              if (isSelected) {
-                                tunnelSortableForwardIds.forEach((id) => {
-                                  next.add(id);
-                                });
-
-                                return next;
-                              }
-
-                              tunnelSortableForwardIds.forEach((id) => {
-                                next.delete(id);
-                              });
-
-                              return next;
-                            });
-                          };
-                          const collapsed =
-                            sanitizedCollapsedTunnelGroups[
-                              buildTunnelGroupCollapseKey(
-                                group.userId,
-                                tunnel.tunnelKey,
-                              )
-                            ] === true;
-
-                          return (
-                            <SortableTunnelGroupContainer
-                              key={`grouped-table-${group.userId}-${tunnel.tunnelKey}`}
-                              bodyClassName=""
-                              collapsed={collapsed}
-                              countClassName="text-xs text-default-600"
-                              groupUserId={group.userId}
-                              headerClassName="flex items-center justify-between border-b border-divider border-divider bg-content1 bg-content1  px-4 py-2.5"
-                              titleClassName="truncate text-sm font-semibold text-default-700"
-                              tunnel={tunnel}
-                              wrapperClassName="rounded-lg border border-divider border-divider bg-content1 bg-content1  shadow-sm"
-                              onToggleCollapsed={() =>
-                                toggleTunnelGroupCollapsed(
-                                  group.userId,
-                                  tunnel.tunnelKey,
-                                )
-                              }
-                            >
-                              <DndContext
-                                collisionDetection={pointerWithin}
-                                sensors={sensors}
-                                onDragEnd={handleDragEnd}
-                              >
-                                <SortableContext
-                                  items={tunnelSortableForwardIds}
-                                  strategy={verticalListSortingStrategy}
-                                >
-                                  <Table
-                                    aria-label={`${group.userName}-${tunnel.tunnelName}规则列表`}
-                                    className={`table-fixed ${FORWARD_GROUPED_TABLE_MIN_WIDTH_CLASS}`}
-                                    classNames={{
-                                      wrapper:
-                                        "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
-                                      th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-                                      td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                                      tr: "hover:bg-content1 dark:hover:bg-content1 transition-colors",
-                                    }}
-                                  >
-                                    <TableHeader>
-                                      {true && (
-                                        <TableColumn className="w-14">
-                                          {/* @ts-ignore */}
-                                          <Checkbox
-                                            aria-label="全选"
-                                            isIndeterminate={
-                                              isTunnelIndeterminate
-                                            }
-                                            isSelected={isTunnelAllSelected}
-                                            onValueChange={
-                                              handleTunnelSelectAllToggle
-                                            }
-                                          />
-                                        </TableColumn>
-                                      )}
-                                      <TableColumn
-                                        className={
-                                          FORWARD_GROUPED_TABLE_COLUMN_CLASS.drag
-                                        }
-                                      />
-                                      <TableColumn
-                                        className={
-                                          FORWARD_GROUPED_TABLE_COLUMN_CLASS.name
-                                        }
-                                      >
-                                        名称
-                                      </TableColumn>
-                                      <TableColumn
-                                        className={
-                                          FORWARD_GROUPED_TABLE_COLUMN_CLASS.inbound
-                                        }
-                                      >
-                                        入口
-                                      </TableColumn>
-                                      <TableColumn
-                                        className={
-                                          FORWARD_GROUPED_TABLE_COLUMN_CLASS.target
-                                        }
-                                      >
-                                        目标
-                                      </TableColumn>
-                                      <TableColumn
-                                        className={
-                                          FORWARD_GROUPED_TABLE_COLUMN_CLASS.strategy
-                                        }
-                                      >
-                                        策略
-                                      </TableColumn>
-                                      <TableColumn
-                                        className={
-                                          FORWARD_GROUPED_TABLE_COLUMN_CLASS.totalFlow
-                                        }
-                                      >
-                                        总流量
-                                      </TableColumn>
-                                      <TableColumn
-                                        className={
-                                          FORWARD_GROUPED_TABLE_COLUMN_CLASS.status
-                                        }
-                                      >
-                                        状态
-                                      </TableColumn>
-                                      <TableColumn
-                                        className={
-                                          FORWARD_GROUPED_TABLE_COLUMN_CLASS.actions
-                                        }
-                                      >
-                                        操作
-                                      </TableColumn>
-                                    </TableHeader>
-                                    <TableBody
-                                      emptyContent="暂无规则配置"
-                                      items={tunnel.items}
-                                    >
-                                      {(forward) => (
-                                        <SortableTableRow
-                                          copyToClipboard={copyToClipboard}
-                                          formatFlow={formatFlow}
-                                          formatInAddress={formatInAddress}
-                                          formatRemoteAddress={
-                                            formatRemoteAddress
-                                          }
-                                          forward={forward}
-                                          getStrategyDisplay={
-                                            getStrategyDisplay
-                                          }
-                                          handleDelete={handleDelete}
-                                          handleDiagnose={handleDiagnose}
-                                          handleEdit={handleEdit}
-                                          handleResetFlow={handleResetFlow}
-                                          handleServiceToggle={
-                                            handleServiceToggle
-                                          }
-                                          hasMultipleAddresses={
-                                            hasMultipleAddresses
-                                          }
-                                          selectMode={selectMode}
-                                          selectedIds={selectedIds}
-                                          showAddressModal={showAddressModal}
-                                          toggleSelect={toggleSelect}
-                                        />
-                                      )}
-                                    </TableBody>
-                                  </Table>
-                                </SortableContext>
-                              </DndContext>
-                            </SortableTunnelGroupContainer>
-                          );
-                        })}
-                      </SortableContext>
-                    </DndContext>
-                  </div>
-                </div>
-              );
-            })}
+                新增规则
+              </Button>
+            )}
           </div>
-        ) : (
-          <Card className="bg-content1 border border-divider shadow-sm">
-            <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
-              <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
-                暂无规则配置
-              </h3>
-              <p className="text-default-500 text-sm max-w-xs mx-auto leading-relaxed">
-                还没有创建任何规则配置，点击上方按钮开始创建
-              </p>
-            </CardBody>
-          </Card>
-        )
-      ) : sortedForwards.length > 0 ? (
-        <div className="space-y-5">
+        </Card>
+      ) : compactMode ? (
+        <DndContext
+          collisionDetection={pointerWithin}
+          sensors={sensors}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={sortableForwardIds}
+            strategy={
+              viewMode === "grouped"
+                ? verticalListSortingStrategy
+                : rectSortingStrategy
+            }
+          >
+            {viewMode === "grouped" ? (
+              <div className="forward-group">
+                <div className="forward-list">
+                  <ForwardListHeader
+                    isAllSelected={isAllSelected}
+                    isIndeterminate={isIndeterminate}
+                    onToggleAll={handleSelectAllToggle}
+                  />
+                  {sortedForwards.map((forward) => (
+                    <SortableForwardRow
+                      key={forward.id}
+                      showTunnel
+                      forward={forward}
+                      handlers={forwardHandlers}
+                      selected={selectedIds.has(forward.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className={FORWARD_CARD_GRID_CLASS}>
+                {sortedForwards.map((forward) =>
+                  forward && forward.id ? (
+                    <SortableForwardCard
+                      key={forward.id}
+                      forward={forward}
+                      renderCard={renderForwardCard}
+                    />
+                  ) : null,
+                )}
+              </div>
+            )}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        <div className="space-y-6">
           {groupedForwards.map((group) => {
             const isSelfGroup =
               isAdmin && tokenUserId !== null && group.userId === tokenUserId;
@@ -3608,45 +3107,71 @@ export default function ForwardPage() {
             );
 
             return (
-              <div
-                key={`direct-group-${group.userId}-${group.userName}`}
+              <section
+                key={`forward-group-${group.userId}-${group.userName}`}
                 className="space-y-3"
               >
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-foreground">
+                <div className="flex items-center justify-between gap-3 px-1">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Avatar
+                      color="initials"
+                      name={group.userName}
+                      radius="xl"
+                      size={28}
+                    />
+                    <span className="truncate text-sm font-semibold text-foreground">
                       {group.userName}
                     </span>
                     {isSelfGroup && (
-                      <Chip color="primary" size="sm" variant="flat">
+                      <Chip color="primary" size="sm">
                         管理员本人
                       </Chip>
                     )}
                   </div>
-                  <span className="text-xs text-default-600">
+                  <span className="shrink-0 text-xs text-default-500">
                     {groupForwardCount} 条规则
                   </span>
                 </div>
 
-                <div className="space-y-4">
-                  <DndContext
-                    collisionDetection={pointerWithin}
-                    sensors={sensors}
-                    onDragEnd={handleDragEnd}
+                <DndContext
+                  collisionDetection={pointerWithin}
+                  sensors={sensors}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={group.tunnels.map((tunnel) =>
+                      buildTunnelGroupSortableId(
+                        group.userId,
+                        tunnel.tunnelKey,
+                      ),
+                    )}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <SortableContext
-                      items={group.tunnels.map((tunnel) =>
-                        buildTunnelGroupSortableId(
-                          group.userId,
-                          tunnel.tunnelKey,
-                        ),
-                      )}
-                      strategy={verticalListSortingStrategy}
-                    >
+                    <div className="space-y-3">
                       {group.tunnels.map((tunnel) => {
                         const tunnelSortableForwardIds = tunnel.items
                           .map((item) => item.id)
                           .filter((id) => id > 0);
+                        const tunnelSelectedCount =
+                          tunnelSortableForwardIds.reduce(
+                            (count, id) =>
+                              count + (selectedIds.has(id) ? 1 : 0),
+                            0,
+                          );
+                        const handleTunnelSelectAllToggle = (
+                          isSelected: boolean,
+                        ) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+
+                            tunnelSortableForwardIds.forEach((id) => {
+                              if (isSelected) next.add(id);
+                              else next.delete(id);
+                            });
+
+                            return next;
+                          });
+                        };
                         const collapsed =
                           sanitizedCollapsedTunnelGroups[
                             buildTunnelGroupCollapseKey(
@@ -3657,15 +3182,10 @@ export default function ForwardPage() {
 
                         return (
                           <SortableTunnelGroupContainer
-                            key={`direct-group-${group.userId}-${tunnel.tunnelKey}`}
-                            bodyClassName="p-3"
+                            key={`forward-tunnel-${group.userId}-${tunnel.tunnelKey}`}
                             collapsed={collapsed}
-                            countClassName="text-xs text-default-600"
                             groupUserId={group.userId}
-                            headerClassName="flex items-center justify-between rounded-lg bg-content1 bg-content1  border border-divider border-divider px-3 py-2"
-                            titleClassName="truncate text-sm font-semibold text-default-700"
                             tunnel={tunnel}
-                            wrapperClassName="rounded-xl border border-divider bg-content1 bg-content1 space-y-3"
                             onToggleCollapsed={() =>
                               toggleTunnelGroupCollapsed(
                                 group.userId,
@@ -3677,46 +3197,66 @@ export default function ForwardPage() {
                               collisionDetection={pointerWithin}
                               sensors={sensors}
                               onDragEnd={handleDragEnd}
-                              onDragStart={() => {}}
                             >
                               <SortableContext
                                 items={tunnelSortableForwardIds}
-                                strategy={rectSortingStrategy}
+                                strategy={
+                                  viewMode === "grouped"
+                                    ? verticalListSortingStrategy
+                                    : rectSortingStrategy
+                                }
                               >
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                                  {tunnel.items.map((forward) =>
-                                    forward && forward.id ? (
-                                      <SortableForwardCard
+                                {viewMode === "grouped" ? (
+                                  <div className="forward-list">
+                                    <ForwardListHeader
+                                      isAllSelected={
+                                        tunnelSortableForwardIds.length > 0 &&
+                                        tunnelSelectedCount ===
+                                          tunnelSortableForwardIds.length
+                                      }
+                                      isIndeterminate={
+                                        tunnelSelectedCount > 0 &&
+                                        tunnelSelectedCount <
+                                          tunnelSortableForwardIds.length
+                                      }
+                                      onToggleAll={handleTunnelSelectAllToggle}
+                                    />
+                                    {tunnel.items.map((forward) => (
+                                      <SortableForwardRow
                                         key={forward.id}
                                         forward={forward}
-                                        renderCard={renderForwardCard}
+                                        handlers={forwardHandlers}
+                                        selected={selectedIds.has(forward.id)}
                                       />
-                                    ) : null,
-                                  )}
-                                </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div
+                                    className={`${FORWARD_CARD_GRID_CLASS} p-3`}
+                                  >
+                                    {tunnel.items.map((forward) =>
+                                      forward && forward.id ? (
+                                        <SortableForwardCard
+                                          key={forward.id}
+                                          forward={forward}
+                                          renderCard={renderForwardCard}
+                                        />
+                                      ) : null,
+                                    )}
+                                  </div>
+                                )}
                               </SortableContext>
                             </DndContext>
                           </SortableTunnelGroupContainer>
                         );
                       })}
-                    </SortableContext>
-                  </DndContext>
-                </div>
-              </div>
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </section>
             );
           })}
         </div>
-      ) : (
-        <Card>
-          <CardBody className="text-center py-12 flex flex-col items-center justify-center min-h-[240px]">
-            <h3 className="text-xl font-medium text-foreground tracking-tight mb-2">
-              暂无规则配置
-            </h3>
-            <p className="text-default-500 text-sm max-w-xs mx-auto leading-relaxed">
-              还没有创建任何规则配置，点击上方按钮开始创建
-            </p>
-          </CardBody>
-        </Card>
       )}
 
       {/* 新增/编辑模态框 */}
@@ -4552,7 +4092,7 @@ export default function ForwardPage() {
                 {diagnosisResult ? (
                   <div className="space-y-4">
                     {diagnosisLoading && (
-                      <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+                      <div className="flex items-center justify-between rounded-lg border border-primary-line bg-primary-soft px-3 py-2">
                         <div className="flex items-center gap-2 text-sm text-primary">
                           <Spinner size="sm" />
                           <span>
