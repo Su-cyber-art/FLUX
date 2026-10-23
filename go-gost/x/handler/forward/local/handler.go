@@ -256,6 +256,12 @@ func (h *forwardHandler) Handle(ctx context.Context, conn net.Conn, opts ...hand
 		cc = proxyproto.WrapClientConn(h.md.proxyProtocol, conn.RemoteAddr(), conn.LocalAddr(), cc)
 
 		if err := xnet.Transport(conn, cc); err != nil {
+			// A connection closed on our side, such as a UDP session reaped by
+			// the listener's idle TTL, ends the flow normally and says nothing
+			// about the target's health.
+			if errors.Is(err, net.ErrClosed) {
+				return nil
+			}
 			if marker := target.Marker(); marker != nil {
 				marker.Mark()
 				h.options.Logger.Debugf("[handler.transport] transport failed, marked node=%s count=%d err=%v",
