@@ -162,27 +162,54 @@ func TestJWTRejectsMissingUserState(t *testing.T) {
 	assertAuthDenied(t, res)
 }
 
-func TestJWTRejectsAuthStateLookupError(t *testing.T) {
+func TestJWTAuthStateLookupFailurePreservesCredentialsForRecovery(t *testing.T) {
 	secret := "unit-test-secret"
 	token, err := auth.GenerateToken(1, "admin_user", 0, secret)
 	if err != nil {
 		t.Fatalf("generate token: %v", err)
 	}
 
+	lookupErr := errors.New("database temporarily unavailable")
+	called := false
 	wrapped := JWT(AuthOptions{
 		JWTSecret: secret,
 		GetUserAuthState: func(userID int64) (*auth.UserAuthState, error) {
-			return nil, errors.New("boom")
+			if lookupErr != nil {
+				return nil, lookupErr
+			}
+			return &auth.UserAuthState{ID: userID, Status: 1, RoleID: 0}, nil
 		},
 	})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
 		response.WriteJSON(w, response.OK("pass"))
 	}))
 
+	for _, path := range []string{"/api/v1/tunnel/list", "/api/v1/config/get"} {
+		req := httptest.NewRequest(http.MethodPost, path, nil)
+		req.Header.Set("Authorization", token)
+		res := httptest.NewRecorder()
+		wrapped.ServeHTTP(res, req)
+		var payload response.R
+		if err := json.Unmarshal(res.Body.Bytes(), &payload); err != nil {
+			t.Fatal(err)
+		}
+		if called || res.Code != http.StatusServiceUnavailable || payload.Code != 503 || res.Header().Get("Retry-After") == "" {
+			t.Fatalf("lookup failure must deny access without expiring the session: status=%d body=%s called=%v", res.Code, res.Body.String(), called)
+		}
+	}
+
+	lookupErr = nil
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/tunnel/list", nil)
 	req.Header.Set("Authorization", token)
 	res := httptest.NewRecorder()
 	wrapped.ServeHTTP(res, req)
-	assertAuthDenied(t, res)
+	var payload response.R
+	if err := json.Unmarshal(res.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if !called || payload.Code != 0 {
+		t.Fatalf("same token should work after recovery: %s", res.Body.String())
+	}
 }
 
 func TestShouldSkipDoesNotBypassConfigGet(t *testing.T) {

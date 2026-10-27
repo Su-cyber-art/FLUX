@@ -46,3 +46,9 @@ func WriteJSON(w http.ResponseWriter, payload R) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(payload)
 }
+
+func WriteJSONStatus(w http.ResponseWriter, status int, payload R) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}

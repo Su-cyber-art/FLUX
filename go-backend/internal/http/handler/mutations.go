@@ -1298,7 +1298,7 @@ func (h *Handler) tunnelUpdate(w http.ResponseWriter, r *http.Request) {
 			}
 			applyErr = errors.Join(applyErr, h.cleanupFederationRuntime(id))
 			if len(federationReleaseRefs) == 0 && shouldDeferTunnelRuntimeApplyError(applyErr) {
-				response.WriteJSON(w, response.OKEmpty())
+				writeTunnelRuntimePending(w, id, "节点暂时不可用，运行配置尚未应用", batchOperationResult{})
 				return
 			}
 			response.WriteJSON(w, response.ErrDefault(applyErr.Error()))
@@ -1313,13 +1313,8 @@ func (h *Handler) tunnelUpdate(w http.ResponseWriter, r *http.Request) {
 		oldType = oldTunnel.Type
 	}
 	if tunnelForwardRuntimeNeedsSync(oldType, typeVal, oldEntryNodeIDs, newEntryNodeIDs) {
-		forwards, fwdErr := h.listForwardsByTunnel(id)
-		if fwdErr != nil {
-			response.WriteJSON(w, response.OKEmpty())
+		if !h.syncUpdatedTunnelForwards(w, id) {
 			return
-		}
-		for i := range forwards {
-			_ = h.syncForwardServices(&forwards[i], "UpdateService", true)
 		}
 	}
 

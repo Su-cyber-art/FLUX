@@ -408,6 +408,9 @@ func (r *Repository) DeleteNodeCascade(nodeID int64) error {
 		if err := tx.Where("node_id = ?", nodeID).Delete(&model.FederationTunnelBinding{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("node_id = ?", nodeID).Delete(&model.FlowReportCursor{}).Error; err != nil {
+			return err
+		}
 		return tx.Where("id = ?", nodeID).Delete(&model.Node{}).Error
 	})
 }

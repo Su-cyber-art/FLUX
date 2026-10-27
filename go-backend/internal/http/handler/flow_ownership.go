@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -10,23 +11,28 @@ import (
 // Classify ownership before building local counters or enforcing local quotas.
 // Numeric IDs from a consuming panel are not IDs in the provider's database.
 func (h *Handler) buildNodeFlowUploadBatch(nodeID int64, items []flowItem, metas map[int64]repo.FlowUploadForwardMeta) flowUploadBatch {
+	batch, err := h.buildNodeFlowUploadBatchChecked(nodeID, items, metas)
+	if err != nil {
+		log.Printf("flow ownership lookup failed node_id=%d err=%v", nodeID, err)
+	}
+	return batch
+}
+
+func (h *Handler) buildNodeFlowUploadBatchChecked(nodeID int64, items []flowItem, metas map[int64]repo.FlowUploadForwardMeta) (flowUploadBatch, error) {
 	if h == nil || h.repo == nil || nodeID <= 0 {
-		return flowUploadBatch{}
+		return flowUploadBatch{}, fmt.Errorf("invalid flow ownership context")
 	}
 	runtimes, err := h.repo.ListActiveForwardPeerShareRuntimesByNode(nodeID)
 	if err != nil {
-		log.Printf("flow ownership lookup failed node_id=%d err=%v", nodeID, err)
-		return flowUploadBatch{}
+		return flowUploadBatch{}, err
 	}
 	resources, err := h.repo.ListPeerShareResourcesByNode(nodeID)
 	if err != nil {
-		log.Printf("flow resource lookup failed node_id=%d err=%v", nodeID, err)
-		return flowUploadBatch{}
+		return flowUploadBatch{}, err
 	}
 	forwardIDs, err := h.repo.ListForwardIDsByNode(nodeID)
 	if err != nil {
-		log.Printf("flow node ownership lookup failed node_id=%d err=%v", nodeID, err)
-		return flowUploadBatch{}
+		return flowUploadBatch{}, err
 	}
 	nodeForwards := make(map[int64]struct{}, len(forwardIDs))
 	for _, forwardID := range forwardIDs {
@@ -97,7 +103,7 @@ func (h *Handler) buildNodeFlowUploadBatch(nodeID int64, items []flowItem, metas
 	}
 	batch := h.buildFlowUploadBatch(localItems, metas)
 	batch.peerShareUsage = sharedUsage
-	return batch
+	return batch, nil
 }
 
 func (h *Handler) addPeerShareFlow(nodeID, shareID, delta int64) {

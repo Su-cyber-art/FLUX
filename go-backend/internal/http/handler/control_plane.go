@@ -234,6 +234,15 @@ func (h *Handler) syncForwardServices(forward *forwardRecord, method string, all
 }
 
 func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method string, allowFallbackAdd bool) ([]string, error) {
+	return h.syncForwardServicesWithPending(forward, method, allowFallbackAdd, nil)
+}
+
+func (h *Handler) syncForwardServicesWithPending(forward *forwardRecord, method string, allowFallbackAdd bool, pending *bool) ([]string, error) {
+	markPending := func() {
+		if pending != nil {
+			*pending = true
+		}
+	}
 	if h == nil || forward == nil {
 		return nil, errors.New("invalid forward sync context")
 	}
@@ -317,6 +326,7 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 			if err := h.ensureLimiterOnNode(fp.NodeID, *limiterID, *speed); err != nil {
 				// If the limiter push fails because the node is offline, skip it with a warning
 				if isNodeOfflineOrTimeoutError(err) {
+					markPending()
 					node, _ := h.getNodeRecord(fp.NodeID)
 					nodeName := fmt.Sprintf("%d", fp.NodeID)
 					if node != nil && strings.TrimSpace(node.Name) != "" {
@@ -334,6 +344,7 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 			if err := h.ensureTrafficLimiterOnNode(fp.NodeID, ruleLimiterName, nil, ipSpeed); err != nil {
 				// If the limiter push fails because the node is offline, skip it with a warning
 				if isNodeOfflineOrTimeoutError(err) {
+					markPending()
 					node, _ := h.getNodeRecord(fp.NodeID)
 					nodeName := fmt.Sprintf("%d", fp.NodeID)
 					if node != nil && strings.TrimSpace(node.Name) != "" {
@@ -350,6 +361,7 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 
 		for _, connLimiterConfig := range connLimiterConfigs {
 			if err := h.ensureConnLimiterOnNode(fp.NodeID, connLimiterConfig); err != nil {
+				markPending()
 				warnings = append(warnings, fmt.Sprintf("节点 %d 连接限制器下发失败: %v", fp.NodeID, err))
 			}
 		}
@@ -381,6 +393,7 @@ func (h *Handler) syncForwardServicesWithWarnings(forward *forwardRecord, method
 		// When a node is offline, skip it with a warning instead of failing.
 		// This lets users modify forward rules even when some entry nodes are down.
 		if err != nil && isNodeOfflineOrTimeoutError(err) {
+			markPending()
 			warnings = append(warnings, fmt.Sprintf("节点 %s 不在线，已跳过下发", node.Name))
 			continue
 		}

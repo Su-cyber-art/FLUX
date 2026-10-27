@@ -7,15 +7,20 @@ import (
 	"time"
 
 	"github.com/go-gost/x/registry"
+	"github.com/google/uuid"
 )
 
 // GlobalTrafficManager 全局流量管理器（所有服务共享）
 type GlobalTrafficManager struct {
+	reportMu       sync.Mutex
 	mu             sync.RWMutex
 	serviceTraffic map[string]*ServiceTraffic // key: 服务名, value: 流量数据
 	ctx            context.Context
 	cancel         context.CancelFunc
 	reportTicker   *time.Ticker
+	producerID     string
+	sequence       int64
+	pending        []TrafficReportItem
 }
 
 // ServiceTraffic 单个服务的流量累积
@@ -137,59 +142,69 @@ func (m *GlobalTrafficManager) startReporting() {
 
 // collectAndReport 收集所有服务流量并合并上报
 func (m *GlobalTrafficManager) collectAndReport() {
-	m.mu.Lock()
+	m.reportMu.Lock()
+	defer m.reportMu.Unlock()
 
-	if len(m.serviceTraffic) == 0 {
+	if len(m.pending) == 0 {
+		m.mu.Lock()
+
+		reportItems := make([]TrafficReportItem, 0, min(len(m.serviceTraffic), 500))
+
+		for name, traffic := range m.serviceTraffic {
+			if len(reportItems) == 500 {
+				break
+			}
+			traffic.mu.Lock()
+			up := traffic.UpBytes
+			down := traffic.DownBytes
+			if up > 0 || down > 0 {
+				traffic.UpBytes = 0
+				traffic.DownBytes = 0
+			}
+			traffic.mu.Unlock()
+			isStale := !registry.ServiceRegistry().IsRegistered(name)
+
+			if up > 0 || down > 0 {
+				reportItems = append(reportItems, TrafficReportItem{
+					N: name,
+					U: up,
+					D: down,
+				})
+			}
+			if isStale {
+				delete(m.serviceTraffic, name)
+			}
+		}
+
 		m.mu.Unlock()
-		return
-	}
 
-	reportItems := make([]TrafficReportItem, 0, len(m.serviceTraffic))
-
-	for name, traffic := range m.serviceTraffic {
-		traffic.mu.Lock()
-		up := traffic.UpBytes
-		down := traffic.DownBytes
-		if up > 0 || down > 0 {
-			traffic.UpBytes = 0
-			traffic.DownBytes = 0
+		if len(reportItems) == 0 {
+			return
 		}
-		traffic.mu.Unlock()
-		isStale := !registry.ServiceRegistry().IsRegistered(name)
-
-		if up > 0 || down > 0 {
-			reportItems = append(reportItems, TrafficReportItem{
-				N: name,
-				U: up,
-				D: down,
-			})
+		if m.producerID == "" {
+			m.producerID = uuid.NewString()
 		}
-		if isStale {
-			delete(m.serviceTraffic, name)
-		}
-	}
-
-	m.mu.Unlock()
-
-	if len(reportItems) == 0 {
-		return
+		m.sequence++
+		m.pending = reportItems
 	}
 
 	var totalUp, totalDown int64
-	for _, item := range reportItems {
+	for _, item := range m.pending {
 		totalUp += item.U
 		totalDown += item.D
 	}
 
-	success, err := sendBatchTrafficReport(m.ctx, reportItems)
+	success, err := sendIdentifiedBatchTrafficReport(m.ctx, m.pending, m.producerID, m.sequence)
 	if err != nil {
-		fmt.Printf("❌ 全局流量上报失败: %v (总流量: ↑%d ↓%d, %d个服务)\n", err, totalUp, totalDown, len(reportItems))
+		fmt.Printf("❌ 全局流量上报失败，保留原批次重试: %v (总流量: ↑%d ↓%d, %d个服务)\n", err, totalUp, totalDown, len(m.pending))
 		return
 	}
 
 	if !success {
-		fmt.Printf("⚠️ 全局流量上报未成功 (总流量: ↑%d ↓%d, %d个服务)\n", totalUp, totalDown, len(reportItems))
+		fmt.Printf("⚠️ 全局流量上报未成功，保留原批次重试 (总流量: ↑%d ↓%d, %d个服务)\n", totalUp, totalDown, len(m.pending))
+		return
 	}
+	m.pending = nil
 }
 
 // Stop 停止全局流量管理器

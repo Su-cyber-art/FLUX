@@ -156,6 +156,10 @@ func prioritizeURLs(urls []string, preferred string) []string {
 }
 
 func postJSONWithFallback(ctx context.Context, urls []string, requestBody []byte, userAgent string, timeout time.Duration, preferred *string) (bool, error) {
+	return postJSONWithHeaders(ctx, urls, requestBody, userAgent, timeout, preferred, nil)
+}
+
+func postJSONWithHeaders(ctx context.Context, urls []string, requestBody []byte, userAgent string, timeout time.Duration, preferred *string, headers http.Header) (bool, error) {
 	if len(urls) == 0 {
 		return false, fmt.Errorf("上报URL未设置")
 	}
@@ -175,6 +179,9 @@ func postJSONWithFallback(ctx context.Context, urls []string, requestBody []byte
 
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Agent", userAgent)
+		for key, values := range headers {
+			req.Header[key] = append([]string(nil), values...)
+		}
 
 		resp, err := reportDo(ctx, req, timeout)
 		if err != nil {
@@ -206,6 +213,11 @@ func postJSONWithFallback(ctx context.Context, urls []string, requestBody []byte
 
 		responseText := strings.TrimSpace(responseBytes.String())
 		if responseText == "ok" {
+			expected := headers.Get("X-Flux-Flow-Producer") + ":" + headers.Get("X-Flux-Flow-Sequence")
+			if ack := resp.Header.Get("X-Flux-Flow-Ack"); ack != "" && ack != expected {
+				errs = append(errs, "流量批次确认标识不匹配")
+				continue
+			}
 			if i > 0 {
 				fmt.Printf("↪️ HTTP上报已自动回退到: %s\n", targetURL)
 			}
@@ -222,8 +234,14 @@ func postJSONWithFallback(ctx context.Context, urls []string, requestBody []byte
 	return false, fmt.Errorf("发送HTTP请求失败: %s", strings.Join(errs, " | "))
 }
 
-// sendBatchTrafficReport 批量发送多个服务的流量报告到HTTP接口
-func sendBatchTrafficReport(ctx context.Context, reportItems []TrafficReportItem) (bool, error) {
+func sendIdentifiedBatchTrafficReport(ctx context.Context, reportItems []TrafficReportItem, producer string, sequence int64) (bool, error) {
+	headers := make(http.Header)
+	headers.Set("X-Flux-Flow-Producer", producer)
+	headers.Set("X-Flux-Flow-Sequence", fmt.Sprint(sequence))
+	return sendTrafficReport(ctx, reportItems, headers)
+}
+
+func sendTrafficReport(ctx context.Context, reportItems []TrafficReportItem, headers http.Header) (bool, error) {
 	if httpReportURL == "" {
 		return false, fmt.Errorf("流量上报URL未设置")
 	}
@@ -239,8 +257,7 @@ func sendBatchTrafficReport(ctx context.Context, reportItems []TrafficReportItem
 	if httpAESCrypto != nil {
 		encryptedData, err := httpAESCrypto.Encrypt(jsonData)
 		if err != nil {
-			fmt.Printf("⚠️ 加密流量报告失败，发送原始数据: %v\n", err)
-			requestBody = jsonData
+			return false, fmt.Errorf("加密流量报告失败: %w", err)
 		} else {
 			// 创建加密消息包装器
 			encryptedMessage := map[string]interface{}{
@@ -250,21 +267,21 @@ func sendBatchTrafficReport(ctx context.Context, reportItems []TrafficReportItem
 			}
 			requestBody, err = json.Marshal(encryptedMessage)
 			if err != nil {
-				fmt.Printf("⚠️ 序列化加密流量报告失败，发送原始数据: %v\n", err)
-				requestBody = jsonData
+				return false, fmt.Errorf("序列化加密流量报告失败: %w", err)
 			}
 		}
 	} else {
 		requestBody = jsonData
 	}
 
-	return postJSONWithFallback(
+	return postJSONWithHeaders(
 		ctx,
 		strings.Split(httpReportURL, ","),
 		requestBody,
 		"GOST-Traffic-Reporter/1.0",
 		5*time.Second,
 		&preferredUploadURL,
+		headers,
 	)
 }
 

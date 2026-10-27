@@ -379,6 +379,11 @@ export interface TunnelMutationPayload {
   chainNodes?: TunnelChainNodePayload[][];
 }
 
+export interface TunnelMutationResult {
+  // Saving configuration can succeed while an offline node is still pending.
+  runtimeSync?: BatchOperationResult & { status: "pending" };
+}
+
 export interface UserQuotaResetPayload {
   userId: number;
   scope?: "daily" | "monthly" | "all";

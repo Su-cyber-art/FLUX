@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -63,7 +64,13 @@ func JWT(opts AuthOptions) func(http.Handler) http.Handler {
 					return
 				}
 				state, err := opts.GetUserAuthState(userID)
-				if err != nil || state == nil || state.Status != 1 || state.RoleID != claims.RoleID || claims.IatMs <= state.PasswordChangedAt {
+				if err != nil {
+					log.Printf("authentication state lookup failed user_id=%d err=%v", userID, err)
+					w.Header().Set("Retry-After", "2")
+					response.WriteJSONStatus(w, http.StatusServiceUnavailable, response.Err(503, "用户验证暂时不可用，请稍后重试"))
+					return
+				}
+				if state == nil || state.Status != 1 || state.RoleID != claims.RoleID || claims.IatMs <= state.PasswordChangedAt {
 					if allowsOptionalAuth(r.URL.Path) {
 						next.ServeHTTP(w, r)
 						return

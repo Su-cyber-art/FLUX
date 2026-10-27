@@ -541,19 +541,15 @@ func (h *Handler) forwardList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items, err := h.repo.ListForwards()
+	var items []map[string]interface{}
+	if roleID == 0 {
+		items, err = h.repo.ListForwards()
+	} else {
+		items, err = h.repo.ListForwardsByUser(userID)
+	}
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, err.Error()))
 		return
-	}
-	if roleID != 0 {
-		filtered := make([]map[string]interface{}, 0, len(items))
-		for _, item := range items {
-			if asInt64(item["userId"], 0) == userID {
-				filtered = append(filtered, item)
-			}
-		}
-		items = filtered
 	}
 	response.WriteJSON(w, response.OK(items))
 }
@@ -865,6 +861,10 @@ func (h *Handler) flowConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) flowUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get(flowProducerHeader) != "" || r.Header.Get(flowSequenceHeader) != "" {
+		h.flowUploadIdentified(w, r)
+		return
+	}
 	secret := r.URL.Query().Get("secret")
 	node, _ := h.repo.GetNodeBySecret(secret)
 	if node == nil {

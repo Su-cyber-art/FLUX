@@ -692,7 +692,11 @@ export default function TunnelPage() {
         : await createTunnel(data);
 
       if (response.code === 0) {
-        toast.success(isEdit ? "更新成功" : "创建成功");
+        if (response.data?.runtimeSync?.status === "pending") {
+          toast.warning(response.msg || "配置已保存，运行配置待同步");
+        } else {
+          toast.success(isEdit ? "更新成功" : "创建成功");
+        }
         setModalOpen(false);
         await refreshTunnelList(false);
       } else {

@@ -47,6 +47,9 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      - name: Lint without modifying sources
+        run: pnpm exec eslint src --no-fix --max-warnings=0
+
   backend:
     name: Build Go Backend
     runs-on: ubuntu-latest
@@ -64,6 +67,9 @@ jobs:
 
       - name: Download dependencies
         run: go mod download
+
+      - name: Run backend tests
+        run: go test ./...
 
       - name: Build
         run: go build -v ./...
@@ -125,3 +131,10 @@ jobs:
 
       - name: Build
         run: go build -v .
+
+      - name: Run agent tests
+        run: go test ./...
+
+      - name: Run agent control and runtime tests
+        working-directory: go-gost/x
+        run: go test ./socket ./config/... ./api/... ./service ./registry
