@@ -380,6 +380,14 @@ func (r *Repository) UpdateNodeExpiryReminderDismissed(nodeID int64, dismissed i
 }
 
 func (r *Repository) DeleteNodeCascade(nodeID int64) error {
+	return r.deleteNodeCascade(nodeID, false)
+}
+
+func (r *Repository) ForceDeleteNodeCascade(nodeID int64) error {
+	return r.deleteNodeCascade(nodeID, true)
+}
+
+func (r *Repository) deleteNodeCascade(nodeID int64, force bool) error {
 	if r == nil || r.db == nil {
 		return errors.New("repository not initialized")
 	}
@@ -388,12 +396,19 @@ func (r *Repository) DeleteNodeCascade(nodeID int64) error {
 		if err := tx.First(&node, nodeID).Error; err != nil {
 			return err
 		}
-		if node.DeleteState != 2 {
+		if force && node.DeleteState != model.NodeDeletionPanelOnly {
+			return errors.New("尚未请求仅从面板移除节点")
+		}
+		if !force && node.DeleteState != 2 {
 			return errors.New("节点尚未确认清理完成")
+		}
+		if err := ensureNodeUnreferenced(tx, nodeID); err != nil {
+			return err
 		}
 		for _, table := range []interface{}{
 			&model.NodeSSHConfig{}, &model.NftRuleBinding{}, &model.NftCounterState{},
 			&model.NodeMetric{}, &model.TunnelMetric{}, &model.ServiceMonitorResult{}, &model.ServiceMonitor{},
+			&model.PeerShareResource{},
 		} {
 			if err := tx.Where("node_id = ?", nodeID).Delete(table).Error; err != nil {
 				return err

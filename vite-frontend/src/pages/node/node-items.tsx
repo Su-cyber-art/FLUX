@@ -74,7 +74,7 @@ const isOnline = (node: Node) => node.connectionStatus === "online";
 const StatusChip = ({ node }: { node: Node }) =>
   node.deleteState ? (
     <Chip dot color="warning" size="xs">
-      待清理
+      {node.deleteState === 3 ? "待移除" : "待清理"}
     </Chip>
   ) : (
     <Chip dot color={isOnline(node) ? "success" : "default"} size="xs">

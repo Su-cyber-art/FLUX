@@ -724,6 +724,10 @@ func (h *Handler) nodeDismissExpiryReminder(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *Handler) nodeBatchDelete(w http.ResponseWriter, r *http.Request) {
+	h.nodeBatchRemove(w, r, false)
+}
+
+func (h *Handler) nodeBatchRemove(w http.ResponseWriter, r *http.Request, force bool) {
 	if r.Method != http.MethodPost {
 		response.WriteJSON(w, response.ErrDefault("请求失败"))
 		return
@@ -734,7 +738,7 @@ func (h *Handler) nodeBatchDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	result := batchOperationResult{}
 	for _, id := range ids {
-		if err := h.deleteNodeByID(id); err != nil {
+		if err := h.removeNodeByID(id, force); err != nil {
 			result.FailCount++
 			result.Failures = appendBatchFailure(result.Failures, id, "", err)
 		} else {
@@ -4753,6 +4757,10 @@ func (h *Handler) replaceTunnelChainsTx(tx *gorm.DB, tunnelID int64, req map[str
 }
 
 func (h *Handler) deleteNodeByID(id int64) error {
+	return h.removeNodeByID(id, false)
+}
+
+func (h *Handler) removeNodeByID(id int64, force bool) error {
 	h.nodeDeletionMu.Lock()
 	defer h.nodeDeletionMu.Unlock()
 	node, err := h.repo.GetNodeByID(id)
@@ -4762,11 +4770,26 @@ func (h *Handler) deleteNodeByID(id int64) error {
 	if node == nil {
 		return errors.New("节点不存在")
 	}
-	if err := h.repo.BeginNodeDeletion(id); err != nil {
+	// A persisted panel-only intent must stay panel-only when reconnect retries
+	// removal after a database error or panel restart.
+	force = force || node.DeleteState == model.NodeDeletionPanelOnly
+	begin := h.repo.BeginNodeDeletion
+	if force {
+		begin = h.repo.BeginForceNodeDeletion
+	}
+	if err := begin(id); err != nil {
 		return err
 	}
 	if h.metrics != nil {
 		h.metrics.RetireNode(id)
+	}
+	if force {
+		if err := h.repo.ForceDeleteNodeCascade(id); err != nil {
+			return fmt.Errorf("仅从面板移除节点未完成，请重试：%w", err)
+		}
+		h.wsServer.DisconnectNode(id)
+		h.wsServer.NotifyNodeDeleted(id)
+		return nil
 	}
 	if node.DeleteState != 2 {
 		switch {
@@ -4780,7 +4803,7 @@ func (h *Handler) deleteNodeByID(id int64) error {
 		default:
 			result, err := h.wsServer.SendCommand(id, "RetireNode", nil, 30*time.Second)
 			if err != nil {
-				return fmt.Errorf("节点待删除，尚未确认 agent 清理：%w；离线节点上线后会自动重试，旧版 agent 请先升级", err)
+				return fmt.Errorf("节点待删除，尚未确认 agent 清理：%w；离线节点上线后会自动重试，旧版 agent 请先升级；服务器已停用时，可选择仅从面板强制移除", err)
 			}
 			if result.Type != "RetireNodeResponse" || result.Data["cleaned"] != true {
 				return errors.New("agent 未确认彻底清理，节点已保留，请升级 agent 后重试")

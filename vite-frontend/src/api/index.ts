@@ -129,8 +129,12 @@ export const getDashboardNodeExpiryList = () =>
   Network.post<NodeApiItem[]>("/node/list", {});
 export const updateNode = (data: NodeMutationPayload) =>
   Network.post("/node/update", data);
-export const deleteNode = (id: number) =>
-  Network.post("/node/delete", { id }, { timeout: 45_000 });
+export const deleteNode = (id: number, force = false) =>
+  Network.post(
+    force ? "/node/force-delete" : "/node/delete",
+    { id },
+    { timeout: 45_000 },
+  );
 export const getNodeInstallCommand = (
   id: number,
   channel: ReleaseChannel = "stable",
@@ -360,9 +364,9 @@ export const batchResumeForwards = (ids: number[]) =>
   Network.post<BatchOperationResult>("/forward/batch-resume", { ids });
 export const batchDeleteTunnels = (ids: number[]) =>
   Network.post<BatchOperationResult>("/tunnel/batch-delete", { ids });
-export const batchDeleteNodes = (ids: number[]) =>
+export const batchDeleteNodes = (ids: number[], force = false) =>
   Network.post<BatchOperationResult>(
-    "/node/batch-delete",
+    force ? "/node/batch-force-delete" : "/node/batch-delete",
     { ids },
     { timeout: Math.max(45_000, ids.length * 35_000 + 5_000) },
   );

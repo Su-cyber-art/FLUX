@@ -94,6 +94,7 @@ import { type NodeRenewalCycle } from "@/pages/node/renewal";
 import { buildNodeSystemInfo } from "@/pages/node/system-info";
 import { useNodeOfflineTimers } from "@/pages/node/use-node-offline-timers";
 import { useNodeRealtime } from "@/pages/node/use-node-realtime";
+import { NodeRemovalOptions } from "@/pages/node/removal-options";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { loadStoredOrder, saveOrder } from "@/utils/order-storage";
 
@@ -137,9 +138,11 @@ export default function NodePage() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [forceDelete, setForceDelete] = useState(false);
   const [rollbackModalOpen, setRollbackModalOpen] = useState(false);
   const [nodeToRollback, setNodeToRollback] = useState<Node | null>(null);
   const [nodeToDelete, setNodeToDelete] = useState<Node | null>(null);
+  const forceNodeRemoval = forceDelete || nodeToDelete?.deleteState === 3;
   const [protocolDisabled, setProtocolDisabled] = useState(false);
   const [protocolDisabledReason, setProtocolDisabledReason] = useState("");
   const [form, setForm] = useState<NodeForm>({
@@ -179,6 +182,7 @@ export default function NodePage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [batchDeleteModalOpen, setBatchDeleteModalOpen] = useState(false);
+  const [batchForceDelete, setBatchForceDelete] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
 
   // 安装命令相关状态
@@ -285,6 +289,11 @@ export default function NodePage() {
             mergeNodeRealtimeState(node, previousById.get(node.id)),
           );
         });
+        setNodeToDelete((current) =>
+          current
+            ? nodesData.find((node) => node.id === current.id) || current
+            : null,
+        );
 
         // 优先使用数据库中的 inx 字段进行排序，否则回退到本地排序
         const hasDbOrdering = nodesData.some(
@@ -741,6 +750,7 @@ export default function NodePage() {
   // 删除节点
   const handleDelete = (node: Node) => {
     setNodeToDelete(node);
+    setForceDelete(node.deleteState === 3);
     setDeleteModalOpen(true);
   };
 
@@ -749,11 +759,21 @@ export default function NodePage() {
 
     setDeleteLoading(true);
     try {
-      const res = await deleteNode(nodeToDelete.id);
+      const res = await deleteNode(nodeToDelete.id, forceNodeRemoval);
 
       if (res.code === 0) {
-        toast.success("删除成功");
+        toast.success(
+          forceNodeRemoval ? "节点已从面板移除，原接入凭证已失效" : "删除成功",
+        );
         setNodeList((prev) => prev.filter((n) => n.id !== nodeToDelete.id));
+        clearOfflineTimer(nodeToDelete.id);
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+
+          next.delete(nodeToDelete.id);
+
+          return next;
+        });
         setDeleteModalOpen(false);
         setNodeToDelete(null);
       } else {
@@ -1205,13 +1225,20 @@ export default function NodePage() {
     if (selectedIds.size === 0) return;
     setBatchLoading(true);
     try {
-      const res = await batchDeleteNodes(Array.from(selectedIds));
+      const res = await batchDeleteNodes(
+        Array.from(selectedIds),
+        batchForceDelete,
+      );
 
       if (res.code === 0) {
         const failures = res.data?.failures || [];
 
         if (res.data?.successCount)
-          toast.success(`成功删除 ${res.data.successCount} 个节点`);
+          toast.success(
+            batchForceDelete
+              ? `已从面板移除 ${res.data.successCount} 个节点，原接入凭证已失效`
+              : `成功删除 ${res.data.successCount} 个节点`,
+          );
         if (failures.length)
           toast.error(
             failures
@@ -1583,7 +1610,10 @@ export default function NodePage() {
               size="sm"
               startContent={<Trash2 size={14} />}
               variant="flat"
-              onPress={() => setBatchDeleteModalOpen(true)}
+              onPress={() => {
+                setBatchForceDelete(false);
+                setBatchDeleteModalOpen(true);
+              }}
             >
               删除
             </Button>
@@ -2363,17 +2393,27 @@ export default function NodePage() {
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold">确认删除</h2>
+                <h2 className="text-xl font-bold">
+                  {forceNodeRemoval ? "确认强制移除" : "确认删除"}
+                </h2>
               </ModalHeader>
               <ModalBody>
                 <p>
-                  确定要删除节点{" "}
+                  确定要{forceNodeRemoval ? "从面板移除" : "删除"}节点{" "}
                   <strong>&quot;{nodeToDelete?.name}&quot;</strong> 吗？
                 </p>
-                <p className="text-small text-default-500">
-                  本地节点会停止转发、清除配置并卸载
-                  agent；离线节点上线后自动清理。请先解除隧道、转发和共享引用。远程共享节点仅移除本面板的接入。
-                </p>
+                {!forceNodeRemoval && (
+                  <p className="text-small text-default-500">
+                    本地节点会停止转发、清除配置并卸载
+                    agent；离线节点上线后自动清理。请先解除隧道、转发和共享引用。远程共享节点仅移除本面板的接入。
+                  </p>
+                )}
+                <NodeRemovalOptions
+                  disabled={deleteLoading}
+                  force={forceNodeRemoval}
+                  locked={nodeToDelete?.deleteState === 3}
+                  onChange={setForceDelete}
+                />
               </ModalBody>
               <ModalFooter>
                 <Button variant="light" onPress={onClose}>
@@ -2384,7 +2424,11 @@ export default function NodePage() {
                   isLoading={deleteLoading}
                   onPress={confirmDelete}
                 >
-                  {deleteLoading ? "删除中..." : "确认删除"}
+                  {deleteLoading
+                    ? "处理中..."
+                    : forceNodeRemoval
+                      ? "确认强制移除"
+                      : "确认删除"}
                 </Button>
               </ModalFooter>
             </>
@@ -2606,17 +2650,26 @@ export default function NodePage() {
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold">确认删除</h2>
+                <h2 className="text-xl font-bold">
+                  {batchForceDelete ? "确认批量强制移除" : "确认删除"}
+                </h2>
               </ModalHeader>
               <ModalBody>
                 <p>
-                  确定要删除选中的 <strong>{selectedIds.size}</strong>{" "}
-                  个节点吗？
+                  确定要{batchForceDelete ? "从面板移除" : "删除"}选中的{" "}
+                  <strong>{selectedIds.size}</strong> 个节点吗？
                 </p>
-                <p className="text-small text-default-500">
-                  将逐项清理并卸载本地
-                  agent；离线节点上线后自动重试。有关联资源或清理失败的节点会保留并显示原因。
-                </p>
+                {!batchForceDelete && (
+                  <p className="text-small text-default-500">
+                    将逐项清理并卸载本地
+                    agent；离线节点上线后自动重试。有关联资源或清理失败的节点会保留并显示原因。
+                  </p>
+                )}
+                <NodeRemovalOptions
+                  disabled={batchLoading}
+                  force={batchForceDelete}
+                  onChange={setBatchForceDelete}
+                />
               </ModalBody>
               <ModalFooter>
                 <Button variant="light" onPress={onClose}>
@@ -2627,7 +2680,11 @@ export default function NodePage() {
                   isLoading={batchLoading}
                   onPress={handleBatchDelete}
                 >
-                  {batchLoading ? "删除中..." : "确认删除"}
+                  {batchLoading
+                    ? "处理中..."
+                    : batchForceDelete
+                      ? "确认强制移除"
+                      : "确认删除"}
                 </Button>
               </ModalFooter>
             </>
