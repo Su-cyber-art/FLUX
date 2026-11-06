@@ -1,21 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { ActionIcon, SegmentedControl, Tooltip } from "@mantine/core";
-import {
-  Gauge,
-  LayoutGrid,
-  List,
-  Plus,
-  SearchX,
-  SquarePen,
-  Trash2,
-} from "lucide-react";
+import { ActionIcon, Tooltip, Badge, Button, TextInput } from "@mantine/core";
+import { Gauge, Plus, SearchX, SquarePen, Trash2 } from "lucide-react";
 
 import toast from "@/lib/notifications";
+import { PageToolbar } from "@/components/page-toolbar";
 import { AnimatedPage } from "@/components/animated-page";
 import { SearchBar } from "@/components/search-bar";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Modal,
   ModalContent,
@@ -23,7 +14,6 @@ import {
   ModalBody,
   ModalFooter,
 } from "@/components/ui/modal";
-import { Chip } from "@/components/ui/chip";
 import {
   createSpeedLimit,
   getSpeedLimitList,
@@ -57,7 +47,6 @@ export default function LimitPage() {
     "limit-search-keyword",
     "",
   );
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [viewMode, setViewMode] = useLocalStorageState<"list" | "grid">(
     "limit-view-mode",
     "grid",
@@ -257,63 +246,34 @@ export default function LimitPage() {
   );
   const ruleStatus = (rule: SpeedLimitRule) =>
     rule.status === 1 ? null : (
-      <Chip dot color="warning" size="xs">
+      <Badge
+        color="orange"
+        leftSection={<span className="badge-dot" />}
+        size="xs"
+        variant="light"
+      >
         停用
-      </Chip>
+      </Badge>
     );
 
   return (
     <AnimatedPage>
-      <div className="page-toolbar">
-        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
-          <div className="min-w-40 flex-1 sm:max-w-72">
-            <SearchBar
-              isVisible={isSearchVisible}
-              placeholder="搜索限速策略名称"
-              value={searchKeyword}
-              onChange={setSearchKeyword}
-              onClose={() => setIsSearchVisible(false)}
-              onOpen={() => setIsSearchVisible(true)}
-            />
-          </div>
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <SegmentedControl
-            aria-label="显示方式"
-            data={[
-              {
-                value: "grid",
-                label: (
-                  <span className="flex items-center gap-1.5">
-                    <LayoutGrid size={15} />
-                    <span className="hidden sm:inline">卡片</span>
-                  </span>
-                ),
-              },
-              {
-                value: "list",
-                label: (
-                  <span className="flex items-center gap-1.5">
-                    <List size={15} />
-                    <span className="hidden sm:inline">列表</span>
-                  </span>
-                ),
-              },
-            ]}
-            size="sm"
-            value={viewMode}
-            onChange={(value) => setViewMode(value as "list" | "grid")}
+      <PageToolbar
+        primary={{
+          label: "新增",
+          noun: "策略",
+          icon: <Plus size={16} />,
+          onClick: handleAdd,
+        }}
+        search={
+          <SearchBar
+            placeholder="搜索限速策略名称"
+            value={searchKeyword}
+            onChange={setSearchKeyword}
           />
-          <Button
-            className="ml-auto sm:ml-0"
-            color="primary"
-            startContent={<Plus size={16} />}
-            onPress={handleAdd}
-          >
-            新增<span className="hidden sm:inline">策略</span>
-          </Button>
-        </div>
-      </div>
+        }
+        view={{ value: viewMode, onChange: setViewMode }}
+      />
 
       {rules.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
@@ -343,20 +303,19 @@ export default function LimitPage() {
         rules.length > 0 ? (
           <EmptyStateCard
             action={
-              <Button onPress={() => setSearchKeyword("")}>清空搜索</Button>
+              <Button variant="default" onClick={() => setSearchKeyword("")}>
+                清空搜索
+              </Button>
             }
             description="换个关键词再试试。"
             icon={<SearchX size={20} />}
             title="没有匹配的限速策略"
+            tone="default"
           />
         ) : (
           <EmptyStateCard
             action={
-              <Button
-                color="primary"
-                startContent={<Plus size={16} />}
-                onPress={handleAdd}
-              >
+              <Button leftSection={<Plus size={16} />} onClick={handleAdd}>
                 新增策略
               </Button>
             }
@@ -439,121 +398,97 @@ export default function LimitPage() {
       )}
 
       {/* 新增/编辑模态框 */}
-      <Modal
-        backdrop="blur"
-        isOpen={modalOpen}
-        placement="center"
-        scrollBehavior="inside"
-        size="2xl"
-        onOpenChange={setModalOpen}
-      >
+      <Modal opened={modalOpen} size="2xl" onClose={() => setModalOpen(false)}>
         <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold">
-                  {isEdit ? "编辑限速规则" : "新增限速规则"}
-                </h2>
-                <p className="text-small text-default-500">
-                  {isEdit ? "修改现有限速规则的配置信息" : "创建新的限速规则"}
-                </p>
-              </ModalHeader>
-              <ModalBody>
-                <div className="space-y-4">
-                  <Input
-                    errorMessage={errors.name}
-                    isInvalid={!!errors.name}
-                    label="规则名称"
-                    placeholder="请输入限速规则名称"
-                    value={form.name}
-                    variant="bordered"
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                  />
+          <ModalHeader className="flex flex-col gap-1">
+            <h2 className="text-xl font-bold">
+              {isEdit ? "编辑限速规则" : "新增限速规则"}
+            </h2>
+            <p className="text-small text-default-500">
+              {isEdit ? "修改现有限速规则的配置信息" : "创建新的限速规则"}
+            </p>
+          </ModalHeader>
+          <ModalBody>
+            <div className="space-y-4">
+              <TextInput
+                error={errors.name}
+                label="规则名称"
+                placeholder="请输入限速规则名称"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, name: e.target.value }))
+                }
+              />
 
-                  <Input
-                    endContent={
-                      <div className="pointer-events-none flex items-center">
-                        <span className="text-default-400 text-small">
-                          Mbps
-                        </span>
-                      </div>
-                    }
-                    errorMessage={errors.speed}
-                    isInvalid={!!errors.speed}
-                    label="速度限制"
-                    placeholder="请输入速度限制"
-                    type="number"
-                    value={form.speed.toString()}
-                    variant="bordered"
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        speed: parseInt(e.target.value) || 0,
-                      }))
-                    }
-                  />
-                </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button
-                  color="primary"
-                  isLoading={submitLoading}
-                  onPress={handleSubmit}
-                >
-                  {isEdit ? "保存修改" : "创建规则"}
-                </Button>
-              </ModalFooter>
-            </>
-          )}
+              <TextInput
+                error={errors.speed}
+                label="速度限制"
+                placeholder="请输入速度限制"
+                rightSection={
+                  <div className="pointer-events-none flex items-center">
+                    <span className="text-default-400 text-small">Mbps</span>
+                  </div>
+                }
+                type="number"
+                value={form.speed.toString()}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    speed: parseInt(e.target.value) || 0,
+                  }))
+                }
+              />
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="gray"
+              variant="subtle"
+              onClick={() => setModalOpen(false)}
+            >
+              取消
+            </Button>
+            <Button loading={submitLoading} onClick={handleSubmit}>
+              {isEdit ? "保存修改" : "创建规则"}
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
 
       {/* 删除确认模态框 */}
       <Modal
-        backdrop="blur"
-        isOpen={deleteModalOpen}
-        placement="center"
-        scrollBehavior="inside"
+        opened={deleteModalOpen}
         size="2xl"
-        onOpenChange={setDeleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
       >
         <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-lg font-bold text-danger">确认删除</h2>
-              </ModalHeader>
-              <ModalBody>
-                <p className="text-default-600">
-                  确定要删除限速规则{" "}
-                  <span className="font-semibold text-foreground">
-                    &quot;{ruleToDelete?.name}&quot;
-                  </span>{" "}
-                  吗？
-                </p>
-                <p className="text-small text-default-500 mt-2">
-                  此操作无法撤销，删除后该规则将永久消失。
-                </p>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button
-                  color="danger"
-                  isLoading={deleteLoading}
-                  onPress={confirmDelete}
-                >
-                  确认删除
-                </Button>
-              </ModalFooter>
-            </>
-          )}
+          <ModalHeader className="flex flex-col gap-1">
+            <h2 className="text-lg font-bold text-danger">确认删除</h2>
+          </ModalHeader>
+          <ModalBody>
+            <p className="text-default-600">
+              确定要删除限速规则{" "}
+              <span className="font-semibold text-foreground">
+                &quot;{ruleToDelete?.name}&quot;
+              </span>{" "}
+              吗？
+            </p>
+            <p className="text-small text-default-500 mt-2">
+              此操作无法撤销，删除后该规则将永久消失。
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="gray"
+              variant="subtle"
+              onClick={() => setDeleteModalOpen(false)}
+            >
+              取消
+            </Button>
+            <Button color="red" loading={deleteLoading} onClick={confirmDelete}>
+              确认删除
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </AnimatedPage>

@@ -1,12 +1,11 @@
-import { ActionIcon, Tooltip } from "@mantine/core";
+import { ActionIcon, Tooltip, Badge, Loader } from "@mantine/core";
 import { RotateCcw, SquarePen, Trash2 } from "lucide-react";
 
 import { UsageMeter } from "@/components/usage-meter";
-import { Chip } from "@/components/ui/chip";
-import { Spinner } from "@/components/ui/spinner";
 import { calculateTunnelUsedFlow, formatFlow } from "@/pages/user/presentation";
 import { UserTunnel } from "@/types";
 import { flowLimitBytes, formatFlowLimit } from "@/utils/traffic";
+import { uiColor } from "@/components/ui/shared";
 
 interface TunnelPermissionListProps {
   items: UserTunnel[];
@@ -38,7 +37,7 @@ export function TunnelPermissionList({
   if (loading) {
     return (
       <div className="flex justify-center py-6">
-        <Spinner size="sm" />
+        <Loader aria-label="加载中" role="status" size="sm" />
       </div>
     );
   }
@@ -64,16 +63,22 @@ export function TunnelPermissionList({
                 {item.tunnelName}
               </span>
               {item.status !== 1 && (
-                <Chip dot color="danger" size="xs">
+                <Badge
+                  color="red"
+                  leftSection={<span className="badge-dot" />}
+                  size="xs"
+                  variant="light"
+                >
                   禁用
-                </Chip>
+                </Badge>
               )}
-              <Chip
-                color={item.speedLimitName ? "warning" : "default"}
+              <Badge
+                color={uiColor(item.speedLimitName ? "warning" : "default")}
                 size="xs"
+                variant="light"
               >
                 {item.speedLimitName || "不限速"}
-              </Chip>
+              </Badge>
             </div>
             <p className="mt-1 truncate text-xs text-default-500">
               规则 {item.num} 条 ·{" "}

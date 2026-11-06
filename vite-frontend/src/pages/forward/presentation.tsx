@@ -12,15 +12,19 @@ import {
   Stethoscope,
   Trash2,
 } from "lucide-react";
-import { ActionIcon, Menu, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Menu,
+  Tooltip,
+  Badge,
+  Switch,
+  Checkbox,
+} from "@mantine/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { Card } from "@/components/ui/card";
-import { Chip } from "@/components/ui/chip";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { type SemanticColor } from "@/components/ui/shared";
+import { type SemanticColor, uiColor } from "@/components/ui/shared";
 import { cn } from "@/lib/utils";
 import { addressPreview } from "@/pages/forward/address";
 
@@ -703,11 +707,11 @@ const ServiceSwitch = ({
     <span className="inline-flex">
       <Switch
         aria-label={forward.serviceRunning ? "暂停规则" : "启用规则"}
-        color="success"
-        isDisabled={forward.status !== 1 && forward.status !== 0}
-        isSelected={forward.serviceRunning}
+        checked={forward.serviceRunning}
+        color="teal"
+        disabled={forward.status !== 1 && forward.status !== 0}
         size="sm"
-        onValueChange={() => onToggleService(forward)}
+        onChange={() => onToggleService(forward)}
       />
     </span>
   </Tooltip>
@@ -794,9 +798,9 @@ export const ForwardListHeader = ({
     <div className="forward-row-lead">
       <Checkbox
         aria-label="全选"
-        isIndeterminate={isIndeterminate}
-        isSelected={isAllSelected}
-        onValueChange={onToggleAll}
+        checked={isAllSelected}
+        indeterminate={isIndeterminate}
+        onChange={(event) => onToggleAll(event.currentTarget.checked)}
       />
     </div>
     <div className="forward-row-name">规则</div>
@@ -835,8 +839,10 @@ export const SortableForwardRow = ({
       <div className="forward-row-lead">
         <Checkbox
           aria-label={`选择 ${forward.name}`}
-          isSelected={selected}
-          onValueChange={(checked) => handlers.onSelect(forward.id, checked)}
+          checked={selected}
+          onChange={({ currentTarget: { checked: checked } }) =>
+            handlers.onSelect(forward.id, checked)
+          }
         />
         <DragHandle {...attributes} {...listeners} />
       </div>
@@ -850,13 +856,22 @@ export const SortableForwardRow = ({
           {forward.name}
         </button>
         <div className="mt-1 flex min-w-0 items-center gap-1.5">
-          <Chip color={strategy.color as SemanticColor} size="xs">
+          <Badge
+            color={uiColor(strategy.color as SemanticColor)}
+            size="xs"
+            variant="light"
+          >
             {strategy.text}
-          </Chip>
+          </Badge>
           {forward.status === -1 && (
-            <Chip dot color={status.tone} size="xs">
+            <Badge
+              color={uiColor(status.tone)}
+              leftSection={<span className="badge-dot" />}
+              size="xs"
+              variant="light"
+            >
               {status.text}
-            </Chip>
+            </Badge>
           )}
           {showTunnel && (
             <span className="truncate text-xs text-default-500">
@@ -909,9 +924,11 @@ export const ForwardCard = ({
       <div className="flex items-start gap-2.5">
         <Checkbox
           aria-label={`选择 ${forward.name}`}
+          checked={selected}
           className="mt-0.5"
-          isSelected={selected}
-          onValueChange={(checked) => handlers.onSelect(forward.id, checked)}
+          onChange={({ currentTarget: { checked: checked } }) =>
+            handlers.onSelect(forward.id, checked)
+          }
         />
         <div className="min-w-0 flex-1">
           <button
@@ -923,12 +940,21 @@ export const ForwardCard = ({
             {forward.name}
           </button>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <Chip dot color={status.tone} size="xs">
+            <Badge
+              color={uiColor(status.tone)}
+              leftSection={<span className="badge-dot" />}
+              size="xs"
+              variant="light"
+            >
               {status.text}
-            </Chip>
-            <Chip color={strategy.color as SemanticColor} size="xs">
+            </Badge>
+            <Badge
+              color={uiColor(strategy.color as SemanticColor)}
+              size="xs"
+              variant="light"
+            >
               {strategy.text}
-            </Chip>
+            </Badge>
           </div>
         </div>
         <ServiceSwitch
@@ -1019,9 +1045,9 @@ export const SortableTunnelGroupContainer = ({
             {tunnel.tunnelName}
           </span>
           {ratio !== 1 && (
-            <Chip color="success" size="xs" title="流量倍率">
+            <Badge color="teal" size="xs" title="流量倍率" variant="light">
               {formatTunnelTrafficRatio(ratio)}
-            </Chip>
+            </Badge>
           )}
         </button>
         <div className="flex shrink-0 items-center gap-1.5">

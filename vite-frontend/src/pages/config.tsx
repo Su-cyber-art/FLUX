@@ -1,25 +1,26 @@
 import type {
   SystemUpgradeCheckApiData,
-  SystemUpgradeRunApiData,
   SystemUpgradeReleaseApiItem,
+  SystemUpgradeRunApiData,
   SystemUpgradeVersionApiData,
 } from "@/api/types";
 
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { ActionIcon, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Button,
+  Checkbox,
+  Loader,
+  Select,
+  Switch,
+  TextInput,
+  Tooltip,
+} from "@mantine/core";
 import {
   Activity,
   Brush,
-  CircleArrowUp,
-  Database,
-  Download,
-  HardDriveDownload,
   Image as ImageIcon,
-  Megaphone,
   Moon,
   Palette,
-  RefreshCw,
   RotateCcw,
   Save,
   ShieldCheck,
@@ -27,16 +28,26 @@ import {
   Upload,
   type LucideIcon,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import toast from "@/lib/notifications";
-import { Button } from "@/components/ui/button";
+import {
+  checkSystemUpgrade,
+  exportBackup,
+  getAnnouncement,
+  getStorageSummary,
+  getSystemUpgradeVersion,
+  importBackup,
+  runSystemUpgrade,
+  updateAnnouncement,
+  updateConfigs,
+  type AnnouncementData,
+} from "@/api";
+import { SectionHeader } from "@/components/section-header";
+import { describedSelectProps } from "@/components/select-options";
+import { SystemUpgradeProgress } from "@/components/system-upgrade-progress";
+import { ThemeSettings } from "@/components/theme-settings";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectItem } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Modal,
   ModalBody,
@@ -44,25 +55,7 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@/components/ui/modal";
-import {
-  updateConfigs,
-  exportBackup,
-  importBackup,
-  getAnnouncement,
-  updateAnnouncement,
-  getStorageSummary,
-  getSystemUpgradeVersion,
-  checkSystemUpgrade,
-  runSystemUpgrade,
-  type AnnouncementData,
-} from "@/api";
-import { ThemeSettings } from "@/components/theme-settings";
-import { SectionHeader } from "@/components/section-header";
-import { Chip } from "@/components/ui/chip";
-import { SystemUpgradeProgress } from "@/components/system-upgrade-progress";
-import { useSystemUpgrade } from "@/hooks/use-system-upgrade";
-import { isAdmin } from "@/utils/auth";
-import { getCachedConfigs, configCache, updateSiteConfig } from "@/config/site";
+import { configCache, getCachedConfigs, updateSiteConfig } from "@/config/site";
 import {
   DEFAULT_TUNNEL_QUALITY_INTERVAL_SEC,
   MAX_TUNNEL_QUALITY_INTERVAL_SEC,
@@ -71,260 +64,41 @@ import {
   TUNNEL_QUALITY_INTERVAL_CONFIG_KEY,
   validateTunnelQualityInterval,
 } from "@/config/tunnel-quality";
+import { useSystemUpgrade } from "@/hooks/use-system-upgrade";
+import toast from "@/lib/notifications";
+import { AnnouncementCard } from "@/pages/config/announcement-card";
+import { BackupCard } from "@/pages/config/backup-card";
 import {
-  type UpdateReleaseChannel,
-  getUpdateReleaseChannel,
-  setUpdateReleaseChannel,
-} from "@/utils/version-update";
+  BACKUP_TYPE_OPTIONS,
+  BACKUP_TYPE_VALUES,
+  BgImageKey,
+  BRAND_FILE_ACCEPT,
+  BRAND_KEYS,
+  BrandPreviewKey,
+  CONFIG_ITEMS,
+  CONFIG_SECTION_KEYS,
+  CONFIG_SECTIONS,
+  ConfigItem,
+  getInitialConfigs,
+  isBrandPreviewKey,
+  toBrandAssetKind,
+} from "@/pages/config/config-items";
+import { SystemUpgradeConfirmModal } from "@/pages/config/system-upgrade-confirm-modal";
+import { UpdateSettingsCard } from "@/pages/config/update-settings-card";
+import { isAdmin } from "@/utils/auth";
 import {
   convertBrandAssetToPngDataURL,
   isPngDataURL,
-  type BrandAssetKind,
 } from "@/utils/brand-asset";
-
-interface ConfigItem {
-  key: string;
-  label: string;
-  placeholder?: string;
-  description?: string;
-  type: "input" | "switch" | "select" | "bg_image";
-  options?: { label: string; value: string; description?: string }[];
-  dependsOn?: string; // 依赖的配置项key
-  dependsValue?: string; // 依赖的配置项值
-}
-
-type BgImageKey = "app_bg_image" | "app_bg_image_light" | "app_bg_image_dark";
-
-const BRAND_PREVIEW_KEYS = ["app_logo", "app_favicon"] as const;
-
-type BrandPreviewKey = (typeof BRAND_PREVIEW_KEYS)[number];
-
-const isBrandPreviewKey = (key: string): key is BrandPreviewKey =>
-  BRAND_PREVIEW_KEYS.includes(key as BrandPreviewKey);
-
-const BRAND_FILE_ACCEPT = "image/png,image/jpeg,image/webp,image/svg+xml";
-
-const toBrandAssetKind = (key: BrandPreviewKey): BrandAssetKind => {
-  return key === "app_logo" ? "logo" : "favicon";
-};
+import {
+  getUpdateReleaseChannel,
+  setUpdateReleaseChannel,
+  type UpdateReleaseChannel,
+} from "@/utils/version-update";
 
 // 网站配置项定义
-const CONFIG_ITEMS: ConfigItem[] = [
-  {
-    key: "app_bg_image",
-    label: "背景壁纸",
-    description:
-      "默认背景用于未单独设置壁纸的模式。可分别上传亮色和暗色壁纸，保存后随外观模式自动切换。",
-    type: "bg_image",
-  },
-  {
-    key: "ip",
-    label: "面板后端地址",
-    placeholder: "请输入面板后端IP:PORT",
-    description:
-      '格式"ip:port"或"domain:port",用于对接节点时使用。支持套CDN和HTTPS,通讯数据有加密',
-    type: "input",
-  },
-  {
-    key: "panel_domain",
-    label: "面板域名",
-    placeholder: "请输入面板域名",
-    description: "当前面板的域名，用于与其他面板进行联邦共享时验证身份",
-    type: "input",
-  },
-  {
-    key: "app_name",
-    label: "应用名称",
-    placeholder: "请输入应用名称",
-    description: "在浏览器标签页和导航栏显示的应用名称",
-    type: "input",
-  },
-  {
-    key: "app_logo",
-    label: "网页角标 Logo",
-    description: "用于页面左上角导航角标，上传后会自动转换为 PNG 并持久化保存",
-    type: "input",
-  },
-  {
-    key: "app_favicon",
-    label: "浏览器缩略图标",
-    description: "用于浏览器标签页图标，上传后会自动转换为 PNG 并持久化保存",
-    type: "input",
-  },
-  {
-    key: "hide_footer_brand",
-    label: "隐藏页面底部 FLVX 版权信息",
-    description: "开启后不再显示侧栏、登录页与个人中心底部的 “Powered by FLVX”",
-    type: "switch",
-  },
-  {
-    key: "forward_compact_mode",
-    label: "规则页面精简模式",
-    description: "开启后，规则页面列表使用 2.1.6-alpha8 样式（全局配置）",
-    type: "switch",
-  },
-  {
-    key: "monitor_tunnel_quality_enabled",
-    label: "实时隧道质量检测",
-    description:
-      "关闭后，前端停止自动刷新，后端停止实时隧道质量探测（全局配置）",
-    type: "switch",
-  },
-  {
-    key: TUNNEL_QUALITY_INTERVAL_CONFIG_KEY,
-    label: "隧道质量探测间隔",
-    placeholder: String(DEFAULT_TUNNEL_QUALITY_INTERVAL_SEC),
-    description:
-      "设置实时隧道质量检测的执行频率，单位为秒；允许 1–3600 秒，默认 1 秒。",
-    type: "input",
-    dependsOn: "monitor_tunnel_quality_enabled",
-    dependsValue: "true",
-  },
-  {
-    key: "monitor_retention_days",
-    label: "监控数据保留天数",
-    placeholder: "7",
-    description:
-      "统一清理节点指标、隧道流量、服务监控结果和隧道质量历史；默认 7 天。",
-    type: "input",
-  },
-  {
-    key: "captcha_enabled",
-    label: "启用验证码",
-    description: "开启后，用户登录时需要完成验证码验证",
-    type: "switch",
-  },
-  {
-    key: "cloudflare_site_key",
-    label: "Cloudflare Site Key",
-    placeholder: "请输入 Cloudflare Site Key",
-    description: "Cloudflare Turnstile 站点密钥",
-    type: "input",
-    dependsOn: "captcha_enabled",
-    dependsValue: "true",
-  },
-  {
-    key: "cloudflare_secret_key",
-    label: "Cloudflare Secret Key",
-    placeholder: "请输入 Cloudflare Secret Key",
-    description: "Cloudflare Turnstile 密钥",
-    type: "input",
-    dependsOn: "captcha_enabled",
-    dependsValue: "true",
-  },
-  {
-    key: "github_proxy_enabled",
-    label: "开启 GitHub 加速",
-    description: "用于节点更新和安装脚本下载，解决部分地区 GitHub 访问受限问题",
-    type: "switch",
-  },
-  {
-    key: "github_proxy_url",
-    label: "加速地址",
-    placeholder: "https://gcode.hostcentral.cc",
-    description: "GitHub 下载加速代理地址，开启加速后生效",
-    type: "input",
-    dependsOn: "github_proxy_enabled",
-    dependsValue: "true",
-  },
-  {
-    key: "allow_local_remote_addr",
-    label: "允许转发到本地地址",
-    description:
-      "开启后，普通用户创建或编辑规则时可将目标地址指向 127.0.0.1、10.x.x.x、172.16-31.x.x、192.168.x.x 等本地或内网地址。默认关闭以降低开放代理风险。",
-    type: "switch",
-  },
-];
-
-const BACKUP_TYPE_OPTIONS = [
-  { value: "users", label: "用户" },
-  { value: "nodes", label: "节点" },
-  { value: "tunnels", label: "隧道" },
-  { value: "forwards", label: "规则" },
-  { value: "userTunnels", label: "用户隧道权限" },
-  { value: "speedLimits", label: "限速规则" },
-  { value: "tunnelGroups", label: "隧道分组" },
-  { value: "userGroups", label: "用户分组" },
-  { value: "permissions", label: "分组权限" },
-  { value: "configs", label: "系统配置" },
-] as const;
-
-const BACKUP_TYPE_VALUES = BACKUP_TYPE_OPTIONS.map((option) => option.value);
-
 // 初始化时从缓存读取配置，避免闪烁
-const getInitialConfigs = (): Record<string, string> => {
-  if (typeof window === "undefined") return {};
-
-  const configKeys = [
-    "app_name",
-    "captcha_enabled",
-    "cloudflare_site_key",
-    "cloudflare_secret_key",
-    "forward_compact_mode",
-    "monitor_tunnel_quality_enabled",
-    TUNNEL_QUALITY_INTERVAL_CONFIG_KEY,
-    "monitor_retention_days",
-    "ip",
-    "panel_domain",
-    "app_logo",
-    "app_favicon",
-    "app_bg_image",
-    "app_bg_image_light",
-    "app_bg_image_dark",
-    "github_proxy_enabled",
-    "github_proxy_url",
-    "allow_local_remote_addr",
-    "hide_footer_brand",
-  ];
-  const initialConfigs: Record<string, string> = {};
-
-  try {
-    configKeys.forEach((key) => {
-      const cachedValue = localStorage.getItem("vite_config_" + key);
-
-      if (cachedValue) {
-        initialConfigs[key] = cachedValue;
-      }
-    });
-  } catch {}
-
-  return initialConfigs;
-};
-
-const BRAND_KEYS = ["app_name", "app_logo", "app_favicon", "hide_footer_brand"];
-
 // Config keys per settings section; items not listed fall back to the first section.
-const CONFIG_SECTION_KEYS: { keys: string[] }[] = [
-  {
-    keys: [
-      "ip",
-      "panel_domain",
-      "captcha_enabled",
-      "cloudflare_site_key",
-      "cloudflare_secret_key",
-      "allow_local_remote_addr",
-    ],
-  },
-  { keys: ["app_bg_image", "forward_compact_mode"] },
-  {
-    keys: [
-      "monitor_tunnel_quality_enabled",
-      TUNNEL_QUALITY_INTERVAL_CONFIG_KEY,
-      "monitor_retention_days",
-    ],
-  },
-  { keys: ["github_proxy_enabled", "github_proxy_url"] },
-];
-
-const CONFIG_SECTIONS: { id: string; title: string; icon: LucideIcon }[] = [
-  { id: "config-access", title: "访问与安全", icon: ShieldCheck },
-  { id: "config-appearance", title: "外观", icon: Palette },
-  { id: "config-monitor", title: "监控", icon: Activity },
-  { id: "config-upgrade", title: "更新与升级", icon: CircleArrowUp },
-  { id: "config-brand", title: "站点品牌", icon: Brush },
-  { id: "config-announcement", title: "公告", icon: Megaphone },
-  { id: "config-backup", title: "数据备份", icon: HardDriveDownload },
-];
 
 export default function ConfigPage() {
   const navigate = useNavigate();
@@ -972,31 +746,32 @@ export default function ConfigPage() {
           />
           <div className="mt-auto flex flex-wrap items-center gap-1.5">
             <Button
-              color="primary"
-              isDisabled={busy && bgImageUploading !== key}
-              isLoading={bgImageUploading === key}
-              size="sm"
-              startContent={<Upload size={14} />}
-              variant="flat"
-              onPress={() => bgImageFileInputRefs.current[key]?.click()}
+              disabled={busy && bgImageUploading !== key}
+              leftSection={<Upload size={14} />}
+              loading={bgImageUploading === key}
+              size="xs"
+              variant="light"
+              onClick={() => bgImageFileInputRefs.current[key]?.click()}
             >
               {isImage ? "替换" : "上传"}
             </Button>
             {isDefault && (
               <>
                 <Button
-                  isDisabled={busy || isTheme}
-                  size="sm"
-                  variant="light"
-                  onPress={() => handleConfigChange(key, "theme")}
+                  color="gray"
+                  disabled={busy || isTheme}
+                  size="xs"
+                  variant="subtle"
+                  onClick={() => handleConfigChange(key, "theme")}
                 >
                   自适应纯色
                 </Button>
                 <Button
-                  isDisabled={busy || bgImage === "#ffffff"}
-                  size="sm"
-                  variant="light"
-                  onPress={() => handleConfigChange(key, "#ffffff")}
+                  color="gray"
+                  disabled={busy || bgImage === "#ffffff"}
+                  size="xs"
+                  variant="subtle"
+                  onClick={() => handleConfigChange(key, "#ffffff")}
                 >
                   白色
                 </Button>
@@ -1125,11 +900,10 @@ export default function ConfigPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            color="primary"
-            isLoading={uploading}
-            size="sm"
-            variant="flat"
-            onPress={() => triggerBrandFilePicker(key)}
+            loading={uploading}
+            size="xs"
+            variant="light"
+            onClick={() => triggerBrandFilePicker(key)}
           >
             {value.length > 0
               ? isLogo
@@ -1140,10 +914,11 @@ export default function ConfigPage() {
                 : "上传 Favicon"}
           </Button>
           <Button
-            isDisabled={value.length === 0 || uploading}
-            size="sm"
-            variant="light"
-            onPress={() => clearBrandAsset(key)}
+            color="gray"
+            disabled={value.length === 0 || uploading}
+            size="xs"
+            variant="subtle"
+            onClick={() => clearBrandAsset(key)}
           >
             清除
           </Button>
@@ -1194,16 +969,14 @@ export default function ConfigPage() {
             : null;
 
         return (
-          <Input
+          <TextInput
             classNames={{
               input: "text-sm",
-              inputWrapper: isChanged
+              wrapper: isChanged
                 ? "border-warning-line data-[hover=true]:border-warning"
                 : "",
             }}
-            endContent={isTunnelQualityInterval ? "秒" : undefined}
-            errorMessage={intervalError || undefined}
-            isInvalid={Boolean(intervalError)}
+            error={intervalError || undefined}
             max={
               isTunnelQualityInterval
                 ? MAX_TUNNEL_QUALITY_INTERVAL_SEC
@@ -1215,11 +988,11 @@ export default function ConfigPage() {
                 : undefined
             }
             placeholder={item.placeholder}
+            rightSection={isTunnelQualityInterval ? "秒" : undefined}
             size="md"
             step={isTunnelQualityInterval ? 1 : undefined}
             type={isTunnelQualityInterval ? "number" : "text"}
             value={intervalValue}
-            variant="bordered"
             onChange={(e) => handleConfigChange(item.key, e.target.value)}
           />
         );
@@ -1228,47 +1001,47 @@ export default function ConfigPage() {
       case "switch":
         return (
           <Switch
-            classNames={{
-              wrapper: isChanged ? "border-warning-line" : "",
-            }}
-            isSelected={configs[item.key] === "true"}
+            checked={configs[item.key] === "true"}
+            label={
+              <>
+                <span className="text-sm text-default-700">
+                  {configs[item.key] === "true" ? "已启用" : "已禁用"}
+                </span>
+              </>
+            }
             size="sm"
-            onValueChange={(checked) =>
+            onChange={({ currentTarget: { checked: checked } }) =>
               handleConfigChange(item.key, checked ? "true" : "false")
             }
-          >
-            <span className="text-sm text-default-700">
-              {configs[item.key] === "true" ? "已启用" : "已禁用"}
-            </span>
-          </Switch>
+          />
         );
 
       case "select":
         return (
           <Select
+            {...describedSelectProps(
+              item.options?.map((option) => ({
+                value: String(option.value),
+                label: option.label,
+                description: option.description,
+              })) || [],
+            )}
             classNames={{
-              trigger: isChanged
+              input: isChanged
                 ? "border-warning-line data-[hover=true]:border-warning"
                 : "",
             }}
             placeholder="请选择验证码类型"
-            selectedKeys={configs[item.key] ? [configs[item.key]] : []}
             size="md"
-            variant="bordered"
-            onSelectionChange={(keys) => {
-              const selectedKey = Array.from(keys)[0] as string;
+            value={configs[item.key] ? configs[item.key] : null}
+            onChange={(value) => {
+              const selectedKey = value as string;
 
               if (selectedKey) {
                 handleConfigChange(item.key, selectedKey);
               }
             }}
-          >
-            {item.options?.map((option) => (
-              <SelectItem key={option.value} description={option.description}>
-                {option.label}
-              </SelectItem>
-            )) || []}
-          </Select>
+          />
         );
 
       default:
@@ -1372,15 +1145,21 @@ export default function ConfigPage() {
           <span className="text-sm font-medium text-default-700">{label}</span>
           <div className="flex items-center gap-2">
             <Button
-              size="sm"
-              variant="flat"
-              onPress={() =>
+              color="gray"
+              size="xs"
+              variant="light"
+              onClick={() =>
                 setTypes(allSelected ? [] : [...BACKUP_TYPE_VALUES])
               }
             >
               {allSelected ? "取消全选" : "全选"}
             </Button>
-            <Button size="sm" variant="light" onPress={() => setTypes([])}>
+            <Button
+              color="gray"
+              size="xs"
+              variant="subtle"
+              onClick={() => setTypes([])}
+            >
               清空
             </Button>
           </div>
@@ -1403,14 +1182,7 @@ export default function ConfigPage() {
                 onClick={() => toggleTypeSelection(option.value, setTypes)}
               >
                 <div className="flex items-center gap-3">
-                  <Checkbox
-                    classNames={{
-                      base: "pointer-events-none",
-                    }}
-                    color="primary"
-                    isSelected={isSelected}
-                    size="md"
-                  />
+                  <Checkbox checked={isSelected} size="md" />
                   <span
                     className={`font-medium ${
                       isSelected ? "text-default-900" : "text-default-700"
@@ -1481,7 +1253,7 @@ export default function ConfigPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Spinner label="加载配置中..." size="lg" />
+        <Loader aria-label="加载配置中..." role="status" size="lg" />
       </div>
     );
   }
@@ -1588,231 +1360,27 @@ export default function ConfigPage() {
           </CardBody>
         </Card>
 
-        <Card className="config-section" id="config-upgrade">
-          <CardHeader className="pb-3">
-            <SectionHeader
-              description="更新通道、下载加速、数据库占用与面板自升级"
-              icon={CircleArrowUp}
-              title="更新与升级"
-            />
-          </CardHeader>
-          <CardBody className="pt-0">
-            {itemsFor(CONFIG_SECTION_KEYS[3].keys).map((item) =>
-              renderItemRow(item),
-            )}
-            <div className="settings-row">
-              <div>
-                <p className="settings-row-label">更新通道</p>
-                <p className="settings-row-desc">
-                  稳定版仅匹配纯数字版本；开发版仅匹配包含 alpha / beta / rc
-                  的版本。
-                </p>
-              </div>
-              <Select
-                aria-label="更新通道"
-                selectedKeys={[updateChannel]}
-                size="md"
-                variant="bordered"
-                onSelectionChange={(keys) => {
-                  const selected =
-                    (Array.from(keys)[0] as UpdateReleaseChannel) || "stable";
-
-                  handleUpdateChannelChange(selected);
-                }}
-              >
-                <SelectItem key="stable" description="仅纯数字版本，如 2.1.4">
-                  稳定版
-                </SelectItem>
-                <SelectItem
-                  key="dev"
-                  description="仅 alpha / beta / rc 关键字版本"
-                >
-                  开发版
-                </SelectItem>
-              </Select>
-            </div>
-            <div className="settings-row">
-              <div>
-                <p className="settings-row-label">数据库占用</p>
-                <p className="settings-row-desc">
-                  当前后端数据库文件或实例占用空间，仅用于容量参考。
-                </p>
-              </div>
-              <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Database className="text-default-400" size={16} />
-                {storageSummary}
-              </p>
-            </div>
-            <div data-wide className="settings-row">
-              <div>
-                <p className="settings-row-label">面板自升级</p>
-                <p className="settings-row-desc">
-                  检查当前版本与可用发布，并在容器环境中触发面板升级。
-                </p>
-              </div>
-              {systemUpgradeLoading ? (
-                <div className="flex items-center gap-2 rounded-lg bg-default-soft px-4 py-3 text-sm text-default-500">
-                  <Spinner size="sm" />
-                  正在加载升级状态...
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <dl className="grid gap-x-4 gap-y-3 rounded-lg bg-default-soft px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="min-w-0">
-                      <dt className="text-xs text-default-500">当前版本</dt>
-                      <dd className="mt-0.5 font-medium text-foreground">
-                        {systemUpgradeInfo?.currentVersion || "未获取"}
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="text-xs text-default-500">最新版本</dt>
-                      <dd className="mt-0.5 font-medium text-foreground">
-                        {systemUpgradeInfo?.latestVersion || "未获取"}
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="text-xs text-default-500">当前通道</dt>
-                      <dd className="mt-0.5 font-medium text-foreground">
-                        {systemUpgradeInfo?.channel === "dev"
-                          ? "开发版"
-                          : systemUpgradeInfo?.channel === "stable"
-                            ? "稳定版"
-                            : updateChannel === "dev"
-                              ? "开发版"
-                              : "稳定版"}
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="text-xs text-default-500">升级能力</dt>
-                      <dd className="mt-0.5">
-                        <Chip
-                          dot
-                          color={
-                            systemUpgradeInfo?.capability.capable
-                              ? "success"
-                              : "warning"
-                          }
-                          size="sm"
-                        >
-                          {systemUpgradeInfo?.capability.capable
-                            ? "可升级"
-                            : "当前不可升级"}
-                        </Chip>
-                      </dd>
-                    </div>
-                    <div className="min-w-0 sm:col-span-2">
-                      <dt className="text-xs text-default-500">部署目录</dt>
-                      <dd className="mt-0.5 break-all font-mono text-xs text-foreground">
-                        {systemUpgradeInfo?.capability.deployDir || "未获取"}
-                      </dd>
-                    </div>
-                    <div className="min-w-0 sm:col-span-2">
-                      <dt className="text-xs text-default-500">后端容器</dt>
-                      <dd className="mt-0.5 break-all font-mono text-xs text-foreground">
-                        {systemUpgradeInfo?.capability.backendContainer ||
-                          "未获取"}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {!systemUpgradeInfo?.capability.capable && (
-                    <div className="rounded-lg border border-warning-line bg-warning-soft px-4 py-3 text-warning-ink">
-                      <p className="text-xs font-medium">当前无法升级</p>
-                      <ul className="mt-2 list-disc space-y-1 pl-4 text-xs">
-                        {(systemUpgradeInfo?.capability.reasons?.length
-                          ? systemUpgradeInfo.capability.reasons
-                          : ["暂未获取到不可升级原因"]
-                        ).map((reason) => (
-                          <li key={reason}>{reason}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-                    <Select
-                      aria-label="目标版本"
-                      description="留空时使用当前通道下最新可用版本"
-                      isDisabled={
-                        !systemUpgradeReleasesMatchChannel ||
-                        systemUpgradeReleases.length === 0 ||
-                        systemUpgradeInProgress
-                      }
-                      label="目标版本"
-                      placeholder={
-                        systemUpgradeReleasesMatchChannel &&
-                        systemUpgradeReleases.length > 0
-                          ? "留空时自动选择最新版本"
-                          : "请先检查当前通道更新"
-                      }
-                      selectedKeys={
-                        systemUpgradeSelectedVersion
-                          ? [systemUpgradeSelectedVersion]
-                          : []
-                      }
-                      size="md"
-                      variant="bordered"
-                      onSelectionChange={(keys) => {
-                        const selected = Array.from(keys)[0] as
-                          | string
-                          | undefined;
-
-                        setSystemUpgradeSelectedVersion(selected || "");
-                      }}
-                    >
-                      {(systemUpgradeReleasesMatchChannel
-                        ? systemUpgradeReleases
-                        : []
-                      ).map((release) => (
-                        <SelectItem
-                          key={release.version}
-                          description={release.publishedAt || "暂无发布时间"}
-                        >
-                          {release.name || release.version}
-                        </SelectItem>
-                      ))}
-                    </Select>
-                    <div className="flex flex-wrap gap-2 md:pb-6">
-                      <Button
-                        isDisabled={systemUpgradeInProgress}
-                        isLoading={systemUpgradeChecking}
-                        startContent={<RefreshCw size={15} />}
-                        variant="flat"
-                        onPress={handleCheckSystemUpgrade}
-                      >
-                        检查更新
-                      </Button>
-                      <Button
-                        color="primary"
-                        isDisabled={
-                          systemUpgradeExecuting ||
-                          (!canTriggerSystemUpgrade &&
-                            upgrade.job?.status !== "running")
-                        }
-                        isLoading={systemUpgradeExecuting}
-                        startContent={<CircleArrowUp size={15} />}
-                        onPress={handleOpenSystemUpgradeModal}
-                      >
-                        {upgrade.job?.status === "running"
-                          ? "查看升级进度"
-                          : "立即升级"}
-                      </Button>
-                    </div>
-                  </div>
-                  {upgrade.job && upgrade.job.status !== "running" && (
-                    <Button
-                      size="sm"
-                      variant="light"
-                      onPress={() => setUpgradeProgressOpen(true)}
-                    >
-                      查看上次升级结果
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardBody>
-        </Card>
+        <UpdateSettingsCard
+          canTriggerSystemUpgrade={canTriggerSystemUpgrade}
+          handleCheckSystemUpgrade={handleCheckSystemUpgrade}
+          handleOpenSystemUpgradeModal={handleOpenSystemUpgradeModal}
+          handleUpdateChannelChange={handleUpdateChannelChange}
+          itemsFor={itemsFor}
+          renderItemRow={renderItemRow}
+          setSystemUpgradeSelectedVersion={setSystemUpgradeSelectedVersion}
+          setUpgradeProgressOpen={setUpgradeProgressOpen}
+          storageSummary={storageSummary}
+          systemUpgradeChecking={systemUpgradeChecking}
+          systemUpgradeExecuting={systemUpgradeExecuting}
+          systemUpgradeInProgress={systemUpgradeInProgress}
+          systemUpgradeInfo={systemUpgradeInfo}
+          systemUpgradeLoading={systemUpgradeLoading}
+          systemUpgradeReleases={systemUpgradeReleases}
+          systemUpgradeReleasesMatchChannel={systemUpgradeReleasesMatchChannel}
+          systemUpgradeSelectedVersion={systemUpgradeSelectedVersion}
+          updateChannel={updateChannel}
+          upgrade={upgrade}
+        />
 
         <Card className="config-section" id="config-brand">
           <CardHeader className="pb-3">
@@ -1827,132 +1395,25 @@ export default function ConfigPage() {
           </CardBody>
         </Card>
 
-        <Card className="config-section" id="config-announcement">
-          <CardHeader className="pb-3">
-            <SectionHeader
-              description="在仪表盘顶部向所有用户展示的公告，支持 Markdown"
-              icon={Megaphone}
-              title="公告"
-            />
-          </CardHeader>
-          <CardBody className="pt-0">
-            {announcementLoading ? (
-              <div className="flex justify-center py-8">
-                <Spinner size="lg" />
-              </div>
-            ) : (
-              <>
-                <div className="settings-row">
-                  <div>
-                    <p className="settings-row-label">显示公告</p>
-                    <p className="settings-row-desc">
-                      启用后，公告将在仪表盘顶部显示
-                    </p>
-                  </div>
-                  <Switch
-                    isSelected={announcement.enabled === 1}
-                    onValueChange={(checked) =>
-                      setAnnouncement({
-                        ...announcement,
-                        enabled: checked ? 1 : 0,
-                      })
-                    }
-                  >
-                    <span className="text-sm text-default-700">
-                      {announcement.enabled === 1 ? "已启用" : "已禁用"}
-                    </span>
-                  </Switch>
-                </div>
-                <div data-wide className="settings-row">
-                  <Textarea
-                    description="支持 Markdown 语法，链接会在新标签页打开"
-                    label="公告内容"
-                    minRows={4}
-                    placeholder="例如：**加粗**、[链接](https://example.com)、- 列表"
-                    value={announcement.content}
-                    variant="bordered"
-                    onChange={(e) =>
-                      setAnnouncement({
-                        ...announcement,
-                        content: e.target.value,
-                      })
-                    }
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      color="primary"
-                      isLoading={announcementSaving}
-                      startContent={<Save size={15} />}
-                      onPress={saveAnnouncement}
-                    >
-                      保存公告
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </CardBody>
-        </Card>
+        <AnnouncementCard
+          announcement={announcement}
+          announcementLoading={announcementLoading}
+          announcementSaving={announcementSaving}
+          saveAnnouncement={saveAnnouncement}
+          setAnnouncement={setAnnouncement}
+        />
 
-        <Card className="config-section" id="config-backup">
-          <CardHeader className="pb-3">
-            <SectionHeader
-              description="导出或导入系统数据，可按类型选择"
-              icon={HardDriveDownload}
-              title="数据备份与恢复"
-            />
-          </CardHeader>
-          <CardBody className="pt-0">
-            <div className="settings-row">
-              <div>
-                <p className="settings-row-label">导出数据</p>
-                <p className="settings-row-desc">
-                  选择数据类型后导出为 JSON 文件（当前已选 {exportTypes.length}{" "}
-                  / {BACKUP_TYPE_VALUES.length}）
-                </p>
-              </div>
-              <div>
-                <Button
-                  isLoading={exporting}
-                  startContent={<Download size={15} />}
-                  onPress={() => setExportSelectorOpen(true)}
-                >
-                  选择并导出
-                </Button>
-              </div>
-            </div>
-            <div className="settings-row">
-              <div>
-                <p className="settings-row-label">导入数据</p>
-                <p className="settings-row-desc">
-                  从备份文件恢复所选类型的数据（当前已选 {importTypes.length} /{" "}
-                  {BACKUP_TYPE_VALUES.length}）
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <input
-                  ref={backupFileInputRef}
-                  accept=".json"
-                  className="hidden"
-                  type="file"
-                  onChange={handleFileChange}
-                />
-                <Button
-                  isLoading={importing}
-                  startContent={<Upload size={15} />}
-                  onPress={() => setImportSelectorOpen(true)}
-                >
-                  选择并导入
-                </Button>
-                {importFileName && (
-                  <span className="text-sm text-default-600">
-                    已选择：{importFileName}
-                  </span>
-                )}
-              </div>
-            </div>
-          </CardBody>
-        </Card>
+        <BackupCard
+          backupFileInputRef={backupFileInputRef}
+          exportTypes={exportTypes}
+          exporting={exporting}
+          handleFileChange={handleFileChange}
+          importFileName={importFileName}
+          importTypes={importTypes}
+          importing={importing}
+          setExportSelectorOpen={setExportSelectorOpen}
+          setImportSelectorOpen={setImportSelectorOpen}
+        />
 
         {hasChanges && (
           <div className="config-save-bar" role="status">
@@ -1961,14 +1422,13 @@ export default function ConfigPage() {
               有未保存的配置修改
             </span>
             <div className="ml-auto flex gap-2">
-              <Button variant="light" onPress={discardChanges}>
+              <Button color="gray" variant="subtle" onClick={discardChanges}>
                 放弃修改
               </Button>
               <Button
-                color="primary"
-                isLoading={saving}
-                startContent={<Save size={15} />}
-                onPress={handleSave}
+                leftSection={<Save size={15} />}
+                loading={saving}
+                onClick={handleSave}
               >
                 保存配置
               </Button>
@@ -1978,115 +1438,64 @@ export default function ConfigPage() {
       </div>
 
       <Modal
-        backdrop="blur"
-        isOpen={exportSelectorOpen}
-        onOpenChange={setExportSelectorOpen}
+        opened={exportSelectorOpen}
+        onClose={() => setExportSelectorOpen(false)}
       >
         <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>选择导出内容</ModalHeader>
-              <ModalBody>
-                {renderTypeSelection("导出内容", exportTypes, setExportTypes)}
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button
-                  color="primary"
-                  isLoading={exporting}
-                  onPress={handleExport}
-                >
-                  {exporting ? "导出中..." : "确认导出"}
-                </Button>
-              </ModalFooter>
-            </>
-          )}
+          <ModalHeader>选择导出内容</ModalHeader>
+          <ModalBody>
+            {renderTypeSelection("导出内容", exportTypes, setExportTypes)}
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="gray"
+              variant="subtle"
+              onClick={() => setExportSelectorOpen(false)}
+            >
+              取消
+            </Button>
+            <Button loading={exporting} onClick={handleExport}>
+              {exporting ? "导出中..." : "确认导出"}
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
 
       <Modal
-        backdrop="blur"
-        isOpen={importSelectorOpen}
-        onOpenChange={setImportSelectorOpen}
+        opened={importSelectorOpen}
+        onClose={() => setImportSelectorOpen(false)}
       >
         <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>选择导入内容</ModalHeader>
-              <ModalBody>
-                {renderTypeSelection("导入内容", importTypes, setImportTypes)}
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button
-                  color="primary"
-                  isDisabled={importTypes.length === 0}
-                  onPress={triggerImportFilePicker}
-                >
-                  下一步选择文件
-                </Button>
-              </ModalFooter>
-            </>
-          )}
+          <ModalHeader>选择导入内容</ModalHeader>
+          <ModalBody>
+            {renderTypeSelection("导入内容", importTypes, setImportTypes)}
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="gray"
+              variant="subtle"
+              onClick={() => setImportSelectorOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              disabled={importTypes.length === 0}
+              onClick={triggerImportFilePicker}
+            >
+              下一步选择文件
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
 
-      <Modal
-        backdrop="blur"
-        isOpen={systemUpgradeModalOpen}
-        onOpenChange={(open) => {
-          if (!systemUpgradeExecuting) {
-            setSystemUpgradeModalOpen(open);
-          }
-        }}
-      >
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>确认面板升级</ModalHeader>
-              <ModalBody>
-                <div className="space-y-3 text-sm text-default-700">
-                  <p>
-                    将从 {systemUpgradeInfo?.currentVersion || "当前版本"}{" "}
-                    升级至{" "}
-                    {systemUpgradeSelectedVersion ||
-                      systemUpgradeInfo?.latestVersion ||
-                      "最新版本"}
-                    。
-                  </p>
-                  <p>
-                    下载并校验镜像后，将自动备份配置与数据库，再切换服务。健康检查失败会自动恢复原版本和备份数据。
-                  </p>
-                  <p>
-                    切换期间面板会短暂离线，恢复后继续显示进度。关闭页面不会中断升级。
-                  </p>
-                </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button
-                  isDisabled={systemUpgradeExecuting}
-                  variant="light"
-                  onPress={onClose}
-                >
-                  取消
-                </Button>
-                <Button
-                  color="primary"
-                  isDisabled={systemUpgradeExecuting}
-                  isLoading={systemUpgradeExecuting}
-                  onPress={handleConfirmSystemUpgrade}
-                >
-                  确认升级
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      <SystemUpgradeConfirmModal
+        handleConfirmSystemUpgrade={handleConfirmSystemUpgrade}
+        setSystemUpgradeModalOpen={setSystemUpgradeModalOpen}
+        systemUpgradeExecuting={systemUpgradeExecuting}
+        systemUpgradeInfo={systemUpgradeInfo}
+        systemUpgradeModalOpen={systemUpgradeModalOpen}
+        systemUpgradeSelectedVersion={systemUpgradeSelectedVersion}
+      />
 
       <SystemUpgradeProgress
         job={upgrade.job}

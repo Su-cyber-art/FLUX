@@ -1,10 +1,9 @@
 import { Link } from "react-router-dom";
-import { Button } from "@mantine/core";
+import { Button, Badge } from "@mantine/core";
 import { ChevronRight, TriangleAlert } from "lucide-react";
 
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Chip } from "@/components/ui/chip";
-import { type SemanticColor } from "@/components/ui/shared";
+import { type SemanticColor, uiColor } from "@/components/ui/shared";
 import { SectionHeader } from "@/components/section-header";
 import { type DashboardNodeExpiryItem } from "@/pages/dashboard/use-dashboard-data";
 import {
@@ -76,9 +75,14 @@ export function NodeExpiryPanel({
                   <p className="truncate text-sm font-medium text-foreground">
                     {node.name}
                   </p>
-                  <Chip className="shrink-0" color={status.tone} size="sm">
+                  <Badge
+                    className="shrink-0"
+                    color={uiColor(status.tone)}
+                    size="sm"
+                    variant="light"
+                  >
                     {status.label}
-                  </Chip>
+                  </Badge>
                 </div>
                 <p className="mt-1 truncate text-xs text-default-500">
                   {details.join(" · ")}

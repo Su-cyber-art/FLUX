@@ -346,7 +346,7 @@ export default function LoginPage() {
         </section>
       </div>
       <Modal
-        isOpen={captchaOpen}
+        opened={captchaOpen}
         size="sm"
         onClose={() => {
           setCaptchaOpen(false);

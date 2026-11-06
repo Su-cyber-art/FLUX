@@ -1,7 +1,7 @@
 import { Network } from "lucide-react";
+import { Badge } from "@mantine/core";
 
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Chip } from "@/components/ui/chip";
 import { PageEmptyState } from "@/components/page-state";
 import { UsageMeter } from "@/pages/dashboard/components/quota-card";
 import { SectionHeader } from "@/components/section-header";
@@ -19,6 +19,7 @@ import {
   formatFlowLimit,
   formatTraffic,
 } from "@/utils/traffic";
+import { uiColor } from "@/components/ui/shared";
 
 interface TunnelAccessListProps {
   tunnels: DashboardUserTunnel[];
@@ -70,15 +71,23 @@ export function TunnelAccessList({
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-                      <Chip
-                        color={tunnel.tunnelFlow === 1 ? "primary" : "warning"}
+                      <Badge
+                        color={uiColor(
+                          tunnel.tunnelFlow === 1 ? "primary" : "warning",
+                        )}
                         size="sm"
+                        variant="light"
                       >
                         {tunnel.tunnelFlow === 1 ? "单向计费" : "双向计费"}
-                      </Chip>
-                      <Chip dot color={expiry.tone} size="sm">
+                      </Badge>
+                      <Badge
+                        color={uiColor(expiry.tone)}
+                        leftSection={<span className="badge-dot" />}
+                        size="sm"
+                        variant="light"
+                      >
                         {expiry.text}
-                      </Chip>
+                      </Badge>
                     </div>
                   </div>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">

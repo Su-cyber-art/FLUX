@@ -1,3 +1,5 @@
+import dayjs from "dayjs";
+
 import { User, UserTunnel } from "@/types";
 import {
   formatTraffic,
@@ -7,6 +9,10 @@ import {
 } from "@/utils/traffic";
 
 export const formatFlow = formatTraffic;
+
+/** Expiry dates picked in a DateInput mean "valid through that whole day". */
+export const endOfDay = (date: string) =>
+  dayjs(date).hour(23).minute(59).second(59).millisecond(0).toDate();
 
 export const formatQuotaLimit = (value?: number): string => {
   const limit = Number(value ?? 0);

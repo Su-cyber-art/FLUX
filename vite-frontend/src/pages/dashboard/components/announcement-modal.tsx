@@ -2,8 +2,8 @@ import type { AnnouncementData } from "@/api";
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Button } from "@mantine/core";
 
-import { Button } from "@/components/ui/button";
 import {
   Modal,
   ModalBody,
@@ -14,23 +14,19 @@ import {
 
 interface AnnouncementModalProps {
   announcement: AnnouncementData;
-  isOpen: boolean;
+  opened: boolean;
   onClose: () => void;
   onDontShowAgain: () => void;
 }
 
 export const AnnouncementModal = ({
   announcement,
-  isOpen,
+  opened,
   onClose,
   onDontShowAgain,
 }: AnnouncementModalProps) => {
   return (
-    <Modal
-      isOpen={isOpen}
-      size="2xl"
-      onOpenChange={(open) => !open && onClose()}
-    >
+    <Modal opened={opened} size="2xl" onClose={onClose}>
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">平台公告</ModalHeader>
         <ModalBody>
@@ -41,12 +37,10 @@ export const AnnouncementModal = ({
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button variant="flat" onPress={onDontShowAgain}>
+          <Button color="gray" variant="light" onClick={onDontShowAgain}>
             不再提示
           </Button>
-          <Button color="primary" onPress={onClose}>
-            关闭
-          </Button>
+          <Button onClick={onClose}>关闭</Button>
         </ModalFooter>
       </ModalContent>
     </Modal>

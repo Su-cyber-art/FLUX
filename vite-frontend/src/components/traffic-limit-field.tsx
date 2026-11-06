@@ -1,5 +1,5 @@
-import { Input } from "@/components/ui/input";
-import { Select, SelectItem } from "@/components/ui/select";
+import { TextInput, Select } from "@mantine/core";
+
 import {
   parseTrafficInput,
   TRAFFIC_UNIT_MIB,
@@ -27,11 +27,11 @@ export function TrafficLimitField({
 }: TrafficLimitFieldProps) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
-      <Input
+      <TextInput
         description={description}
-        isRequired={isRequired}
         label={label}
         min="0"
+        required={isRequired}
         step="any"
         type="number"
         value={value}
@@ -39,10 +39,11 @@ export function TrafficLimitField({
       />
       <Select
         aria-label={`${label}单位`}
+        data={UNITS}
         label="单位"
-        selectedKeys={[unit]}
-        onSelectionChange={(keys) => {
-          const nextUnit = Array.from(keys)[0] as TrafficUnit | undefined;
+        value={unit}
+        onChange={(selected) => {
+          const nextUnit = selected as TrafficUnit | null;
 
           if (!nextUnit) return;
           const mib = parseTrafficInput(value, unit);
@@ -52,11 +53,7 @@ export function TrafficLimitField({
             nextUnit,
           );
         }}
-      >
-        {UNITS.map((option) => (
-          <SelectItem key={option}>{option}</SelectItem>
-        ))}
-      </Select>
+      />
     </div>
   );
 }

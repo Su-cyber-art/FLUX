@@ -1,9 +1,9 @@
 import type { BatchOperationFailure } from "@/api/types";
 
 import { CircleX, Copy } from "lucide-react";
+import { Button } from "@mantine/core";
 
 import toast from "@/lib/notifications";
-import { Button } from "@/components/ui/button";
 import {
   Modal,
   ModalBody,
@@ -14,8 +14,8 @@ import {
 
 interface BatchActionResultModalProps {
   failures: BatchOperationFailure[];
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  opened: boolean;
+  onClose: () => void;
   summary: string;
   title: string;
 }
@@ -62,8 +62,8 @@ const buildFailureCopyText = (
 
 export function BatchActionResultModal({
   failures,
-  isOpen,
-  onOpenChange,
+  opened,
+  onClose,
   summary,
   title,
 }: BatchActionResultModalProps) {
@@ -89,59 +89,49 @@ export function BatchActionResultModal({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      scrollBehavior="inside"
-      size="lg"
-      onOpenChange={onOpenChange}
-    >
+    <Modal opened={opened} size="lg" onClose={onClose}>
       <ModalContent>
-        {(onClose) => (
-          <>
-            <ModalHeader className="flex flex-col gap-1">
-              <h2>{title}</h2>
-              <p>{summary}</p>
-            </ModalHeader>
-            <ModalBody>
-              <p className="text-xs font-medium text-default-500">
-                {failures.length} 项未完成
-              </p>
-              <div className="overflow-hidden rounded-[10px] border border-divider">
-                {failures.map((failure, index) => (
-                  <div
-                    key={`${failure.id ?? "unknown"}-${index}`}
-                    className="flex items-start gap-3 border-divider px-4 py-3 [&+&]:border-t"
-                  >
-                    <CircleX
-                      className="mt-0.5 shrink-0 text-danger-ink"
-                      size={16}
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {getFailureTitle(failure, index)}
-                      </p>
-                      <p className="mt-0.5 text-xs leading-5 text-default-500">
-                        {getFailureReason(failure)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ModalBody>
-            <ModalFooter>
-              <Button
-                startContent={<Copy size={14} />}
-                variant="light"
-                onPress={handleCopy}
+        <ModalHeader className="flex flex-col gap-1">
+          <h2>{title}</h2>
+          <p>{summary}</p>
+        </ModalHeader>
+        <ModalBody>
+          <p className="text-xs font-medium text-default-500">
+            {failures.length} 项未完成
+          </p>
+          <div className="overflow-hidden rounded-[10px] border border-divider">
+            {failures.map((failure, index) => (
+              <div
+                key={`${failure.id ?? "unknown"}-${index}`}
+                className="flex items-start gap-3 border-divider px-4 py-3 [&+&]:border-t"
               >
-                复制失败原因
-              </Button>
-              <Button color="primary" onPress={onClose}>
-                我知道了
-              </Button>
-            </ModalFooter>
-          </>
-        )}
+                <CircleX
+                  className="mt-0.5 shrink-0 text-danger-ink"
+                  size={16}
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {getFailureTitle(failure, index)}
+                  </p>
+                  <p className="mt-0.5 text-xs leading-5 text-default-500">
+                    {getFailureReason(failure)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            color="gray"
+            leftSection={<Copy size={14} />}
+            variant="subtle"
+            onClick={handleCopy}
+          >
+            复制失败原因
+          </Button>
+          <Button onClick={onClose}>我知道了</Button>
+        </ModalFooter>
       </ModalContent>
     </Modal>
   );

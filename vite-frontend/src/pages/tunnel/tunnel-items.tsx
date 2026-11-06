@@ -1,6 +1,13 @@
 import type { ReactNode } from "react";
 
-import { ActionIcon, Menu, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Menu,
+  Tooltip,
+  Badge,
+  Button,
+  Checkbox,
+} from "@mantine/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -12,11 +19,8 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Chip } from "@/components/ui/chip";
-import { type SemanticColor } from "@/components/ui/shared";
+import { type SemanticColor, uiColor } from "@/components/ui/shared";
 import { cn } from "@/lib/utils";
 import {
   getTunnelFlowDisplay,
@@ -166,13 +170,22 @@ const TunnelChips = ({ tunnel }: { tunnel: Tunnel }) => {
 
   return (
     <>
-      <Chip color={type.color as SemanticColor} size="xs">
+      <Badge
+        color={uiColor(type.color as SemanticColor)}
+        size="xs"
+        variant="light"
+      >
         {type.text}
-      </Chip>
+      </Badge>
       {tunnel.status !== 1 && (
-        <Chip dot color={status.tone} size="xs">
+        <Badge
+          color={uiColor(status.tone)}
+          leftSection={<span className="badge-dot" />}
+          size="xs"
+          variant="light"
+        >
           {status.text}
-        </Chip>
+        </Badge>
       )}
     </>
   );
@@ -270,9 +283,9 @@ export const TunnelCard = ({
         {selectMode && (
           <Checkbox
             aria-label={`选择 ${tunnel.name}`}
+            checked={selected}
             className="mt-0.5"
-            isSelected={selected}
-            onValueChange={() => handlers.onToggleSelect(tunnel.id)}
+            onChange={() => handlers.onToggleSelect(tunnel.id)}
           />
         )}
         <div className="min-w-0 flex-1">
@@ -307,18 +320,20 @@ export const TunnelCard = ({
 
       <div className="mt-auto flex items-center gap-1.5 border-t border-divider pt-3">
         <Button
-          size="sm"
-          startContent={<SquarePen size={14} />}
-          variant="light"
-          onPress={() => handlers.onEdit(tunnel)}
+          color="gray"
+          leftSection={<SquarePen size={14} />}
+          size="xs"
+          variant="subtle"
+          onClick={() => handlers.onEdit(tunnel)}
         >
           编辑
         </Button>
         <Button
-          size="sm"
-          startContent={<Stethoscope size={14} />}
-          variant="light"
-          onPress={() => handlers.onDiagnose(tunnel)}
+          color="gray"
+          leftSection={<Stethoscope size={14} />}
+          size="xs"
+          variant="subtle"
+          onClick={() => handlers.onDiagnose(tunnel)}
         >
           诊断
         </Button>
@@ -343,9 +358,9 @@ export const TunnelListHeader = ({
     <div className="tunnel-row-lead">
       <Checkbox
         aria-label="全选"
-        isIndeterminate={isIndeterminate}
-        isSelected={isAllSelected}
-        onValueChange={onToggleAll}
+        checked={isAllSelected}
+        indeterminate={isIndeterminate}
+        onChange={(event) => onToggleAll(event.currentTarget.checked)}
       />
     </div>
     <div className="tunnel-row-name">隧道</div>
@@ -372,8 +387,8 @@ export const TunnelRow = ({
       <div className="tunnel-row-lead">
         <Checkbox
           aria-label={`选择 ${tunnel.name}`}
-          isSelected={selected}
-          onValueChange={() => handlers.onToggleSelect(tunnel.id)}
+          checked={selected}
+          onChange={() => handlers.onToggleSelect(tunnel.id)}
         />
       </div>
       <div className="tunnel-row-name min-w-0">

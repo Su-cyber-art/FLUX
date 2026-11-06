@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Skeleton } from "@mantine/core";
+import { Skeleton, Badge, Button, ActionIcon } from "@mantine/core";
 import {
   ArrowDownUp,
   ArrowLeftRight,
@@ -10,8 +10,6 @@ import {
 
 import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
-import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import {
   Modal,
   ModalContent,
@@ -42,6 +40,7 @@ import {
   formatFlowLimit,
   formatTraffic,
 } from "@/utils/traffic";
+import { uiColor } from "@/components/ui/shared";
 
 function DashboardSkeleton() {
   return (
@@ -140,7 +139,7 @@ export default function DashboardPage() {
       {announcement && (
         <AnnouncementModal
           announcement={announcement}
-          isOpen={isAnnouncementModalOpen}
+          opened={isAnnouncementModalOpen}
           onClose={() => setIsAnnouncementModalOpen(false)}
           onDontShowAgain={dismissAnnouncementModal}
         />
@@ -150,9 +149,13 @@ export default function DashboardPage() {
         <QuotaCard
           badge={
             !flowUnlimited && (
-              <Chip color={usageTone(flowPercent)} size="sm">
+              <Badge
+                color={uiColor(usageTone(flowPercent))}
+                size="sm"
+                variant="light"
+              >
                 {flowPercent.toFixed(1)}%
-              </Chip>
+              </Badge>
             )
           }
           footer={
@@ -179,9 +182,13 @@ export default function DashboardPage() {
         <QuotaCard
           badge={
             !forwardUnlimited && (
-              <Chip color={usageTone(forwardPercent)} size="sm">
+              <Badge
+                color={uiColor(usageTone(forwardPercent))}
+                size="sm"
+                variant="light"
+              >
                 {forwardPercent.toFixed(0)}%
-              </Chip>
+              </Badge>
             )
           }
           footer={
@@ -204,9 +211,14 @@ export default function DashboardPage() {
 
         <QuotaCard
           badge={
-            <Chip dot color={accountExpiry.tone} size="sm">
+            <Badge
+              color={uiColor(accountExpiry.tone)}
+              leftSection={<span className="badge-dot" />}
+              size="sm"
+              variant="light"
+            >
               {accountExpiry.text}
-            </Chip>
+            </Badge>
           }
           footer={isAdmin ? "管理员账户" : "成员账户"}
           icon={CalendarClock}
@@ -243,8 +255,7 @@ export default function DashboardPage() {
       <ForwardOverview forwards={forwardList} onAddresses={openAddresses} />
 
       <Modal
-        isOpen={addressModal !== null}
-        scrollBehavior="inside"
+        opened={addressModal !== null}
         size="lg"
         onClose={() => setAddressModal(null)}
       >
@@ -255,9 +266,10 @@ export default function DashboardPage() {
           <ModalBody className="pb-6">
             <div className="flex justify-end">
               <Button
-                size="sm"
-                startContent={<Copy size={14} />}
-                onPress={() =>
+                leftSection={<Copy size={14} />}
+                size="xs"
+                variant="default"
+                onClick={() =>
                   void copyText(addressModal?.addresses.join("\n") ?? "")
                 }
               >
@@ -273,15 +285,15 @@ export default function DashboardPage() {
                   <code className="min-w-0 truncate font-mono text-sm text-foreground">
                     {address}
                   </code>
-                  <Button
-                    isIconOnly
+                  <ActionIcon
                     aria-label={`复制 ${address}`}
-                    size="sm"
-                    variant="light"
-                    onPress={() => void copyText(address)}
+                    color="gray"
+                    size={30}
+                    variant="subtle"
+                    onClick={() => void copyText(address)}
                   >
                     <Copy size={14} />
-                  </Button>
+                  </ActionIcon>
                 </li>
               ))}
             </ul>

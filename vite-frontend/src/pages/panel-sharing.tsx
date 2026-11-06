@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { ActionIcon, SegmentedControl, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  SegmentedControl,
+  Tooltip,
+  Button,
+  Badge,
+  TextInput,
+  Select,
+} from "@mantine/core";
 import {
   Copy,
   Download,
@@ -13,15 +21,13 @@ import {
 } from "lucide-react";
 
 import { toast } from "@/lib/notifications";
+import { PageToolbar } from "@/components/page-toolbar";
 import { AnimatedPage } from "@/components/animated-page";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyStateCard, PageLoadingState } from "@/components/page-state";
 import { UsageMeter } from "@/components/usage-meter";
-import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import { IconTile } from "@/components/ui/icon-tile";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { TrafficLimitField } from "@/components/traffic-limit-field";
 import {
   formatTraffic,
@@ -38,7 +44,6 @@ import {
   ModalBody,
   ModalFooter,
 } from "@/components/ui/modal";
-import { Select, SelectItem } from "@/components/ui/select";
 import {
   getNodeList,
   createPeerShare,
@@ -49,6 +54,7 @@ import {
   importRemoteNode,
   updatePeerShare,
 } from "@/api";
+import { uiColor } from "@/components/ui/shared";
 
 interface Node {
   id: number;
@@ -478,38 +484,36 @@ export default function PanelSharingPage() {
 
   return (
     <AnimatedPage>
-      <div className="page-toolbar">
-        <SegmentedControl
-          aria-label="面板共享类型"
-          data={[
-            { value: "my-shares", label: `我分享的 ${shares.length}` },
-            {
-              value: "remote-nodes",
-              label: `远程接入 ${remoteUsageNodes.length}`,
-            },
-          ]}
-          size="sm"
-          value={selectedTab}
-          onChange={setSelectedTab}
-        />
-        {selectedTab === "my-shares" ? (
-          <Button
-            color="primary"
-            startContent={<Plus size={16} />}
-            onPress={() => setCreateShareOpen(true)}
-          >
-            创建分享
-          </Button>
-        ) : (
-          <Button
-            color="primary"
-            startContent={<Download size={16} />}
-            onPress={() => setImportNodeOpen(true)}
-          >
-            导入远程节点
-          </Button>
-        )}
-      </div>
+      <PageToolbar
+        primary={
+          selectedTab === "my-shares"
+            ? {
+                label: "创建分享",
+                icon: <Plus size={16} />,
+                onClick: () => setCreateShareOpen(true),
+              }
+            : {
+                label: "导入远程节点",
+                icon: <Download size={16} />,
+                onClick: () => setImportNodeOpen(true),
+              }
+        }
+        tabs={
+          <SegmentedControl
+            aria-label="面板共享类型"
+            data={[
+              { value: "my-shares", label: `我分享的 ${shares.length}` },
+              {
+                value: "remote-nodes",
+                label: `远程接入 ${remoteUsageNodes.length}`,
+              },
+            ]}
+            size="sm"
+            value={selectedTab}
+            onChange={setSelectedTab}
+          />
+        }
+      />
 
       <p className="-mt-2 mb-5 px-1 text-xs text-default-500">
         {selectedTab === "my-shares"
@@ -524,9 +528,8 @@ export default function PanelSharingPage() {
           <EmptyStateCard
             action={
               <Button
-                color="primary"
-                startContent={<Plus size={16} />}
-                onPress={() => setCreateShareOpen(true)}
+                leftSection={<Plus size={16} />}
+                onClick={() => setCreateShareOpen(true)}
               >
                 创建分享
               </Button>
@@ -560,9 +563,14 @@ export default function PanelSharingPage() {
                         {share.name}
                       </span>
                     </div>
-                    <Chip className="shrink-0" color={expiry.tone} size="xs">
+                    <Badge
+                      className="shrink-0"
+                      color={uiColor(expiry.tone)}
+                      size="xs"
+                      variant="light"
+                    >
                       {expiry.text}
-                    </Chip>
+                    </Badge>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -636,13 +644,15 @@ export default function PanelSharingPage() {
                     share.usedPortDetails.length > 0 && (
                       <div className="flex max-h-16 flex-wrap gap-1 overflow-y-auto">
                         {share.usedPortDetails.map((item) => (
-                          <Chip
+                          <Badge
                             key={item.runtimeId}
                             className="font-mono"
+                            color="gray"
                             size="xs"
+                            variant="light"
                           >
                             {item.port} · {item.role || "reserved"}
-                          </Chip>
+                          </Badge>
                         ))}
                       </div>
                     )}
@@ -667,18 +677,20 @@ export default function PanelSharingPage() {
 
                   <div className="mt-auto flex items-center gap-1.5 border-t border-divider pt-3">
                     <Button
-                      size="sm"
-                      startContent={<SquarePen size={14} />}
-                      variant="light"
-                      onPress={() => openEditShare(share)}
+                      color="gray"
+                      leftSection={<SquarePen size={14} />}
+                      size="xs"
+                      variant="subtle"
+                      onClick={() => openEditShare(share)}
                     >
                       编辑
                     </Button>
                     <Button
-                      size="sm"
-                      startContent={<RotateCcw size={14} />}
-                      variant="light"
-                      onPress={() => setPendingAction({ kind: "reset", share })}
+                      color="gray"
+                      leftSection={<RotateCcw size={14} />}
+                      size="xs"
+                      variant="subtle"
+                      onClick={() => setPendingAction({ kind: "reset", share })}
                     >
                       重置流量
                     </Button>
@@ -707,9 +719,8 @@ export default function PanelSharingPage() {
         <EmptyStateCard
           action={
             <Button
-              color="primary"
-              startContent={<Download size={16} />}
-              onPress={() => setImportNodeOpen(true)}
+              leftSection={<Download size={16} />}
+              onClick={() => setImportNodeOpen(true)}
             >
               导入远程节点
             </Button>
@@ -751,9 +762,14 @@ export default function PanelSharingPage() {
                       )}
                     </div>
                   </div>
-                  <Chip className="shrink-0" size="xs">
+                  <Badge
+                    className="shrink-0"
+                    color="gray"
+                    size="xs"
+                    variant="light"
+                  >
                     绑定 {node.activeBindingNum || 0}
-                  </Chip>
+                  </Badge>
                 </div>
 
                 {node.syncError && (
@@ -843,29 +859,24 @@ export default function PanelSharingPage() {
 
       <ConfirmDialog
         confirmLabel={pendingAction?.kind === "reset" ? "重置" : "删除"}
-        isOpen={pendingAction !== null}
         loading={pendingActionLoading}
         message={
           pendingAction?.kind === "reset"
             ? `重置“${pendingAction.share.name}”的共享流量统计？`
             : `删除“${pendingAction?.share.name ?? ""}”后，已导入该分享的面板将无法继续使用。此操作无法撤销。`
         }
+        opened={pendingAction !== null}
         title={pendingAction?.kind === "reset" ? "重置共享流量" : "删除分享"}
         onClose={() => setPendingAction(null)}
         onConfirm={() => void confirmPendingAction()}
       />
 
       {/* Create Share Modal */}
-      <Modal
-        backdrop="blur"
-        isOpen={createShareOpen}
-        scrollBehavior="inside"
-        onClose={() => setCreateShareOpen(false)}
-      >
+      <Modal opened={createShareOpen} onClose={() => setCreateShareOpen(false)}>
         <ModalContent>
           <ModalHeader>创建分享</ModalHeader>
           <ModalBody>
-            <Input
+            <TextInput
               label="名称"
               placeholder="备注名称"
               value={shareForm.name}
@@ -874,21 +885,21 @@ export default function PanelSharingPage() {
               }
             />
             <Select
+              clearable
+              searchable
+              data={nodes.map((node) => ({
+                value: String(node.id),
+                label: node.name,
+              }))}
               label="选择节点"
               placeholder="选择要分享的本地节点"
-              selectedKeys={shareForm.nodeId ? [shareForm.nodeId] : []}
-              onChange={(e) =>
-                setShareForm({ ...shareForm, nodeId: e.target.value })
+              value={shareForm.nodeId ? shareForm.nodeId : null}
+              onChange={(nodeId) =>
+                setShareForm({ ...shareForm, nodeId: nodeId ?? "" })
               }
-            >
-              {nodes.map((node) => (
-                <SelectItem key={node.id} textValue={node.name}>
-                  {node.name}
-                </SelectItem>
-              ))}
-            </Select>
+            />
             <div className="flex gap-4">
-              <Input
+              <TextInput
                 label="起始端口"
                 type="number"
                 value={shareForm.portRangeStart.toString()}
@@ -899,7 +910,7 @@ export default function PanelSharingPage() {
                   })
                 }
               />
-              <Input
+              <TextInput
                 label="结束端口"
                 type="number"
                 value={shareForm.portRangeEnd.toString()}
@@ -911,7 +922,7 @@ export default function PanelSharingPage() {
                 }
               />
             </div>
-            <Input
+            <TextInput
               description="0 表示永久"
               label="有效期 (天)"
               type="number"
@@ -936,7 +947,7 @@ export default function PanelSharingPage() {
                 setShareUnit(unit);
               }}
             />
-            <Input
+            <TextInput
               description="限制使用此Token的来源面板域名，多个域名用逗号分隔，留空不限制"
               label="允许的域名 (可选)"
               placeholder="example.com, panel.test.com"
@@ -945,7 +956,7 @@ export default function PanelSharingPage() {
                 setShareForm({ ...shareForm, allowedDomains: e.target.value })
               }
             />
-            <Input
+            <TextInput
               description="仅白名单IP可导入此分享，支持IPv4/IPv6/CIDR，多个用逗号分隔"
               label="允许的API IP (可选)"
               placeholder="203.0.113.10, 2001:db8::10, 198.51.100.0/24"
@@ -956,25 +967,20 @@ export default function PanelSharingPage() {
             />
           </ModalBody>
           <ModalFooter>
-            <Button onPress={() => setCreateShareOpen(false)}>取消</Button>
-            <Button color="primary" onPress={handleCreateShare}>
-              创建
+            <Button variant="default" onClick={() => setCreateShareOpen(false)}>
+              取消
             </Button>
+            <Button onClick={handleCreateShare}>创建</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
       {/* Edit Share Modal */}
-      <Modal
-        backdrop="blur"
-        isOpen={editShareOpen}
-        scrollBehavior="inside"
-        onClose={() => setEditShareOpen(false)}
-      >
+      <Modal opened={editShareOpen} onClose={() => setEditShareOpen(false)}>
         <ModalContent>
           <ModalHeader>编辑分享</ModalHeader>
           <ModalBody>
-            <Input
+            <TextInput
               label="名称"
               placeholder="备注名称"
               value={editForm.name}
@@ -983,7 +989,7 @@ export default function PanelSharingPage() {
               }
             />
             <div className="flex gap-4">
-              <Input
+              <TextInput
                 label="起始端口"
                 type="number"
                 value={editForm.portRangeStart.toString()}
@@ -994,7 +1000,7 @@ export default function PanelSharingPage() {
                   })
                 }
               />
-              <Input
+              <TextInput
                 label="结束端口"
                 type="number"
                 value={editForm.portRangeEnd.toString()}
@@ -1020,7 +1026,7 @@ export default function PanelSharingPage() {
                 setEditBandwidthChanged(true);
               }}
             />
-            <Input
+            <TextInput
               description="留空或清除表示永久有效"
               label="过期时间"
               type="datetime-local"
@@ -1038,7 +1044,7 @@ export default function PanelSharingPage() {
                 })
               }
             />
-            <Input
+            <TextInput
               description="限制使用此Token的来源面板域名，多个域名用逗号分隔，留空不限制"
               label="允许的域名 (可选)"
               placeholder="example.com, panel.test.com"
@@ -1047,7 +1053,7 @@ export default function PanelSharingPage() {
                 setEditForm({ ...editForm, allowedDomains: e.target.value })
               }
             />
-            <Input
+            <TextInput
               description="仅白名单IP可导入此分享，支持IPv4/IPv6/CIDR，多个用逗号分隔"
               label="允许的API IP (可选)"
               placeholder="203.0.113.10, 2001:db8::10, 198.51.100.0/24"
@@ -1058,24 +1064,20 @@ export default function PanelSharingPage() {
             />
           </ModalBody>
           <ModalFooter>
-            <Button onPress={() => setEditShareOpen(false)}>取消</Button>
-            <Button color="primary" onPress={handleEditShare}>
-              保存
+            <Button variant="default" onClick={() => setEditShareOpen(false)}>
+              取消
             </Button>
+            <Button onClick={handleEditShare}>保存</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
       {/* Import Node Modal */}
-      <Modal
-        backdrop="blur"
-        isOpen={importNodeOpen}
-        onClose={() => setImportNodeOpen(false)}
-      >
+      <Modal opened={importNodeOpen} onClose={() => setImportNodeOpen(false)}>
         <ModalContent>
           <ModalHeader>导入远程节点</ModalHeader>
           <ModalBody>
-            <Input
+            <TextInput
               label="远程面板地址"
               placeholder="http://panel.example.com:8088"
               value={importForm.remoteUrl}
@@ -1083,7 +1085,7 @@ export default function PanelSharingPage() {
                 setImportForm({ ...importForm, remoteUrl: e.target.value })
               }
             />
-            <Input
+            <TextInput
               label="Token"
               placeholder="Bearer Token"
               value={importForm.token}
@@ -1093,8 +1095,10 @@ export default function PanelSharingPage() {
             />
           </ModalBody>
           <ModalFooter>
-            <Button onPress={() => setImportNodeOpen(false)}>取消</Button>
-            <Button color="secondary" onPress={handleImportNode}>
+            <Button variant="default" onClick={() => setImportNodeOpen(false)}>
+              取消
+            </Button>
+            <Button color="violet" onClick={handleImportNode}>
               导入
             </Button>
           </ModalFooter>

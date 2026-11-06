@@ -1,12 +1,47 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { parseDate } from "@internationalized/date";
-import { LayoutGrid, List, SearchX, UserPlus, Users } from "lucide-react";
-import { SegmentedControl } from "@mantine/core";
+import { Button } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import { SearchX, UserPlus, Users } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { SearchBar } from "@/components/search-bar";
+import {
+  assignMonitorPermission,
+  batchAssignUserTunnel,
+  createUser,
+  deleteUser,
+  getAllUsers,
+  getMonitorPermissionList,
+  getSpeedLimitList,
+  getTunnelList,
+  getUserGroupList,
+  getUserGroups,
+  getUserTunnelList,
+  removeMonitorPermission,
+  removeUserTunnel,
+  resetUserFlow,
+  resetUserQuota,
+  updateUser,
+  updateUserTunnel,
+} from "@/api";
+import { AnimatedPage } from "@/components/animated-page";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { FormSection } from "@/components/form-section";
-import { TunnelPermissionList } from "@/pages/user/tunnel-permission-list";
+import { EmptyStateCard, PageLoadingState } from "@/components/page-state";
+import { PageToolbar } from "@/components/page-toolbar";
+import { SearchBar } from "@/components/search-bar";
+import { useLocalStorageState } from "@/hooks/use-local-storage-state";
+import toast from "@/lib/notifications";
+import { EditTunnelPermissionModal } from "@/pages/user/edit-tunnel-permission-modal";
+import {
+  calculateTunnelUsedFlow,
+  calculateUserTotalUsedFlow,
+  formatFlow,
+  getExpireStatus,
+  normalizeUserItem,
+  normalizeUserTunnelItem,
+  trafficInputFor,
+  USER_SEARCH_DEBOUNCE_MS,
+} from "@/pages/user/presentation";
+import { TunnelPermissionModal } from "@/pages/user/tunnel-permission-modal";
+import { UserFormModal } from "@/pages/user/user-form-modal";
 import {
   UserCard,
   UserListHeader,
@@ -14,69 +49,19 @@ import {
   type UserItemHandlers,
 } from "@/pages/user/user-items";
 import {
-  formatFlow,
-  formatQuotaLimit,
-  trafficInputFor,
-  getExpireStatus,
-  calculateUserTotalUsedFlow,
-  calculateTunnelUsedFlow,
-  USER_SEARCH_DEBOUNCE_MS,
-  normalizeUserItem,
-  normalizeUserTunnelItem,
-} from "@/pages/user/presentation";
-import toast from "@/lib/notifications";
-import { AnimatedPage } from "@/components/animated-page";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure,
-} from "@/components/ui/modal";
-import { Chip } from "@/components/ui/chip";
-import { Select, SelectItem } from "@/components/ui/select";
-import { RadioGroup, Radio } from "@/components/ui/radio";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Spinner } from "@/components/ui/spinner";
-import {
+  Pagination as PaginationType,
+  SpeedLimit,
+  Tunnel,
+  TunnelAssignItem,
   User,
   UserForm,
   UserGroup,
   UserTunnel,
-  TunnelAssignItem,
-  Tunnel,
-  SpeedLimit,
-  Pagination as PaginationType,
 } from "@/types";
-import {
-  getAllUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-  getTunnelList,
-  batchAssignUserTunnel,
-  getUserTunnelList,
-  removeUserTunnel,
-  updateUserTunnel,
-  getSpeedLimitList,
-  resetUserFlow,
-  resetUserQuota,
-  getUserGroupList,
-  getUserGroups,
-  getMonitorPermissionList,
-  assignMonitorPermission,
-  removeMonitorPermission,
-} from "@/api";
-import { EmptyStateCard, PageLoadingState } from "@/components/page-state";
-import { TrafficLimitField } from "@/components/traffic-limit-field";
-import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { removeItemsById, replaceItemById } from "@/utils/list-state";
 import { parseTrafficInput, type TrafficUnit } from "@/utils/traffic";
+
+// Expiry dates are inclusive: a picked day lasts until 23:59:59 local time.
 
 export default function UserPage() {
   // 状态管理
@@ -86,7 +71,6 @@ export default function UserPage() {
     "user-search-keyword",
     "",
   );
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [viewMode, setViewMode] = useLocalStorageState<"list" | "grid">(
     "user-view-mode",
     "grid",
@@ -99,11 +83,8 @@ export default function UserPage() {
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 用户表单相关状态
-  const {
-    isOpen: isUserModalOpen,
-    onOpen: onUserModalOpen,
-    onClose: onUserModalClose,
-  } = useDisclosure();
+  const [isUserModalOpen, { open: onUserModalOpen, close: onUserModalClose }] =
+    useDisclosure();
   const [isEdit, setIsEdit] = useState(false);
   const [userForm, setUserForm] = useState<UserForm>({
     user: "",
@@ -131,11 +112,10 @@ export default function UserPage() {
   );
 
   // 隧道权限管理相关状态
-  const {
-    isOpen: isTunnelModalOpen,
-    onOpen: onTunnelModalOpen,
-    onClose: onTunnelModalClose,
-  } = useDisclosure();
+  const [
+    isTunnelModalOpen,
+    { open: onTunnelModalOpen, close: onTunnelModalClose },
+  ] = useDisclosure();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [monitorPermissionUserIds, setMonitorPermissionUserIds] = useState<
     Set<number>
@@ -154,47 +134,42 @@ export default function UserPage() {
   >(new Map());
 
   // 编辑隧道权限相关状态
-  const {
-    isOpen: isEditTunnelModalOpen,
-    onOpen: onEditTunnelModalOpen,
-    onClose: onEditTunnelModalClose,
-  } = useDisclosure();
+  const [
+    isEditTunnelModalOpen,
+    { open: onEditTunnelModalOpen, close: onEditTunnelModalClose },
+  ] = useDisclosure();
   const [editTunnelForm, setEditTunnelForm] = useState<UserTunnel | null>(null);
   const [tunnelFlowInput, setTunnelFlowInput] = useState("");
   const [tunnelFlowUnit, setTunnelFlowUnit] = useState<TrafficUnit>("GB");
   const [editTunnelLoading, setEditTunnelLoading] = useState(false);
 
   // 删除确认相关状态
-  const {
-    isOpen: isDeleteModalOpen,
-    onOpen: onDeleteModalOpen,
-    onClose: onDeleteModalClose,
-  } = useDisclosure();
+  const [
+    isDeleteModalOpen,
+    { open: onDeleteModalOpen, close: onDeleteModalClose },
+  ] = useDisclosure();
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // 删除隧道权限确认相关状态
-  const {
-    isOpen: isDeleteTunnelModalOpen,
-    onOpen: onDeleteTunnelModalOpen,
-    onClose: onDeleteTunnelModalClose,
-  } = useDisclosure();
+  const [
+    isDeleteTunnelModalOpen,
+    { open: onDeleteTunnelModalOpen, close: onDeleteTunnelModalClose },
+  ] = useDisclosure();
   const [tunnelToDelete, setTunnelToDelete] = useState<UserTunnel | null>(null);
 
   // 重置流量确认相关状态
-  const {
-    isOpen: isResetFlowModalOpen,
-    onOpen: onResetFlowModalOpen,
-    onClose: onResetFlowModalClose,
-  } = useDisclosure();
+  const [
+    isResetFlowModalOpen,
+    { open: onResetFlowModalOpen, close: onResetFlowModalClose },
+  ] = useDisclosure();
   const [userToReset, setUserToReset] = useState<User | null>(null);
   const [resetFlowLoading, setResetFlowLoading] = useState(false);
 
   // 重置隧道流量确认相关状态
-  const {
-    isOpen: isResetTunnelFlowModalOpen,
-    onOpen: onResetTunnelFlowModalOpen,
-    onClose: onResetTunnelFlowModalClose,
-  } = useDisclosure();
+  const [
+    isResetTunnelFlowModalOpen,
+    { open: onResetTunnelFlowModalOpen, close: onResetTunnelFlowModalClose },
+  ] = useDisclosure();
   const [tunnelToReset, setTunnelToReset] = useState<UserTunnel | null>(null);
   const [resetTunnelFlowLoading, setResetTunnelFlowLoading] = useState(false);
 
@@ -929,57 +904,23 @@ export default function UserPage() {
 
   return (
     <AnimatedPage>
-      <div className="page-toolbar">
-        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
-          <div className="min-w-40 flex-1 sm:max-w-72">
-            <SearchBar
-              isVisible={isSearchVisible}
-              placeholder="搜索用户名"
-              value={searchKeyword}
-              onChange={setSearchKeyword}
-              onClose={() => setIsSearchVisible(false)}
-              onOpen={() => setIsSearchVisible(true)}
-              onSubmit={handleSearch}
-            />
-          </div>
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <SegmentedControl
-            aria-label="显示方式"
-            data={[
-              {
-                value: "grid",
-                label: (
-                  <span className="flex items-center gap-1.5">
-                    <LayoutGrid size={15} />
-                    <span className="hidden sm:inline">卡片</span>
-                  </span>
-                ),
-              },
-              {
-                value: "list",
-                label: (
-                  <span className="flex items-center gap-1.5">
-                    <List size={15} />
-                    <span className="hidden sm:inline">列表</span>
-                  </span>
-                ),
-              },
-            ]}
-            size="sm"
-            value={viewMode}
-            onChange={(value) => setViewMode(value as "list" | "grid")}
+      <PageToolbar
+        primary={{
+          label: "新增",
+          noun: "用户",
+          icon: <UserPlus size={16} />,
+          onClick: handleAdd,
+        }}
+        search={
+          <SearchBar
+            placeholder="搜索用户名"
+            value={searchKeyword}
+            onChange={setSearchKeyword}
+            onSubmit={handleSearch}
           />
-          <Button
-            className="ml-auto sm:ml-0"
-            color="primary"
-            startContent={<UserPlus size={16} />}
-            onPress={handleAdd}
-          >
-            新增<span className="hidden sm:inline">用户</span>
-          </Button>
-        </div>
-      </div>
+        }
+        view={{ value: viewMode, onChange: setViewMode }}
+      />
 
       {!loading && users.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
@@ -1019,20 +960,19 @@ export default function UserPage() {
         searchKeyword.trim() ? (
           <EmptyStateCard
             action={
-              <Button onPress={() => setSearchKeyword("")}>清空搜索</Button>
+              <Button variant="default" onClick={() => setSearchKeyword("")}>
+                清空搜索
+              </Button>
             }
             description="换个用户名再试试。"
             icon={<SearchX size={20} />}
             title="没有匹配的用户"
+            tone="default"
           />
         ) : (
           <EmptyStateCard
             action={
-              <Button
-                color="primary"
-                startContent={<UserPlus size={16} />}
-                onPress={handleAdd}
-              >
+              <Button leftSection={<UserPlus size={16} />} onClick={handleAdd}>
                 新增用户
               </Button>
             }
@@ -1057,675 +997,67 @@ export default function UserPage() {
       )}
 
       {/* 用户表单模态框 */}
-      <Modal
-        backdrop="blur"
-        isOpen={isUserModalOpen}
-        placement="center"
-        scrollBehavior="inside"
-        size="xl"
-        onClose={onUserModalClose}
-      >
-        <ModalContent>
-          <ModalHeader className="flex flex-col gap-1">
-            <h2 className="text-xl font-bold">
-              {isEdit ? "编辑用户" : "新增用户"}
-            </h2>
-            <p className="text-small text-default-500">
-              {isEdit
-                ? "修改账号、配额与有效期，密码留空则保持不变"
-                : "创建面板账号并设置配额与有效期"}
-            </p>
-          </ModalHeader>
-          <ModalBody>
-            <FormSection title="账号">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Input
-                  isRequired
-                  label="用户名"
-                  value={userForm.user}
-                  onChange={(e) =>
-                    setUserForm((prev) => ({ ...prev, user: e.target.value }))
-                  }
-                />
-                <Input
-                  isRequired={!isEdit}
-                  label="密码"
-                  placeholder={isEdit ? "留空则不修改密码" : "请输入密码"}
-                  type="password"
-                  value={userForm.pwd}
-                  onChange={(e) =>
-                    setUserForm((prev) => ({ ...prev, pwd: e.target.value }))
-                  }
-                />
-              </div>
-            </FormSection>
-            <FormSection
-              description="超出流量或规则数量后，该用户无法继续新增转发"
-              title="配额与限制"
-            >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <TrafficLimitField
-                  isRequired
-                  label="流量限制"
-                  unit={userFlowUnit}
-                  value={userFlowInput}
-                  onChange={(value, unit) => {
-                    setUserFlowInput(value);
-                    setUserFlowUnit(unit);
-                  }}
-                />
-                <Select
-                  label="流量重置日期"
-                  selectedKeys={[userForm.flowResetTime.toString()]}
-                  onSelectionChange={(keys) => {
-                    const value = Array.from(keys)[0] as string;
-
-                    setUserForm((prev) => ({
-                      ...prev,
-                      flowResetTime: Number(value),
-                    }));
-                  }}
-                >
-                  <>
-                    <SelectItem key="0" textValue="不重置">
-                      不重置
-                    </SelectItem>
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                      <SelectItem
-                        key={day.toString()}
-                        textValue={`每月${day}号（0点重置）`}
-                      >
-                        每月{day}号（0点重置）
-                      </SelectItem>
-                    ))}
-                  </>
-                </Select>
-                <Input
-                  isRequired
-                  label="规则数量"
-                  max="99999"
-                  min="1"
-                  type="number"
-                  value={userForm.num.toString()}
-                  onChange={(e) => {
-                    const value = Math.min(
-                      Math.max(Number(e.target.value) || 0, 1),
-                      99999,
-                    );
-
-                    setUserForm((prev) => ({ ...prev, num: value }));
-                  }}
-                />
-                <Input
-                  label="最大连接数"
-                  min="0"
-                  placeholder="0 或空表示不限制"
-                  type="number"
-                  value={
-                    userForm.maxConn === 0 ? "" : String(userForm.maxConn || "")
-                  }
-                  onChange={(e) => {
-                    const value = Math.max(Number(e.target.value) || 0, 0);
-
-                    setUserForm((prev) => ({ ...prev, maxConn: value }));
-                  }}
-                />
-              </div>
-              {isEdit &&
-                editingUser &&
-                ((editingUser.dailyQuotaGB ?? 0) > 0 ||
-                  (editingUser.monthlyQuotaGB ?? 0) > 0 ||
-                  (editingUser.disabledByQuota ?? 0) > 0) && (
-                  <div className="space-y-3 rounded-[10px] border border-divider bg-default-soft p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">
-                          当前配额状态
-                        </h3>
-                        <p className="text-xs text-default-500">
-                          配额超额后会自动暂停该用户的转发，重置后可恢复
-                        </p>
-                      </div>
-                      {editingUser.disabledByQuota ? (
-                        <Chip color="danger" size="sm" variant="flat">
-                          配额已触发禁用
-                        </Chip>
-                      ) : (
-                        <Chip color="success" size="sm" variant="flat">
-                          配额正常
-                        </Chip>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <div className="rounded-lg bg-content1 p-3">
-                        <div className="text-xs text-default-500">每日用量</div>
-                        <div className="mt-1 text-sm font-semibold text-foreground">
-                          {formatFlow(Number(editingUser.dailyUsedBytes ?? 0))}{" "}
-                          / {formatQuotaLimit(editingUser.dailyQuotaGB)}
-                        </div>
-                      </div>
-                      <div className="rounded-lg bg-content1 p-3">
-                        <div className="text-xs text-default-500">每月用量</div>
-                        <div className="mt-1 text-sm font-semibold text-foreground">
-                          {formatFlow(
-                            Number(editingUser.monthlyUsedBytes ?? 0),
-                          )}{" "}
-                          / {formatQuotaLimit(editingUser.monthlyQuotaGB)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        color="warning"
-                        isLoading={quotaResetLoading}
-                        size="sm"
-                        variant="flat"
-                        onPress={() => handleQuotaReset("daily")}
-                      >
-                        重置每日配额
-                      </Button>
-                      <Button
-                        color="warning"
-                        isLoading={quotaResetLoading}
-                        size="sm"
-                        variant="flat"
-                        onPress={() => handleQuotaReset("monthly")}
-                      >
-                        重置每月配额
-                      </Button>
-                      <Button
-                        color="primary"
-                        isLoading={quotaResetLoading}
-                        size="sm"
-                        variant="flat"
-                        onPress={() => handleQuotaReset("all")}
-                      >
-                        全部重置并恢复
-                      </Button>
-                    </div>
-                  </div>
-                )}
-            </FormSection>
-            <FormSection title="有效期与状态">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <DatePicker
-                  isRequired
-                  showMonthAndYearPickers
-                  label="过期时间"
-                  value={
-                    userForm.expTime
-                      ? (parseDate(
-                          userForm.expTime.toISOString().split("T")[0],
-                        ) as any)
-                      : null
-                  }
-                  onChange={(date) => {
-                    if (date) {
-                      const jsDate = new Date(
-                        date.year,
-                        date.month - 1,
-                        date.day,
-                        23,
-                        59,
-                        59,
-                      );
-
-                      setUserForm((prev) => ({ ...prev, expTime: jsDate }));
-                    } else {
-                      setUserForm((prev) => ({ ...prev, expTime: null }));
-                    }
-                  }}
-                />
-                <div className="flex flex-col justify-end">
-                  <RadioGroup
-                    label="状态"
-                    orientation="horizontal"
-                    value={userForm.status.toString()}
-                    onValueChange={(value: string) =>
-                      setUserForm((prev) => ({
-                        ...prev,
-                        status: Number(value),
-                      }))
-                    }
-                  >
-                    <Radio value="1">正常</Radio>
-                    <Radio value="0">禁用</Radio>
-                  </RadioGroup>
-                </div>
-              </div>
-              {userGroups.length > 0 && (
-                <Select
-                  label="用户分组（可选）"
-                  placeholder="选择要加入的分组"
-                  selectedKeys={new Set((userForm.groupIds ?? []).map(String))}
-                  selectionMode="multiple"
-                  onSelectionChange={(keys) => {
-                    const selected = Array.from(keys as Set<string>).map(
-                      Number,
-                    );
-
-                    setUserForm((prev) => ({ ...prev, groupIds: selected }));
-                  }}
-                >
-                  {userGroups.map((g) => (
-                    <SelectItem key={g.id.toString()} textValue={g.name}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
-                </Select>
-              )}
-            </FormSection>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" onPress={onUserModalClose}>
-              取消
-            </Button>
-            <Button
-              color="primary"
-              isLoading={userFormLoading}
-              onPress={handleSubmitUser}
-            >
-              {isEdit ? "保存修改" : "创建用户"}
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <UserFormModal
+        editingUser={editingUser}
+        handleQuotaReset={handleQuotaReset}
+        handleSubmitUser={handleSubmitUser}
+        isEdit={isEdit}
+        isUserModalOpen={isUserModalOpen}
+        quotaResetLoading={quotaResetLoading}
+        setUserFlowInput={setUserFlowInput}
+        setUserFlowUnit={setUserFlowUnit}
+        setUserForm={setUserForm}
+        userFlowInput={userFlowInput}
+        userFlowUnit={userFlowUnit}
+        userForm={userForm}
+        userFormLoading={userFormLoading}
+        userGroups={userGroups}
+        onUserModalClose={onUserModalClose}
+      />
 
       {/* 隧道权限管理模态框 */}
-      <Modal
-        backdrop="blur"
-        isDismissable={false}
-        isOpen={isTunnelModalOpen}
-        placement="center"
-        scrollBehavior="inside"
-        size="2xl"
-        onClose={onTunnelModalClose}
-      >
-        <ModalContent>
-          <ModalHeader className="flex flex-col gap-1">
-            <h2 className="text-xl font-bold">隧道权限</h2>
-            <p className="text-small text-default-500">
-              管理用户 {currentUser?.user} 可使用的隧道与监控功能
-            </p>
-          </ModalHeader>
-          <ModalBody>
-            <FormSection title="监控权限">
-              <div className="flex items-center justify-between gap-4 rounded-[10px] border border-divider px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    允许访问监控功能
-                  </p>
-                  <p className="mt-0.5 text-xs text-default-500">
-                    授予后，该用户可以访问监控页面并管理服务监控（TCP/ICMP）。
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {monitorPermissionLoading ? <Spinner size="sm" /> : null}
-                  <Switch
-                    isDisabled={
-                      !currentUser ||
-                      monitorPermissionLoading ||
-                      monitorPermissionMutatingUserId === currentUser.id
-                    }
-                    isSelected={
-                      currentUser
-                        ? monitorPermissionUserIds.has(currentUser.id)
-                        : false
-                    }
-                    onValueChange={(v) =>
-                      currentUser &&
-                      void setUserMonitorPermission(currentUser.id, v)
-                    }
-                  />
-                </div>
-              </div>
-            </FormSection>
-
-            <FormSection
-              description="流量限制、规则数量、到期时间与流量重置日期自动继承用户设置；选中后可单独指定限速。"
-              title="分配新权限"
-            >
-              <div className="grid max-h-72 gap-2 overflow-y-auto pr-1">
-                {tunnels.map((tunnel) => {
-                  const isAssigned = isTunnelAssigned(tunnel.id);
-                  const isSelected = batchTunnelSelections.has(tunnel.id);
-                  const tunnelSpeedLimits = getSpeedLimitsForTunnel(tunnel.id);
-
-                  return (
-                    <div
-                      key={tunnel.id}
-                      aria-disabled={isAssigned}
-                      className={`
-                            px-3 py-2.5 rounded-lg border transition-colors cursor-pointer
-                            ${
-                              isAssigned
-                                ? "bg-default-soft border-divider opacity-60 cursor-not-allowed"
-                                : isSelected
-                                  ? "bg-primary-soft border-primary-line"
-                                  : "bg-content1 border-divider hover:border-primary-line"
-                            }
-                          `}
-                      role="button"
-                      tabIndex={isAssigned ? -1 : 0}
-                      onClick={() =>
-                        !isAssigned && toggleTunnelSelection(tunnel.id)
-                      }
-                      onKeyDown={(event) => {
-                        if (isAssigned) {
-                          return;
-                        }
-
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          toggleTunnelSelection(tunnel.id);
-                        }
-                      }}
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <Checkbox
-                            color="primary"
-                            isDisabled={isAssigned}
-                            isSelected={isSelected}
-                            size="sm"
-                            onClick={(event) => event.stopPropagation()}
-                            onKeyDown={(event) => event.stopPropagation()}
-                            onValueChange={() =>
-                              toggleTunnelSelection(tunnel.id)
-                            }
-                          />
-                          <span
-                            className={`text-sm font-medium truncate ${isAssigned ? "text-default-400" : "text-foreground"}`}
-                          >
-                            {tunnel.name}
-                          </span>
-                          {isAssigned && (
-                            <Chip
-                              className="shrink-0"
-                              color="default"
-                              size="sm"
-                              variant="flat"
-                            >
-                              已分配
-                            </Chip>
-                          )}
-                        </div>
-
-                        {isSelected && !isAssigned && (
-                          <div>
-                            <Select
-                              className="w-36"
-                              classNames={{
-                                trigger: "min-h-10 h-10",
-                              }}
-                              placeholder="不限速"
-                              selectedKeys={
-                                batchTunnelSelections.get(tunnel.id) !== null &&
-                                batchTunnelSelections.get(tunnel.id) !==
-                                  undefined
-                                  ? [
-                                      batchTunnelSelections
-                                        .get(tunnel.id)!
-                                        .toString(),
-                                    ]
-                                  : []
-                              }
-                              size="sm"
-                              onClick={(e) => e.stopPropagation()}
-                              onSelectionChange={(keys) => {
-                                const selectedKey = Array.from(keys)[0] as
-                                  | string
-                                  | undefined;
-
-                                updateTunnelSpeedLimit(
-                                  tunnel.id,
-                                  selectedKey ? Number(selectedKey) : null,
-                                );
-                              }}
-                            >
-                              {tunnelSpeedLimits.map((sl) => (
-                                <SelectItem
-                                  key={sl.id.toString()}
-                                  textValue={sl.name}
-                                >
-                                  {sl.name}
-                                </SelectItem>
-                              ))}
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {tunnels.length === 0 && (
-                  <p className="rounded-[10px] border border-dashed border-divider px-4 py-6 text-center text-sm text-default-500">
-                    暂无可用隧道
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  className="w-full sm:w-auto"
-                  color="primary"
-                  isDisabled={batchTunnelSelections.size === 0}
-                  isLoading={assignLoading}
-                  onPress={handleBatchAssignTunnel}
-                >
-                  分配权限
-                </Button>
-                {batchTunnelSelections.size > 0 && (
-                  <span className="text-xs text-default-500">
-                    已选 {batchTunnelSelections.size} 个隧道
-                  </span>
-                )}
-              </div>
-            </FormSection>
-
-            <FormSection
-              description={`共 ${userTunnels.length} 条隧道权限`}
-              title="已有权限"
-            >
-              <TunnelPermissionList
-                items={userTunnels}
-                loading={tunnelListLoading}
-                onEdit={handleEditTunnel}
-                onRemove={handleRemoveTunnel}
-                onResetFlow={handleResetTunnelFlow}
-              />
-            </FormSection>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" onPress={onTunnelModalClose}>
-              关闭
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <TunnelPermissionModal
+        assignLoading={assignLoading}
+        batchTunnelSelections={batchTunnelSelections}
+        currentUser={currentUser}
+        getSpeedLimitsForTunnel={getSpeedLimitsForTunnel}
+        handleBatchAssignTunnel={handleBatchAssignTunnel}
+        handleEditTunnel={handleEditTunnel}
+        handleRemoveTunnel={handleRemoveTunnel}
+        handleResetTunnelFlow={handleResetTunnelFlow}
+        isTunnelAssigned={isTunnelAssigned}
+        isTunnelModalOpen={isTunnelModalOpen}
+        monitorPermissionLoading={monitorPermissionLoading}
+        monitorPermissionMutatingUserId={monitorPermissionMutatingUserId}
+        monitorPermissionUserIds={monitorPermissionUserIds}
+        setUserMonitorPermission={setUserMonitorPermission}
+        toggleTunnelSelection={toggleTunnelSelection}
+        tunnelListLoading={tunnelListLoading}
+        tunnels={tunnels}
+        updateTunnelSpeedLimit={updateTunnelSpeedLimit}
+        userTunnels={userTunnels}
+        onTunnelModalClose={onTunnelModalClose}
+      />
 
       {/* 编辑隧道权限模态框 */}
-      <Modal
-        backdrop="blur"
-        isDismissable={false}
-        isOpen={isEditTunnelModalOpen}
-        placement="center"
-        scrollBehavior="inside"
-        size="lg"
-        onClose={onEditTunnelModalClose}
-      >
-        <ModalContent>
-          <ModalHeader className="flex flex-col gap-1">
-            <h2 className="text-xl font-bold">编辑隧道权限</h2>
-            <p className="text-small text-default-500">
-              {currentUser?.user} · {editTunnelForm?.tunnelName}
-            </p>
-          </ModalHeader>
-          <ModalBody>
-            {editTunnelForm && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <TrafficLimitField
-                    isRequired
-                    label="流量限制"
-                    unit={tunnelFlowUnit}
-                    value={tunnelFlowInput}
-                    onChange={(value, unit) => {
-                      setTunnelFlowInput(value);
-                      setTunnelFlowUnit(unit);
-                    }}
-                  />
-
-                  <Input
-                    label="规则数量"
-                    max="99999"
-                    min="1"
-                    type="number"
-                    value={editTunnelForm.num.toString()}
-                    onChange={(e) => {
-                      const value = Math.min(
-                        Math.max(Number(e.target.value) || 0, 1),
-                        99999,
-                      );
-
-                      setEditTunnelForm((prev) =>
-                        prev ? { ...prev, num: value } : null,
-                      );
-                    }}
-                  />
-
-                  <Select
-                    label="限速规则"
-                    placeholder="不限速"
-                    selectedKeys={
-                      editTunnelSelectedSpeedId !== null
-                        ? [editTunnelSelectedSpeedId.toString()]
-                        : []
-                    }
-                    onSelectionChange={(keys) => {
-                      const selectedKey = Array.from(keys)[0] as
-                        | string
-                        | undefined;
-
-                      setEditTunnelForm((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              speedId: selectedKey ? Number(selectedKey) : null,
-                            }
-                          : null,
-                      );
-                    }}
-                  >
-                    {editAvailableSpeedLimits.map((speedLimit) => (
-                      <SelectItem
-                        key={speedLimit.id.toString()}
-                        textValue={speedLimit.name}
-                      >
-                        {speedLimit.name}
-                      </SelectItem>
-                    ))}
-                  </Select>
-
-                  <Select
-                    label="流量重置日期"
-                    selectedKeys={[editTunnelForm.flowResetTime.toString()]}
-                    onSelectionChange={(keys) => {
-                      const value = Array.from(keys)[0] as string;
-
-                      setEditTunnelForm((prev) =>
-                        prev ? { ...prev, flowResetTime: Number(value) } : null,
-                      );
-                    }}
-                  >
-                    <>
-                      <SelectItem key="0" textValue="不重置">
-                        不重置
-                      </SelectItem>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map(
-                        (day) => (
-                          <SelectItem
-                            key={day.toString()}
-                            textValue={`每月${day}号（0点重置）`}
-                          >
-                            每月{day}号（0点重置）
-                          </SelectItem>
-                        ),
-                      )}
-                    </>
-                  </Select>
-
-                  <DatePicker
-                    isRequired
-                    showMonthAndYearPickers
-                    label="到期时间"
-                    value={
-                      editTunnelForm.expTime
-                        ? (parseDate(
-                            new Date(editTunnelForm.expTime)
-                              .toISOString()
-                              .split("T")[0],
-                          ) as any)
-                        : null
-                    }
-                    onChange={(date) => {
-                      if (date) {
-                        const jsDate = new Date(
-                          date.year,
-                          date.month - 1,
-                          date.day,
-                          23,
-                          59,
-                          59,
-                        );
-
-                        setEditTunnelForm((prev) =>
-                          prev ? { ...prev, expTime: jsDate.getTime() } : null,
-                        );
-                      } else {
-                        setEditTunnelForm((prev) =>
-                          prev ? { ...prev, expTime: Date.now() } : null,
-                        );
-                      }
-                    }}
-                  />
-                </div>
-
-                <RadioGroup
-                  label="状态"
-                  orientation="horizontal"
-                  value={editTunnelForm.status.toString()}
-                  onValueChange={(value: string) =>
-                    setEditTunnelForm((prev) =>
-                      prev ? { ...prev, status: Number(value) } : null,
-                    )
-                  }
-                >
-                  <Radio value="1">正常</Radio>
-                  <Radio value="0">禁用</Radio>
-                </RadioGroup>
-              </>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="light" onPress={onEditTunnelModalClose}>
-              取消
-            </Button>
-            <Button
-              color="primary"
-              isLoading={editTunnelLoading}
-              onPress={handleUpdateTunnel}
-            >
-              保存修改
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <EditTunnelPermissionModal
+        currentUser={currentUser}
+        editAvailableSpeedLimits={editAvailableSpeedLimits}
+        editTunnelForm={editTunnelForm}
+        editTunnelLoading={editTunnelLoading}
+        editTunnelSelectedSpeedId={editTunnelSelectedSpeedId}
+        handleUpdateTunnel={handleUpdateTunnel}
+        isEditTunnelModalOpen={isEditTunnelModalOpen}
+        setEditTunnelForm={setEditTunnelForm}
+        setTunnelFlowInput={setTunnelFlowInput}
+        setTunnelFlowUnit={setTunnelFlowUnit}
+        tunnelFlowInput={tunnelFlowInput}
+        tunnelFlowUnit={tunnelFlowUnit}
+        onEditTunnelModalClose={onEditTunnelModalClose}
+      />
 
       <ConfirmDialog
         confirmLabel="删除用户"
-        isOpen={isDeleteModalOpen}
         message={
           <>
             确定要删除用户{" "}
@@ -1735,6 +1067,7 @@ export default function UserPage() {
             吗？该用户的规则与权限会一并删除，此操作不可撤销。
           </>
         }
+        opened={isDeleteModalOpen}
         title="删除用户"
         onClose={onDeleteModalClose}
         onConfirm={handleConfirmDelete}
@@ -1742,7 +1075,6 @@ export default function UserPage() {
 
       <ConfirmDialog
         confirmLabel="移除权限"
-        isOpen={isDeleteTunnelModalOpen}
         message={
           <>
             确定要移除用户{" "}
@@ -1756,6 +1088,7 @@ export default function UserPage() {
             的权限吗？移除后该用户无法再用此隧道创建规则。
           </>
         }
+        opened={isDeleteTunnelModalOpen}
         title="移除隧道权限"
         onClose={onDeleteTunnelModalClose}
         onConfirm={handleConfirmRemoveTunnel}
@@ -1763,7 +1096,6 @@ export default function UserPage() {
 
       <ConfirmDialog
         confirmLabel="重置流量"
-        isOpen={isResetFlowModalOpen}
         loading={resetFlowLoading}
         message={
           <>
@@ -1783,6 +1115,7 @@ export default function UserPage() {
             )}
           </>
         }
+        opened={isResetFlowModalOpen}
         title="重置账号流量"
         tone="warning"
         onClose={onResetFlowModalClose}
@@ -1791,7 +1124,6 @@ export default function UserPage() {
 
       <ConfirmDialog
         confirmLabel="重置流量"
-        isOpen={isResetTunnelFlowModalOpen}
         loading={resetTunnelFlowLoading}
         message={
           <>
@@ -1815,6 +1147,7 @@ export default function UserPage() {
             )}
           </>
         }
+        opened={isResetTunnelFlowModalOpen}
         title="重置隧道流量"
         tone="warning"
         onClose={onResetTunnelFlowModalClose}

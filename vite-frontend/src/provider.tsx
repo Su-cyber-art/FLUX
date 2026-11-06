@@ -5,6 +5,7 @@ import { DatesProvider } from "@mantine/dates";
 
 import "dayjs/locale/zh-cn";
 import { ThemeProvider } from "@/themes/context";
+import { ConfirmHost } from "@/components/confirm-host";
 import { useVisualViewport } from "@/hooks/use-visual-viewport";
 
 export function Provider({ children }: { children: ReactNode }) {
@@ -14,6 +15,7 @@ export function Provider({ children }: { children: ReactNode }) {
     <ThemeProvider>
       <DatesProvider settings={{ locale: "zh-cn", firstDayOfWeek: 1 }}>
         {children}
+        <ConfirmHost />
         <Notifications limit={4} position="top-right" zIndex={600} />
       </DatesProvider>
     </ThemeProvider>

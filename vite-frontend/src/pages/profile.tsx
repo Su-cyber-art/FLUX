@@ -9,12 +9,12 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
+import { Badge, Button, TextInput } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 
 import { toast } from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import { IconTile } from "@/components/ui/icon-tile";
 import {
   Modal,
@@ -22,9 +22,7 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure,
 } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
 import { SectionHeader } from "@/components/section-header";
 import { ThemeSettings } from "@/components/theme-settings";
 import { navigation } from "@/config/navigation";
@@ -35,6 +33,7 @@ import { updatePassword } from "@/api";
 import { safeLogout } from "@/utils/logout";
 import { getAdminFlag, getSessionName } from "@/utils/session";
 import { PasskeyManager } from "@/components/passkey-manager";
+import { uiColor } from "@/components/ui/shared";
 
 interface PasswordForm {
   newUsername: string;
@@ -60,7 +59,7 @@ const ADMIN_SHORTCUTS = [
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [passwordModalOpened, passwordModal] = useDisclosure();
   const [username, setUsername] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -129,7 +128,7 @@ export default function ProfilePage() {
 
       if (response.code === 0) {
         toast.success("密码修改成功，请重新登录");
-        onOpenChange();
+        passwordModal.close();
         handleLogout();
       } else {
         toast.error(response.msg || "密码修改失败");
@@ -157,13 +156,14 @@ export default function ProfilePage() {
               <h2 className="truncate text-lg font-semibold text-foreground">
                 {username}
               </h2>
-              <Chip
-                color={isAdmin ? "primary" : "default"}
+              <Badge
+                color={uiColor(isAdmin ? "primary" : "default")}
+                leftSection={isAdmin ? <ShieldCheck size={12} /> : undefined}
                 size="sm"
-                startContent={isAdmin ? <ShieldCheck size={12} /> : undefined}
+                variant="light"
               >
                 {isAdmin ? "管理员" : "普通用户"}
-              </Chip>
+              </Badge>
             </div>
             <p className="mt-1 text-xs text-default-500">
               {isAdmin
@@ -173,10 +173,10 @@ export default function ProfilePage() {
           </div>
           <Button
             className="w-full sm:w-auto"
-            color="danger"
-            startContent={<LogOut size={15} />}
-            variant="flat"
-            onPress={handleLogout}
+            color="red"
+            leftSection={<LogOut size={15} />}
+            variant="light"
+            onClick={handleLogout}
           >
             退出登录
           </Button>
@@ -201,10 +201,11 @@ export default function ProfilePage() {
             </div>
             <div>
               <Button
-                size="sm"
-                startContent={<KeyRound size={14} />}
-                variant="flat"
-                onPress={onOpen}
+                color="gray"
+                leftSection={<KeyRound size={14} />}
+                size="xs"
+                variant="light"
+                onClick={passwordModal.open}
               >
                 修改凭据
               </Button>
@@ -270,75 +271,72 @@ export default function ProfilePage() {
       />
 
       <Modal
-        isOpen={isOpen}
-        placement="center"
-        scrollBehavior="inside"
+        opened={passwordModalOpened}
         size="md"
-        onOpenChange={() => {
-          onOpenChange();
+        onClose={() => {
+          passwordModal.close();
           setPasswordForm(EMPTY_PASSWORD_FORM);
         }}
       >
         <ModalContent>
-          {(onClose: () => void) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                修改用户名与密码
-                <span className="text-xs font-normal text-default-500">
-                  保存后会退出登录，请使用新凭据重新登录。
-                </span>
-              </ModalHeader>
-              <ModalBody>
-                <div className="flex flex-col gap-3">
-                  <Input
-                    autoComplete="username"
-                    label="新用户名"
-                    placeholder="至少 3 位"
-                    value={passwordForm.newUsername}
-                    onChange={updateField("newUsername")}
-                  />
-                  <Input
-                    autoComplete="current-password"
-                    label="当前密码"
-                    placeholder="用于验证身份"
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    onChange={updateField("currentPassword")}
-                  />
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Input
-                      autoComplete="new-password"
-                      label="新密码"
-                      placeholder="至少 6 位"
-                      type="password"
-                      value={passwordForm.newPassword}
-                      onChange={updateField("newPassword")}
-                    />
-                    <Input
-                      autoComplete="new-password"
-                      label="确认新密码"
-                      placeholder="再次输入新密码"
-                      type="password"
-                      value={passwordForm.confirmPassword}
-                      onChange={updateField("confirmPassword")}
-                    />
-                  </div>
-                </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button color="default" variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button
-                  color="primary"
-                  isLoading={passwordLoading}
-                  onPress={handlePasswordSubmit}
-                >
-                  保存并重新登录
-                </Button>
-              </ModalFooter>
-            </>
-          )}
+          <ModalHeader className="flex flex-col gap-1">
+            修改用户名与密码
+            <span className="text-xs font-normal text-default-500">
+              保存后会退出登录，请使用新凭据重新登录。
+            </span>
+          </ModalHeader>
+          <ModalBody>
+            <div className="flex flex-col gap-3">
+              <TextInput
+                autoComplete="username"
+                label="新用户名"
+                placeholder="至少 3 位"
+                value={passwordForm.newUsername}
+                onChange={updateField("newUsername")}
+              />
+              <TextInput
+                autoComplete="current-password"
+                label="当前密码"
+                placeholder="用于验证身份"
+                type="password"
+                value={passwordForm.currentPassword}
+                onChange={updateField("currentPassword")}
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextInput
+                  autoComplete="new-password"
+                  label="新密码"
+                  placeholder="至少 6 位"
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={updateField("newPassword")}
+                />
+                <TextInput
+                  autoComplete="new-password"
+                  label="确认新密码"
+                  placeholder="再次输入新密码"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={updateField("confirmPassword")}
+                />
+              </div>
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              color="gray"
+              variant="subtle"
+              onClick={() => {
+                passwordModal.close();
+                setPasswordForm(EMPTY_PASSWORD_FORM);
+              }}
+            >
+              取消
+            </Button>
+            <Button loading={passwordLoading} onClick={handlePasswordSubmit}>
+              保存并重新登录
+            </Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </AnimatedPage>

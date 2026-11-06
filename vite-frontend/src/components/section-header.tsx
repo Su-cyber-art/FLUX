@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 
-import { Chip } from "@/components/ui/chip";
+import { Badge } from "@mantine/core";
 
 interface SectionHeaderProps {
   icon: LucideIcon;
@@ -25,7 +25,11 @@ export function SectionHeader({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold text-foreground">{title}</h2>
-            {count !== undefined && <Chip size="sm">{count}</Chip>}
+            {count !== undefined && (
+              <Badge color="gray" size="sm" variant="light">
+                {count}
+              </Badge>
+            )}
           </div>
           {description && (
             <p className="mt-1 text-xs text-default-500">{description}</p>

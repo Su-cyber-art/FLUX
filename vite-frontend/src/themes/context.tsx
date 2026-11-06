@@ -13,6 +13,7 @@ import {
   MantineProvider,
   type CSSVariablesResolver,
 } from "@mantine/core";
+import { Info } from "lucide-react";
 
 export type ThemeMode = "light" | "dark" | "system";
 export const ACCENTS = [
@@ -183,11 +184,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           ],
         },
         components: {
-          Button: { defaultProps: { radius: "md", size: "sm" } },
+          // Explicit variant so `[data-variant="filled"]` styles apply to default buttons.
+          Button: {
+            defaultProps: { radius: "md", size: "sm", variant: "filled" },
+          },
           ActionIcon: { defaultProps: { radius: "md" } },
           Input: { defaultProps: { radius: "md" } },
           Menu: {
             defaultProps: {
+              zIndex: 450,
               radius: "md",
               shadow: "lg",
               transitionProps: { transition: "pop", duration: 160 },
@@ -195,6 +200,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           },
           Popover: {
             defaultProps: {
+              zIndex: 450,
               radius: "md",
               shadow: "lg",
               transitionProps: { transition: "pop", duration: 160 },
@@ -203,6 +209,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           Combobox: {
             defaultProps: {
               shadow: "lg",
+              // Above modals (z-index 300); flip/shift keep long lists on screen.
+              zIndex: 450,
+              middlewares: { flip: true, shift: { padding: 12 } },
               transitionProps: { transition: "pop", duration: 140 },
             },
           },
@@ -231,9 +240,43 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             defaultProps: { transitionDuration: 260 },
           },
           Progress: {
-            defaultProps: { transitionDuration: 600 },
+            defaultProps: { radius: "xl", size: "sm", transitionDuration: 600 },
           },
           Notification: { defaultProps: { radius: "lg" } },
+          Alert: { defaultProps: { icon: <Info size={18} /> } },
+          Badge: {
+            defaultProps: { radius: "sm", fw: 600, tt: "none" },
+          },
+          Select: {
+            defaultProps: {
+              allowDeselect: false,
+              nothingFoundMessage: "没有匹配项",
+            },
+          },
+          MultiSelect: {
+            defaultProps: {
+              clearable: true,
+              clearButtonProps: { "aria-label": "清除选择" },
+              nothingFoundMessage: "没有匹配项",
+            },
+          },
+          Table: {
+            defaultProps: {
+              highlightOnHover: true,
+              horizontalSpacing: "md",
+              verticalSpacing: "sm",
+            },
+          },
+          DateInput: {
+            defaultProps: {
+              clearable: true,
+              placeholder: "选择日期",
+              valueFormat: "YYYY-MM-DD",
+            },
+          },
+          Textarea: {
+            defaultProps: { autosize: true, minRows: 3, maxRows: 8 },
+          },
         },
       }),
     [accent],

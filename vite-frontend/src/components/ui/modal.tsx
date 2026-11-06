@@ -5,63 +5,46 @@ import { cn } from "@/lib/utils";
 
 type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl" | "4xl" | "full";
 interface ModalContextValue {
-  onClose: () => void;
   classNames?: Record<string, string>;
 }
-const ModalContext = React.createContext<ModalContextValue>({
-  onClose: () => {},
-});
+const ModalContext = React.createContext<ModalContextValue>({});
 
-export function useDisclosure(options: { isOpen?: boolean } = {}) {
-  const [isOpen, setOpen] = React.useState(Boolean(options.isOpen));
-  const onOpen = React.useCallback(() => setOpen(true), []);
-  const onClose = React.useCallback(() => setOpen(false), []);
-  const onOpenChange = React.useCallback(
-    (open?: boolean) => setOpen((previous) => open ?? !previous),
-    [],
-  );
-
-  return { isOpen, onOpen, onClose, onOpenChange };
-}
 export interface ModalProps {
   children: React.ReactNode;
-  isOpen?: boolean;
-  onClose?: () => void;
-  onOpenChange?: (open: boolean) => void;
+  opened: boolean;
+  onClose: () => void;
   size?: ModalSize;
   className?: string;
   classNames?: Record<string, string>;
-  scrollBehavior?: "inside" | "outside";
-  isDismissable?: boolean;
-  backdrop?: "blur" | "opaque" | "transparent";
-  placement?: "center" | "top" | "bottom";
+  closeOnClickOutside?: boolean;
+  closeOnEscape?: boolean;
+  /** Raise above other open modals (default layer is 300). */
+  zIndex?: number;
 }
+/**
+ * Application dialog: Mantine Modal primitives with a fixed header/footer and a
+ * scrolling body. Compose with ModalContent > ModalHeader / ModalBody / ModalFooter.
+ */
 export function Modal({
   children,
-  isOpen = false,
+  opened,
   onClose,
-  onOpenChange,
   size = "md",
   classNames,
   className,
-  isDismissable = true,
-  placement = "center",
+  closeOnClickOutside = true,
+  closeOnEscape = true,
+  zIndex = 300,
 }: ModalProps) {
-  const close = React.useCallback(() => {
-    onOpenChange?.(false);
-    onClose?.();
-  }, [onClose, onOpenChange]);
-
   return (
-    <ModalContext.Provider value={{ onClose: close, classNames }}>
+    <ModalContext.Provider value={{ classNames }}>
       <MantineModal.Root
         centered
         className={cn("app-modal", className)}
         classNames={{ inner: "app-modal-viewport" }}
-        closeOnClickOutside={isDismissable}
-        closeOnEscape={isDismissable}
-        data-placement={placement}
-        opened={isOpen}
+        closeOnClickOutside={closeOnClickOutside}
+        closeOnEscape={closeOnEscape}
+        opened={opened}
         size={
           {
             sm: 420,
@@ -79,8 +62,8 @@ export function Modal({
           transition: "pop",
           timingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
         }}
-        zIndex={300}
-        onClose={close}
+        zIndex={zIndex}
+        onClose={onClose}
       >
         <MantineModal.Overlay backgroundOpacity={0.35} />
         {children}
@@ -92,9 +75,7 @@ export function ModalContent({
   children,
   className,
   ...props
-}: Omit<React.ComponentProps<"div">, "children"> & {
-  children?: React.ReactNode | ((onClose: () => void) => React.ReactNode);
-}) {
+}: React.ComponentProps<"div">) {
   const context = React.useContext(ModalContext);
 
   return (
@@ -106,7 +87,7 @@ export function ModalContent({
         content: cn("app-modal-content", context.classNames?.base, className),
       }}
     >
-      {typeof children === "function" ? children(context.onClose) : children}
+      {children}
     </MantineModal.Content>
   );
 }

@@ -1,12 +1,17 @@
 import type { User } from "@/types";
 
-import { ActionIcon, Avatar, Menu, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Avatar,
+  Menu,
+  Tooltip,
+  Badge,
+  Button,
+} from "@mantine/core";
 import { Ellipsis, KeyRound, RotateCcw, SquarePen, Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Chip } from "@/components/ui/chip";
-import { type SemanticColor } from "@/components/ui/shared";
+import { type SemanticColor, uiColor } from "@/components/ui/shared";
 import { UsageMeter } from "@/components/usage-meter";
 import { cn } from "@/lib/utils";
 import {
@@ -83,14 +88,14 @@ const UserIdentity = ({ user }: { user: User }) => {
             {displayName}
           </span>
           {user.status !== 1 && (
-            <Chip color="default" size="xs">
+            <Badge color="gray" size="xs" variant="light">
               {status.text}
-            </Chip>
+            </Badge>
           )}
           {user.disabledByQuota ? (
-            <Chip color="danger" size="xs">
+            <Badge color="red" size="xs" variant="light">
               配额超额
-            </Chip>
+            </Badge>
           ) : null}
         </div>
         <p className="truncate text-xs text-default-500">@{user.user}</p>
@@ -166,9 +171,14 @@ export const UserCard = ({
     <Card className="h-full gap-4 p-4">
       <div className="flex items-start justify-between gap-2">
         <UserIdentity user={user} />
-        <Chip className="shrink-0" color={expiry.tone} size="xs">
+        <Badge
+          className="shrink-0"
+          color={uiColor(expiry.tone)}
+          size="xs"
+          variant="light"
+        >
           {expiry.text}
-        </Chip>
+        </Badge>
       </div>
       <div className="space-y-2">
         <FlowMeter user={user} />
@@ -188,18 +198,20 @@ export const UserCard = ({
       </dl>
       <div className="mt-auto flex items-center gap-1.5 border-t border-divider pt-3">
         <Button
-          size="sm"
-          startContent={<KeyRound size={14} />}
-          variant="light"
-          onPress={() => handlers.onManageTunnels(user)}
+          color="gray"
+          leftSection={<KeyRound size={14} />}
+          size="xs"
+          variant="subtle"
+          onClick={() => handlers.onManageTunnels(user)}
         >
           权限
         </Button>
         <Button
-          size="sm"
-          startContent={<SquarePen size={14} />}
-          variant="light"
-          onPress={() => handlers.onEdit(user)}
+          color="gray"
+          leftSection={<SquarePen size={14} />}
+          size="xs"
+          variant="subtle"
+          onClick={() => handlers.onEdit(user)}
         >
           编辑
         </Button>
@@ -246,9 +258,9 @@ export const UserRow = ({
         </p>
       </div>
       <div className="user-row-expiry">
-        <Chip color={expiry.tone} size="xs">
+        <Badge color={uiColor(expiry.tone)} size="xs" variant="light">
           {expiry.text}
-        </Chip>
+        </Badge>
       </div>
       <div className="user-row-actions">
         <Tooltip label="隧道权限">

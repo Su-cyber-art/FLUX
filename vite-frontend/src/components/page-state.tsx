@@ -1,6 +1,7 @@
-import { Loader, Paper, Stack, Text, ThemeIcon } from "@mantine/core";
+import { Loader, Stack, Text, ThemeIcon } from "@mantine/core";
 import { Inbox, CircleAlert } from "lucide-react";
 
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 interface StateProps {
   message: string;
@@ -66,25 +67,27 @@ export const PageErrorState = ({ message, className }: StateProps) => (
 );
 
 /** Empty state with a title, a hint and an optional call to action. */
+/**
+ * Empty list card. "primary" invites the first action (nothing created yet);
+ * "default" is for filters or searches that matched nothing.
+ */
 export const EmptyStateCard = ({
   icon,
   title,
   description,
   action,
+  tone = "primary",
 }: {
   icon: React.ReactNode;
   title: string;
   description?: React.ReactNode;
   action?: React.ReactNode;
+  tone?: "primary" | "default";
 }) => (
-  <Paper
-    withBorder
-    className="flex flex-col items-center px-6 py-14 text-center"
-    radius="md"
-  >
+  <Card className="items-center px-6 py-14 text-center">
     <ThemeIcon
       className="empty-state-icon"
-      color="gray"
+      color={tone === "default" ? "gray" : undefined}
       radius="xl"
       size={44}
       variant="light"
@@ -100,5 +103,5 @@ export const EmptyStateCard = ({
       </Text>
     )}
     {action && <div className="mt-5">{action}</div>}
-  </Paper>
+  </Card>
 );

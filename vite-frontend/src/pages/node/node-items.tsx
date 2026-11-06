@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 
-import { ActionIcon, Menu, Progress, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Menu,
+  Progress,
+  Tooltip,
+  Badge,
+  Button,
+  Checkbox,
+} from "@mantine/core";
 import {
   ArrowDown,
   ArrowUp,
@@ -16,10 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Chip } from "@/components/ui/chip";
 import { uiColor, usageTone } from "@/components/ui/shared";
 import { cn } from "@/lib/utils";
 import { getRemoteSyncErrorMessage } from "@/pages/node/display";
@@ -73,13 +78,23 @@ const isOnline = (node: Node) => node.connectionStatus === "online";
 
 const StatusChip = ({ node }: { node: Node }) =>
   node.deleteState ? (
-    <Chip dot color="warning" size="xs">
+    <Badge
+      color="orange"
+      leftSection={<span className="badge-dot" />}
+      size="xs"
+      variant="light"
+    >
       {node.deleteState === 3 ? "待移除" : "待清理"}
-    </Chip>
+    </Badge>
   ) : (
-    <Chip dot color={isOnline(node) ? "success" : "default"} size="xs">
+    <Badge
+      color={uiColor(isOnline(node) ? "success" : "default")}
+      leftSection={<span className="badge-dot" />}
+      size="xs"
+      variant="light"
+    >
       {isOnline(node) ? "在线" : "离线"}
-    </Chip>
+    </Badge>
   );
 
 const NodeMeter = ({ label, value }: { label: string; value?: number }) => {
@@ -234,9 +249,14 @@ const NodeTags = ({ node }: { node: Node }) => {
   return (
     <div className="flex min-w-0 items-center gap-1.5">
       {expiry && (
-        <Chip className="shrink-0" color={expiry.tone} size="xs">
+        <Badge
+          className="shrink-0"
+          color={uiColor(expiry.tone)}
+          size="xs"
+          variant="light"
+        >
           {expiry.label}
-        </Chip>
+        </Badge>
       )}
       {remark && (
         <span className="truncate text-xs text-default-500" title={remark}>
@@ -301,13 +321,15 @@ const RemoteUsagePanel = ({
       {usage.usedPorts.length > 0 && (
         <div className="flex max-h-16 flex-wrap gap-1 overflow-y-auto">
           {usage.usedPorts.map((port) => (
-            <Chip
+            <Badge
               key={`${node.id}-port-${port}`}
               className="font-mono"
+              color="gray"
               size="xs"
+              variant="light"
             >
               {port}
-            </Chip>
+            </Badge>
           ))}
         </div>
       )}
@@ -455,9 +477,9 @@ export const NodeCard = ({
         {selectMode && (
           <Checkbox
             aria-label={`选择 ${node.name}`}
+            checked={selected}
             className="mt-0.5"
-            isSelected={selected}
-            onValueChange={() => handlers.onToggleSelect(node.id)}
+            onChange={() => handlers.onToggleSelect(node.id)}
           />
         )}
         <NodeIdentity node={node} />
@@ -489,29 +511,32 @@ export const NodeCard = ({
         {!isRemote && (
           <>
             <Button
-              isLoading={node.copyLoading}
-              size="sm"
-              startContent={<Terminal size={14} />}
-              variant="light"
-              onPress={() => handlers.onInstall(node)}
+              color="gray"
+              leftSection={<Terminal size={14} />}
+              loading={node.copyLoading}
+              size="xs"
+              variant="subtle"
+              onClick={() => handlers.onInstall(node)}
             >
               安装
             </Button>
             <Button
-              isDisabled={!isOnline(node)}
-              isLoading={node.upgradeLoading}
-              size="sm"
-              startContent={<CircleArrowUp size={14} />}
-              variant="light"
-              onPress={() => handlers.onUpgrade(node)}
+              color="gray"
+              disabled={!isOnline(node)}
+              leftSection={<CircleArrowUp size={14} />}
+              loading={node.upgradeLoading}
+              size="xs"
+              variant="subtle"
+              onClick={() => handlers.onUpgrade(node)}
             >
               升级
             </Button>
             <Button
-              size="sm"
-              startContent={<SquarePen size={14} />}
-              variant="light"
-              onPress={() => handlers.onEdit(node)}
+              color="gray"
+              leftSection={<SquarePen size={14} />}
+              size="xs"
+              variant="subtle"
+              onClick={() => handlers.onEdit(node)}
             >
               编辑
             </Button>
@@ -538,9 +563,9 @@ export const NodeListHeader = ({
     <div className="node-row-lead">
       <Checkbox
         aria-label="全选"
-        isIndeterminate={isIndeterminate}
-        isSelected={isAllSelected}
-        onValueChange={onToggleAll}
+        checked={isAllSelected}
+        indeterminate={isIndeterminate}
+        onChange={(event) => onToggleAll(event.currentTarget.checked)}
       />
     </div>
     <div className="node-row-name">节点</div>
@@ -566,8 +591,8 @@ export const NodeRow = ({
       <div className="node-row-lead">
         <Checkbox
           aria-label={`选择 ${node.name}`}
-          isSelected={selected}
-          onValueChange={() => handlers.onToggleSelect(node.id)}
+          checked={selected}
+          onChange={() => handlers.onToggleSelect(node.id)}
         />
       </div>
       <div className="node-row-name min-w-0">

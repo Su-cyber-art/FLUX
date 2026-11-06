@@ -76,6 +76,8 @@ export default function ApplicationLayout() {
     session.isAdmin ? true : null,
   );
   const mainRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLElement>(null);
+  const [headingHidden, setHeadingHidden] = useState(false);
   const current =
     navigation.find((item) => item.path === location.pathname) ?? navigation[0];
   const available = navigation.filter(
@@ -96,6 +98,21 @@ export default function ApplicationLayout() {
   };
 
   useHotkeys([["mod+K", () => openSearch()]]);
+  // Track whether the page heading sits under the fixed header (64px).
+  useEffect(() => {
+    const heading = headingRef.current;
+
+    setHeadingHidden(false);
+    if (!heading || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeadingHidden(!entry.isIntersecting),
+      { rootMargin: "-64px 0px 0px 0px" },
+    );
+
+    observer.observe(heading);
+
+    return () => observer.disconnect();
+  }, [location.pathname]);
   useEffect(() => {
     closeMobile();
     closeSearch();
@@ -191,6 +208,7 @@ export default function ApplicationLayout() {
                 )}
               </ActionIcon>
             )}
+            {/* The page name joins the trail only once the big heading has scrolled away. */}
             <Group className="min-w-0" gap={8} wrap="nowrap">
               <Text c="dimmed" size="sm" visibleFrom="sm">
                 控制台
@@ -199,9 +217,19 @@ export default function ApplicationLayout() {
                 className="text-default-400 hidden sm:block"
                 size={13}
               />
-              <Text truncate fw={600} size="sm">
-                {current.title}
+              <Text truncate c="dimmed" size="sm">
+                {current.group}
               </Text>
+              <span
+                aria-hidden={!headingHidden}
+                className="app-header-title"
+                data-visible={headingHidden || undefined}
+              >
+                <ChevronRight className="text-default-400 shrink-0" size={13} />
+                <Text truncate fw={600} size="sm">
+                  {current.title}
+                </Text>
+              </span>
             </Group>
           </Group>
           <Group gap={isMobile ? 8 : 16} wrap="nowrap">
@@ -350,6 +378,8 @@ export default function ApplicationLayout() {
           mt="lg"
           offsetScrollbars={false}
           scrollbarSize={4}
+          // Only while scrolling: a thin bar on hover reads as a stray divider.
+          type="scroll"
         >
           {Array.from(new Set(available.map((item) => item.group))).map(
             (group) => (
@@ -428,22 +458,20 @@ export default function ApplicationLayout() {
           {/* Sibling keys must differ from the route boundary's key below. */}
           <header
             key={`heading:${location.pathname}`}
+            ref={headingRef}
             className="app-page-heading"
           >
             <div>
-              <Group gap={8} mb={7}>
-                <Text c="dimmed" size="xs">
-                  {current.group}
-                </Text>
+              <Group gap={10} wrap="nowrap">
+                <Title fw={650} order={1} size={26}>
+                  {current.title}
+                </Title>
                 {session.isAdmin && (
-                  <Badge color="gray" radius="sm" size="xs" variant="light">
+                  <Badge color="gray" size="xs" variant="light">
                     管理端
                   </Badge>
                 )}
               </Group>
-              <Title fw={650} order={1} size={26}>
-                {current.title}
-              </Title>
               <Text c="dimmed" mt={6} size="sm">
                 {current.description}
               </Text>
@@ -475,7 +503,7 @@ export default function ApplicationLayout() {
           )}
         </div>
       </AppShell.Main>
-      <Modal isOpen={searchOpened} size="md" onClose={closeSearch}>
+      <Modal opened={searchOpened} size="md" onClose={closeSearch}>
         <ModalContent>
           <ModalHeader>快速访问</ModalHeader>
           <ModalBody>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@mantine/core";
+
 import {
   Modal,
   ModalBody,
@@ -8,9 +9,10 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@/components/ui/modal";
+import { uiColor } from "@/components/ui/shared";
 
 interface ConfirmDialogProps {
-  isOpen: boolean;
+  opened: boolean;
   title: string;
   message: ReactNode;
   confirmLabel?: string;
@@ -19,11 +21,12 @@ interface ConfirmDialogProps {
   loading?: boolean;
   onConfirm: () => void;
   onClose: () => void;
+  zIndex?: number;
 }
 
 /** Small destructive-action confirmation shared by list pages. */
 export function ConfirmDialog({
-  isOpen,
+  opened,
   title,
   message,
   confirmLabel = "删除",
@@ -31,19 +34,20 @@ export function ConfirmDialog({
   loading,
   onConfirm,
   onClose,
+  zIndex,
 }: ConfirmDialogProps) {
   return (
-    <Modal isOpen={isOpen} size="sm" onClose={onClose}>
+    <Modal opened={opened} size="sm" zIndex={zIndex} onClose={onClose}>
       <ModalContent>
         <ModalHeader>{title}</ModalHeader>
         <ModalBody>
           <div className="text-sm text-default-600">{message}</div>
         </ModalBody>
         <ModalFooter>
-          <Button variant="light" onPress={onClose}>
+          <Button color="gray" variant="subtle" onClick={onClose}>
             取消
           </Button>
-          <Button color={tone} isLoading={loading} onPress={onConfirm}>
+          <Button color={uiColor(tone)} loading={loading} onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </ModalFooter>

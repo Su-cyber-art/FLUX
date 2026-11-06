@@ -1,6 +1,6 @@
 import type { MonitorNodeApiItem } from "@/api/types";
 
-import { SegmentedControl, Group } from "@mantine/core";
+import { SegmentedControl, Group, Button } from "@mantine/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
@@ -15,7 +15,6 @@ import {
 import { StatCard } from "@/components/stat-card";
 import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
-import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { getMonitorNodes } from "@/api";
 import { MonitorView } from "@/pages/node/monitor-view";
@@ -299,9 +298,10 @@ export default function MonitorPage() {
             {activeTab === "nodes" && (
               <Button
                 aria-label="刷新节点"
-                isLoading={nodesLoading}
-                startContent={<RefreshCw size={15} />}
-                onPress={() => loadNodes()}
+                leftSection={<RefreshCw size={15} />}
+                loading={nodesLoading}
+                variant="default"
+                onClick={() => loadNodes()}
               >
                 <span className="hidden sm:inline">刷新</span>
               </Button>

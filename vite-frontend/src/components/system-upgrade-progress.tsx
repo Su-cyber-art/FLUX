@@ -74,7 +74,7 @@ export function SystemUpgradeProgress({
         : "red";
 
   return (
-    <Modal isOpen={opened} size="lg" onClose={onClose}>
+    <Modal opened={opened} size="lg" onClose={onClose}>
       <ModalContent>
         <ModalHeader>面板升级进度</ModalHeader>
         <ModalBody>

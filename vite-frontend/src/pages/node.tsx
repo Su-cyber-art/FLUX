@@ -1,14 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Link } from "react-router-dom";
-import { Button as MantineButton, SegmentedControl } from "@mantine/core";
 import {
   DndContext,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
-  type DragEndEvent,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -17,86 +14,82 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import {
+  Alert,
+  Button,
+  Button as MantineButton,
+  SegmentedControl,
+} from "@mantine/core";
+import {
   CircleArrowUp,
-  Copy,
-  CreditCard,
-  Download,
-  LayoutGrid,
-  List,
-  Lock,
   Plus,
   SearchX,
   Server,
   Share2,
-  SlidersHorizontal,
-  SquareCheckBig,
   Trash2,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
-  NODE_FALLBACK_REFRESH_INTERVAL_MS,
-  Node,
-  NodeForm,
-  NodeTab,
-  RemoteUsageNode,
-  NodeFilterMode,
-  getNodeReminderEnabled,
-  getNodeExpiryMeta,
-  mergeNodeRealtimeState,
-  SortableItem,
-} from "@/pages/node/presentation";
-import toast from "@/lib/notifications";
-import { SearchBar } from "@/components/search-bar";
-import { FormSection } from "@/components/form-section";
-import { formatTraffic } from "@/utils/traffic";
-import { AnimatedPage } from "@/components/animated-page";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/input";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-} from "@/components/ui/modal";
-import { Chip } from "@/components/ui/chip";
-import { Switch } from "@/components/ui/switch";
-import { Spinner } from "@/components/ui/spinner";
-import { Alert } from "@/components/ui/alert";
-import { Accordion, AccordionItem } from "@/components/ui/accordion";
-import { Select, SelectItem } from "@/components/ui/select";
-import {
-  createNode,
-  getNodeList,
-  updateNode,
-  deleteNode,
-  getNodeInstallCommand,
-  updateNodeOrder,
   batchDeleteNodes,
-  upgradeNode,
   batchUpgradeNodes,
-  getNodeReleases,
-  rollbackNode,
-  getPeerRemoteUsageList,
+  createNode,
+  deleteNode,
   dismissNodeExpiryReminder,
+  getNodeInstallCommand,
+  getNodeList,
+  getNodeReleases,
+  getPeerRemoteUsageList,
+  rollbackNode,
+  updateNode,
+  updateNodeOrder,
+  upgradeNode,
   type ReleaseChannel,
 } from "@/api";
+import { AnimatedPage } from "@/components/animated-page";
 import { EmptyStateCard, PageLoadingState } from "@/components/page-state";
+import { BatchModeButton, PageToolbar } from "@/components/page-toolbar";
+import { SearchBar } from "@/components/search-bar";
+import {
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@/components/ui/modal";
+import { useLocalStorageState } from "@/hooks/use-local-storage-state";
+import toast from "@/lib/notifications";
+import { tryCopyInstallCommand } from "@/pages/node/install-command";
+import { InstallCommandModal } from "@/pages/node/install-command-modal";
+import { InstallSelectorModal } from "@/pages/node/install-selector-modal";
+import { NodeBatchDeleteModal } from "@/pages/node/node-batch-delete-modal";
+import { NodeDeleteModal } from "@/pages/node/node-delete-modal";
+import { NodeFilterModal } from "@/pages/node/node-filter-modal";
+import { NodeFormModal } from "@/pages/node/node-form-modal";
 import {
   NodeCard,
   NodeListHeader,
   NodeRow,
   type NodeItemHandlers,
 } from "@/pages/node/node-items";
-import { tryCopyInstallCommand } from "@/pages/node/install-command";
-import { type NodeRenewalCycle } from "@/pages/node/renewal";
+import { NodeUpgradeModal } from "@/pages/node/node-upgrade-modal";
+import {
+  NODE_FALLBACK_REFRESH_INTERVAL_MS,
+  Node,
+  NodeFilterMode,
+  NodeForm,
+  NodeTab,
+  RemoteUsageNode,
+  SortableItem,
+  getNodeExpiryMeta,
+  getNodeReminderEnabled,
+  mergeNodeRealtimeState,
+} from "@/pages/node/presentation";
 import { buildNodeSystemInfo } from "@/pages/node/system-info";
 import { useNodeOfflineTimers } from "@/pages/node/use-node-offline-timers";
 import { useNodeRealtime } from "@/pages/node/use-node-realtime";
-import { NodeRemovalOptions } from "@/pages/node/removal-options";
-import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { loadStoredOrder, saveOrder } from "@/utils/order-storage";
+import { formatTraffic } from "@/utils/traffic";
 
 export default function NodePage() {
   const [nodeList, setNodeList] = useState<Node[]>([]);
@@ -130,7 +123,6 @@ export default function NodePage() {
   >({});
   const [nodeFilterMode, setNodeFilterMode, resetNodeFilterMode] =
     useLocalStorageState<NodeFilterMode>("node-expiry-filter-mode", "all");
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogTitle, setDialogTitle] = useState("");
@@ -1463,8 +1455,36 @@ export default function NodePage() {
 
   return (
     <AnimatedPage>
-      <div className="page-toolbar">
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-1">
+      <PageToolbar
+        actions={
+          <BatchModeButton active={selectMode} onToggle={toggleSelectMode} />
+        }
+        filter={{
+          count: hasActiveFilters ? 1 : 0,
+          disabled: !canUseExpiryFilter,
+          title: canUseExpiryFilter
+            ? "按到期状态筛选"
+            : "远程节点不支持到期筛选",
+          onOpen: () => setIsFilterModalOpen(true),
+        }}
+        primary={{
+          label: "新增",
+          noun: "节点",
+          icon: <Plus size={16} />,
+          onClick: handleAdd,
+        }}
+        search={
+          <SearchBar
+            placeholder={
+              activeTab === "remote"
+                ? "搜索远程节点名称或IP"
+                : "搜索节点名称或IP"
+            }
+            value={currentSearchKeyword}
+            onChange={setCurrentSearchKeyword}
+          />
+        }
+        tabs={
           <SegmentedControl
             aria-label="节点类型"
             data={[
@@ -1475,85 +1495,9 @@ export default function NodePage() {
             value={activeTab}
             onChange={(value) => setActiveTab(value as NodeTab)}
           />
-          <div className="min-w-40 flex-1 sm:max-w-64">
-            <SearchBar
-              isVisible={isSearchVisible}
-              placeholder={
-                activeTab === "remote"
-                  ? "搜索远程节点名称或IP"
-                  : "搜索节点名称或IP"
-              }
-              value={currentSearchKeyword}
-              onChange={setCurrentSearchKeyword}
-              onClose={() => setIsSearchVisible(false)}
-              onOpen={() => setIsSearchVisible(true)}
-            />
-          </div>
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <Button
-            aria-label="筛选"
-            endContent={
-              canUseExpiryFilter && hasActiveFilters ? (
-                <Chip color="primary" size="xs" variant="solid">
-                  1
-                </Chip>
-              ) : undefined
-            }
-            isDisabled={!canUseExpiryFilter}
-            startContent={<SlidersHorizontal size={15} />}
-            title={
-              canUseExpiryFilter ? "按到期状态筛选" : "远程节点不支持到期筛选"
-            }
-            onPress={() => setIsFilterModalOpen(true)}
-          >
-            <span className="hidden sm:inline">筛选</span>
-          </Button>
-          <SegmentedControl
-            aria-label="显示方式"
-            data={[
-              {
-                value: "grid",
-                label: (
-                  <span className="flex items-center gap-1.5">
-                    <LayoutGrid size={15} />
-                    <span className="hidden sm:inline">卡片</span>
-                  </span>
-                ),
-              },
-              {
-                value: "list",
-                label: (
-                  <span className="flex items-center gap-1.5">
-                    <List size={15} />
-                    <span className="hidden sm:inline">列表</span>
-                  </span>
-                ),
-              },
-            ]}
-            size="sm"
-            value={viewMode}
-            onChange={(value) => setViewMode(value as "list" | "grid")}
-          />
-          <Button
-            aria-label={selectMode ? "完成批量操作" : "批量操作"}
-            startContent={<SquareCheckBig size={15} />}
-            onPress={toggleSelectMode}
-          >
-            <span className="hidden sm:inline">
-              {selectMode ? "完成" : "批量"}
-            </span>
-          </Button>
-          <Button
-            className="ml-auto sm:ml-0"
-            color="primary"
-            startContent={<Plus size={16} />}
-            onPress={handleAdd}
-          >
-            新增<span className="hidden sm:inline">节点</span>
-          </Button>
-        </div>
-      </div>
+        }
+        view={{ value: viewMode, onChange: setViewMode }}
+      />
 
       {!loading && nodeList.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
@@ -1586,38 +1530,43 @@ export default function NodePage() {
           <span className="text-sm font-medium text-primary-ink">
             已选择 {selectedIds.size} 项
           </span>
-          <Button size="sm" variant="light" onPress={selectAll}>
+          <Button color="gray" size="xs" variant="subtle" onClick={selectAll}>
             全选
           </Button>
-          <Button size="sm" variant="light" onPress={deselectAll}>
+          <Button color="gray" size="xs" variant="subtle" onClick={deselectAll}>
             取消选择
           </Button>
           <div className="ml-auto flex flex-wrap items-center gap-1.5">
             <Button
-              color="warning"
-              isDisabled={selectedIds.size === 0 || !canBatchUpgrade}
-              isLoading={batchUpgradeLoading}
-              size="sm"
-              startContent={<CircleArrowUp size={14} />}
-              variant="flat"
-              onPress={() => openUpgradeModal("batch")}
+              color="orange"
+              disabled={selectedIds.size === 0 || !canBatchUpgrade}
+              leftSection={<CircleArrowUp size={14} />}
+              loading={batchUpgradeLoading}
+              size="xs"
+              variant="light"
+              onClick={() => openUpgradeModal("batch")}
             >
               升级
             </Button>
             <Button
-              color="danger"
-              isDisabled={selectedIds.size === 0}
-              size="sm"
-              startContent={<Trash2 size={14} />}
-              variant="flat"
-              onPress={() => {
+              color="red"
+              disabled={selectedIds.size === 0}
+              leftSection={<Trash2 size={14} />}
+              size="xs"
+              variant="light"
+              onClick={() => {
                 setBatchForceDelete(false);
                 setBatchDeleteModalOpen(true);
               }}
             >
               删除
             </Button>
-            <Button size="sm" variant="flat" onPress={toggleSelectMode}>
+            <Button
+              color="gray"
+              size="xs"
+              variant="light"
+              onClick={toggleSelectMode}
+            >
               完成
             </Button>
           </div>
@@ -1625,18 +1574,13 @@ export default function NodePage() {
       )}
 
       {!wsConnected && (
-        <Alert
-          className="mb-4"
-          color="warning"
-          description={
-            wsConnecting
-              ? "监控连接中..."
-              : usingPollingFallback
-                ? "监控连接已断开，已切换为列表自动刷新兜底模式。"
-                : "监控连接已断开，正在重连..."
-          }
-          variant="flat"
-        />
+        <Alert className="mb-4" color="orange">
+          {wsConnecting
+            ? "监控连接中..."
+            : usingPollingFallback
+              ? "监控连接已断开，已切换为列表自动刷新兜底模式。"
+              : "监控连接已断开，正在重连..."}
+        </Alert>
       )}
 
       {loading ? (
@@ -1644,12 +1588,17 @@ export default function NodePage() {
       ) : displayNodes.length === 0 ? (
         isDisplayFiltered ? (
           <EmptyStateCard
-            action={<Button onPress={clearDisplayFilters}>清空筛选条件</Button>}
+            action={
+              <Button variant="default" onClick={clearDisplayFilters}>
+                清空筛选条件
+              </Button>
+            }
             description="调整关键词或到期筛选后再试。"
             icon={<SearchX size={20} />}
             title={
               activeTab === "remote" ? "没有匹配的远程节点" : "没有匹配的节点"
             }
+            tone="default"
           />
         ) : activeTab === "remote" ? (
           <EmptyStateCard
@@ -1669,11 +1618,7 @@ export default function NodePage() {
         ) : (
           <EmptyStateCard
             action={
-              <Button
-                color="primary"
-                startContent={<Plus size={16} />}
-                onPress={handleAdd}
-              >
+              <Button leftSection={<Plus size={16} />} onClick={handleAdd}>
                 新增节点
               </Button>
             }
@@ -1736,1021 +1681,117 @@ export default function NodePage() {
         </DndContext>
       )}
       {/* 新增/编辑节点对话框 */}
-      <Modal
-        backdrop="blur"
-        isOpen={dialogVisible}
-        placement="center"
-        scrollBehavior="inside"
-        size="xl"
-        onClose={() => setDialogVisible(false)}
-      >
-        <ModalContent>
-          <ModalHeader>{dialogTitle}</ModalHeader>
-          <ModalBody>
-            <div>
-              <FormSection title="基本信息">
-                <Input
-                  errorMessage={errors.name}
-                  isInvalid={!!errors.name}
-                  label="节点名称"
-                  placeholder="请输入节点名称"
-                  value={form.name}
-                  variant="bordered"
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                />
-
-                <Textarea
-                  description="可记录供应商、用途、续费说明等补充信息"
-                  label="备注"
-                  maxRows={4}
-                  minRows={3}
-                  placeholder="例如: 搬瓦工年付，2026-12 续费，日本中转"
-                  value={form.remark}
-                  variant="bordered"
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, remark: e.target.value }))
-                  }
-                />
-              </FormSection>
-
-              <FormSection
-                description="系统按周期从基准时间自动推算下次续费，并在仪表盘提醒"
-                title="续费"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Select
-                    description="按月、季或年循环续费"
-                    label="续费周期"
-                    placeholder="选择续费周期"
-                    selectedKeys={form.renewalCycle ? [form.renewalCycle] : []}
-                    variant="bordered"
-                    onSelectionChange={(keys) => {
-                      const selected = Array.from(keys)[0] as
-                        | NodeRenewalCycle
-                        | undefined;
-
-                      setForm((prev) => ({
-                        ...prev,
-                        renewalCycle: selected || "",
-                      }));
-                    }}
-                  >
-                    <SelectItem key="month" textValue="month">
-                      月付
-                    </SelectItem>
-                    <SelectItem key="quarter" textValue="quarter">
-                      季付
-                    </SelectItem>
-                    <SelectItem key="year" textValue="year">
-                      年付
-                    </SelectItem>
-                  </Select>
-
-                  <Input
-                    description="最近一次续费或周期起始日期，例如月付填 2026-03-01 即按每月 1 日推算"
-                    errorMessage={errors.expiryTime}
-                    isInvalid={!!errors.expiryTime}
-                    label="续费基准时间"
-                    max="9999-12-31"
-                    type="date"
-                    value={
-                      form.expiryTime > 0
-                        ? new Date(form.expiryTime).toISOString().slice(0, 10)
-                        : ""
-                    }
-                    variant="bordered"
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        expiryTime: e.target.value
-                          ? new Date(e.target.value).getTime()
-                          : 0,
-                      }))
-                    }
-                  />
-                </div>
-              </FormSection>
-
-              <FormSection
-                description="面板与转发规则使用的节点地址和端口范围"
-                title="连接地址"
-              >
-                <Input
-                  description="可选：不带协议、不带端口。建议在 IPv4 和 IPv6 都未填写时使用。至少填写一个 IPv4/IPv6 域名"
-                  errorMessage={errors.serverHost}
-                  isInvalid={!!errors.serverHost}
-                  label="域名/主机名"
-                  placeholder="例如: test.example.com"
-                  value={form.serverHost}
-                  variant="bordered"
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, serverHost: e.target.value }))
-                  }
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    description="填写一个 IPv4 地址"
-                    errorMessage={errors.serverIpV4}
-                    isInvalid={!!errors.serverIpV4}
-                    label="IPv4 地址"
-                    placeholder="例如: 192.168.1.100"
-                    value={form.serverIpV4}
-                    variant="bordered"
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        serverIpV4: e.target.value,
-                      }))
-                    }
-                  />
-
-                  <Input
-                    description="填写一个 IPv6 地址"
-                    errorMessage={errors.serverIpV6}
-                    isInvalid={!!errors.serverIpV6}
-                    label="IPv6 地址"
-                    placeholder="例如: 2001:db8::10"
-                    value={form.serverIpV6}
-                    variant="bordered"
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        serverIpV6: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <Input
-                  classNames={{
-                    input: "font-mono",
-                  }}
-                  description="支持单个端口(80)、多个端口(80,443)或端口范围(10000-65535)，多个可用逗号分隔"
-                  errorMessage={errors.port}
-                  isInvalid={!!errors.port}
-                  label="可用端口"
-                  placeholder="例如: 80,443,10000-65535"
-                  value={form.port}
-                  variant="bordered"
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, port: e.target.value }))
-                  }
-                />
-              </FormSection>
-
-              <FormSection title="运行模式">
-                <Select
-                  label="转发模式"
-                  selectedKeys={[form.forwardMode]}
-                  variant="bordered"
-                  onSelectionChange={(keys) => {
-                    const selected = Array.from(keys)[0] as
-                      | NodeForm["forwardMode"]
-                      | undefined;
-
-                    setForm((prev) => ({
-                      ...prev,
-                      forwardMode: selected || "agent",
-                    }));
-                  }}
-                >
-                  <SelectItem key="agent" textValue="agent">
-                    agent 模式
-                  </SelectItem>
-                  <SelectItem key="nftables" textValue="nftables">
-                    nftables 模式
-                  </SelectItem>
-                </Select>
-
-                {form.forwardMode === "nftables" ? (
-                  <Alert
-                    color="warning"
-                    description="nftables 模式仅支持纯转发，不支持隧道、流量控制和 agent 安装，规则将由面板通过 SSH 下发。"
-                    variant="flat"
-                  />
-                ) : (
-                  <Alert
-                    color="primary"
-                    description="agent 模式会继续使用节点 agent 执行转发与管理操作。"
-                    variant="flat"
-                  />
-                )}
-              </FormSection>
-
-              {/* 高级配置 */}
-              <section className="form-section">
-                <Accordion className="px-0" variant="light">
-                  <AccordionItem
-                    key="advanced"
-                    aria-label="高级配置"
-                    className="border-b-0 [&_[data-slot=accordion-trigger]]:no-underline [&_[data-slot=accordion-trigger]]:hover:no-underline"
-                    title={
-                      <span className="text-small text-default-500 font-medium">
-                        高级配置
-                      </span>
-                    }
-                  >
-                    <div className="space-y-4 pb-2">
-                      {form.forwardMode === "nftables" ? (
-                        <div className="space-y-4 rounded-xl border border-warning-line bg-warning-soft p-4">
-                          <div>
-                            <div className="text-sm font-medium text-warning-ink">
-                              SSH 配置
-                            </div>
-                            <div className="text-xs text-default-500">
-                              面板会通过 SSH 下发 nftables 规则，不会安装
-                              agent。
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input
-                              errorMessage={errors.sshHost}
-                              isInvalid={!!errors.sshHost}
-                              label="SSH 主机"
-                              placeholder="例如: 192.0.2.10"
-                              value={form.sshHost}
-                              variant="bordered"
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  sshHost: e.target.value,
-                                }))
-                              }
-                            />
-
-                            <Input
-                              errorMessage={errors.sshPort}
-                              isInvalid={!!errors.sshPort}
-                              label="SSH 端口"
-                              placeholder="22"
-                              value={form.sshPort}
-                              variant="bordered"
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  sshPort: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input
-                              errorMessage={errors.sshUsername}
-                              isInvalid={!!errors.sshUsername}
-                              label="SSH 用户名"
-                              placeholder="例如: root"
-                              value={form.sshUsername}
-                              variant="bordered"
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  sshUsername: e.target.value,
-                                }))
-                              }
-                            />
-
-                            <Select
-                              label="SSH 认证方式"
-                              selectedKeys={[form.sshAuthType]}
-                              variant="bordered"
-                              onSelectionChange={(keys) => {
-                                const selected = Array.from(keys)[0] as
-                                  | "password"
-                                  | "private_key"
-                                  | undefined;
-
-                                setForm((prev) => ({
-                                  ...prev,
-                                  sshAuthType: selected || "private_key",
-                                }));
-                              }}
-                            >
-                              <SelectItem
-                                key="private_key"
-                                textValue="private_key"
-                              >
-                                私钥
-                              </SelectItem>
-                              <SelectItem key="password" textValue="password">
-                                密码
-                              </SelectItem>
-                            </Select>
-                          </div>
-
-                          {form.sshAuthType === "password" ? (
-                            <Input
-                              errorMessage={errors.sshPassword}
-                              isInvalid={!!errors.sshPassword}
-                              label="SSH 密码"
-                              placeholder="请输入 SSH 密码"
-                              type="password"
-                              value={form.sshPassword}
-                              variant="bordered"
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  sshPassword: e.target.value,
-                                }))
-                              }
-                            />
-                          ) : (
-                            <Textarea
-                              errorMessage={errors.sshPrivateKey}
-                              isInvalid={!!errors.sshPrivateKey}
-                              label="SSH 私钥"
-                              minRows={6}
-                              placeholder="粘贴 PEM 格式私钥内容"
-                              value={form.sshPrivateKey}
-                              variant="bordered"
-                              onChange={(e) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  sshPrivateKey: e.target.value,
-                                }))
-                              }
-                            />
-                          )}
-
-                          <Input
-                            label="SSH 私钥密码短语"
-                            placeholder="可选"
-                            type="password"
-                            value={form.sshPassphrase}
-                            variant="bordered"
-                            onChange={(e) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                sshPassphrase: e.target.value,
-                              }))
-                            }
-                          />
-
-                          <Select
-                            label="sudo 提权方式"
-                            selectedKeys={[form.sshSudoMode]}
-                            variant="bordered"
-                            onSelectionChange={(keys) => {
-                              const selected = Array.from(keys)[0] as
-                                | "none"
-                                | "sudo"
-                                | "sudo_su"
-                                | undefined;
-
-                              setForm((prev) => ({
-                                ...prev,
-                                sshSudoMode: selected || "none",
-                              }));
-                            }}
-                          >
-                            <SelectItem key="none" textValue="none">
-                              无需提权
-                            </SelectItem>
-                            <SelectItem key="sudo" textValue="sudo">
-                              sudo
-                            </SelectItem>
-                            <SelectItem key="sudo_su" textValue="sudo_su">
-                              sudo su
-                            </SelectItem>
-                          </Select>
-                        </div>
-                      ) : (
-                        <Alert
-                          color="primary"
-                          description="agent 模式下无需填写 SSH 配置；节点安装 agent 后会自行接管转发。"
-                          variant="flat"
-                        />
-                      )}
-
-                      <Input
-                        description="用于多IP服务器指定使用那个IP请求远程地址，不懂的默认为空就行"
-                        errorMessage={errors.interfaceName}
-                        isInvalid={!!errors.interfaceName}
-                        label="出口网卡名或IP"
-                        placeholder="请输入出口网卡名或IP"
-                        value={form.interfaceName}
-                        variant="bordered"
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            interfaceName: e.target.value,
-                          }))
-                        }
-                      />
-
-                      <Input
-                        description="多IP服务器可填写额外IP地址，逗号分隔"
-                        label="额外IP地址"
-                        placeholder="例如: 192.168.1.100, 10.0.0.5"
-                        value={form.extraIPs}
-                        variant="bordered"
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            extraIPs: e.target.value,
-                          }))
-                        }
-                      />
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input
-                          errorMessage={errors.tcpListenAddr}
-                          isInvalid={!!errors.tcpListenAddr}
-                          label="TCP监听地址"
-                          placeholder="请输入TCP监听地址"
-                          startContent={
-                            <div className="pointer-events-none flex items-center">
-                              <span className="text-default-400 text-small">
-                                TCP
-                              </span>
-                            </div>
-                          }
-                          value={form.tcpListenAddr}
-                          variant="bordered"
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              tcpListenAddr: e.target.value,
-                            }))
-                          }
-                        />
-
-                        <Input
-                          errorMessage={errors.udpListenAddr}
-                          isInvalid={!!errors.udpListenAddr}
-                          label="UDP监听地址"
-                          placeholder="请输入UDP监听地址"
-                          startContent={
-                            <div className="pointer-events-none flex items-center">
-                              <span className="text-default-400 text-small">
-                                UDP
-                              </span>
-                            </div>
-                          }
-                          value={form.udpListenAddr}
-                          variant="bordered"
-                          onChange={(e) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              udpListenAddr: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      {/* 屏蔽协议 */}
-                      <div>
-                        <div className="text-sm font-medium text-default-700 mb-2">
-                          屏蔽协议
-                        </div>
-                        <div className="text-xs text-default-500 mb-2">
-                          开启开关以屏蔽对应协议
-                        </div>
-                        {protocolControlsDisabled && (
-                          <Alert
-                            className="mb-2"
-                            color="warning"
-                            description={protocolControlsReason}
-                            variant="flat"
-                          />
-                        )}
-                        <div
-                          className={`grid grid-cols-1 sm:grid-cols-3 gap-3 bg-content1 bg-content1 p-3 rounded-md border border-divider ${protocolControlsDisabled ? "opacity-70" : ""}`}
-                        >
-                          {/* HTTP tile */}
-                          <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-line transition-colors">
-                            <div className="flex items-center gap-2 mb-2">
-                              <CreditCard className="w-4 h-4 text-default-500" />
-                              <div className="text-sm font-medium text-default-700">
-                                HTTP
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="text-xs text-default-500">
-                                禁用/启用
-                              </div>
-                              <Switch
-                                isDisabled={protocolControlsDisabled}
-                                isSelected={form.http === 1}
-                                size="sm"
-                                onValueChange={(v) =>
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    http: v ? 1 : 0,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="mt-1 text-xs text-default-400">
-                              {form.http === 1 ? "已开启" : "已关闭"}
-                            </div>
-                          </div>
-
-                          {/* TLS tile */}
-                          <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-line transition-colors">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Lock className="w-4 h-4 text-default-500" />
-                              <div className="text-sm font-medium text-default-700">
-                                TLS
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="text-xs text-default-500">
-                                禁用/启用
-                              </div>
-                              <Switch
-                                isDisabled={protocolControlsDisabled}
-                                isSelected={form.tls === 1}
-                                size="sm"
-                                onValueChange={(v) =>
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    tls: v ? 1 : 0,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="mt-1 text-xs text-default-400">
-                              {form.tls === 1 ? "已开启" : "已关闭"}
-                            </div>
-                          </div>
-
-                          {/* SOCKS tile */}
-                          <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-line transition-colors">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Download className="w-4 h-4 text-default-500" />
-                              <div className="text-sm font-medium text-default-700">
-                                SOCKS
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="text-xs text-default-500">
-                                禁用/启用
-                              </div>
-                              <Switch
-                                isDisabled={protocolControlsDisabled}
-                                isSelected={form.socks === 1}
-                                size="sm"
-                                onValueChange={(v) =>
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    socks: v ? 1 : 0,
-                                  }))
-                                }
-                              />
-                            </div>
-                            <div className="mt-1 text-xs text-default-400">
-                              {form.socks === 1 ? "已开启" : "已关闭"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <Alert
-                        color="danger"
-                        description="请不要在出口节点执行屏蔽协议，否则可能影响转发；屏蔽协议仅需在入口节点执行。"
-                        variant="flat"
-                      />
-                    </div>
-                  </AccordionItem>
-                </Accordion>
-              </section>
-
-              <Alert
-                className="mt-4"
-                color="primary"
-                description="节点ip地址是你要添加的入口/出口的ip地址，不是面板的ip地址。"
-                variant="flat"
-              />
-            </div>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="flat" onPress={() => setDialogVisible(false)}>
-              取消
-            </Button>
-            <Button
-              color="primary"
-              isLoading={submitLoading}
-              onPress={handleSubmit}
-            >
-              {submitLoading ? "提交中..." : "确定"}
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <NodeFormModal
+        dialogTitle={dialogTitle}
+        dialogVisible={dialogVisible}
+        errors={errors}
+        form={form}
+        handleSubmit={handleSubmit}
+        protocolControlsDisabled={protocolControlsDisabled}
+        protocolControlsReason={protocolControlsReason}
+        setDialogVisible={setDialogVisible}
+        setForm={setForm}
+        submitLoading={submitLoading}
+      />
 
       {/* 回退确认模态框 */}
       <Modal
-        backdrop="blur"
-        isOpen={rollbackModalOpen}
-        placement="center"
-        scrollBehavior="inside"
+        opened={rollbackModalOpen}
         size="2xl"
-        onOpenChange={setRollbackModalOpen}
-      >
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold">确认回退</h2>
-              </ModalHeader>
-              <ModalBody>
-                <p>
-                  确定要将节点{" "}
-                  <strong>&quot;{nodeToRollback?.name}&quot;</strong>{" "}
-                  回退到上一个版本吗？
-                </p>
-                <p className="text-small text-default-500">
-                  节点将执行版本回退并自动重启，期间会导致节点短暂离线。
-                </p>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button color="secondary" onPress={confirmRollback}>
-                  确认回退
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
-
-      {/* 删除确认模态框 */}
-      <Modal
-        backdrop="blur"
-        isOpen={deleteModalOpen}
-        placement="center"
-        scrollBehavior="inside"
-        size="2xl"
-        onOpenChange={setDeleteModalOpen}
-      >
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold">
-                  {forceNodeRemoval ? "确认强制移除" : "确认删除"}
-                </h2>
-              </ModalHeader>
-              <ModalBody>
-                <p>
-                  确定要{forceNodeRemoval ? "从面板移除" : "删除"}节点{" "}
-                  <strong>&quot;{nodeToDelete?.name}&quot;</strong> 吗？
-                </p>
-                {!forceNodeRemoval && (
-                  <p className="text-small text-default-500">
-                    本地节点会停止转发、清除配置并卸载
-                    agent；离线节点上线后自动清理。请先解除隧道、转发和共享引用。远程共享节点仅移除本面板的接入。
-                  </p>
-                )}
-                <NodeRemovalOptions
-                  disabled={deleteLoading}
-                  force={forceNodeRemoval}
-                  locked={nodeToDelete?.deleteState === 3}
-                  onChange={setForceDelete}
-                />
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button
-                  color="danger"
-                  isLoading={deleteLoading}
-                  onPress={confirmDelete}
-                >
-                  {deleteLoading
-                    ? "处理中..."
-                    : forceNodeRemoval
-                      ? "确认强制移除"
-                      : "确认删除"}
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
-
-      <Modal
-        backdrop="blur"
-        isOpen={installSelectorOpen}
-        placement="center"
-        size="md"
-        onOpenChange={setInstallSelectorOpen}
-      >
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold">
-                  选择安装通道
-                  {installTargetNode ? ` - ${installTargetNode.name}` : ""}
-                </h2>
-              </ModalHeader>
-              <ModalBody>
-                <div className="space-y-4">
-                  <Select
-                    label="版本通道"
-                    selectedKeys={[installChannel]}
-                    onSelectionChange={(keys) => {
-                      const selected = Array.from(keys)[0] as ReleaseChannel;
-
-                      setInstallChannel(selected || "stable");
-                    }}
-                  >
-                    <SelectItem key="stable" textValue="stable">
-                      正式版（纯数字版本，如 2.1.4）
-                    </SelectItem>
-                    <SelectItem key="dev" textValue="dev">
-                      测试版（含 alpha / beta / rc）
-                    </SelectItem>
-                  </Select>
-                </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button color="primary" onPress={handleConfirmInstallCommand}>
-                  生成命令
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
-
-      {/* 安装命令模态框 */}
-      <Modal
-        backdrop="blur"
-        isOpen={installCommandModal}
-        placement="center"
-        scrollBehavior="inside"
-        size="lg"
-        onClose={() => setInstallCommandModal(false)}
+        onClose={() => setRollbackModalOpen(false)}
       >
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
-            <h2>安装节点</h2>
-            <p>{currentNodeName}</p>
+            <h2 className="text-xl font-bold">确认回退</h2>
           </ModalHeader>
           <ModalBody>
-            <ol className="install-steps">
-              <li>以 root 身份登录目标服务器</li>
-              <li>复制下方命令并在终端中执行</li>
-              <li>安装完成后，节点状态会自动变为在线</li>
-            </ol>
-            <div className="code-block">
-              <div className="code-block-head">
-                <span>bash</span>
-                <Button
-                  size="sm"
-                  startContent={<Copy size={14} />}
-                  variant="light"
-                  onPress={handleManualCopy}
-                >
-                  复制
-                </Button>
-              </div>
-              <pre>{installCommand}</pre>
-            </div>
-            <p className="text-xs text-default-500">
-              复制按钮不可用时，点击命令区域即可全选后手动复制。
+            <p>
+              确定要将节点 <strong>&quot;{nodeToRollback?.name}&quot;</strong>{" "}
+              回退到上一个版本吗？
+            </p>
+            <p className="text-small text-default-500">
+              节点将执行版本回退并自动重启，期间会导致节点短暂离线。
             </p>
           </ModalBody>
           <ModalFooter>
             <Button
-              variant="light"
-              onPress={() => setInstallCommandModal(false)}
+              color="gray"
+              variant="subtle"
+              onClick={() => setRollbackModalOpen(false)}
             >
-              关闭
+              取消
+            </Button>
+            <Button color="violet" onClick={confirmRollback}>
+              确认回退
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
+      {/* 删除确认模态框 */}
+      <NodeDeleteModal
+        confirmDelete={confirmDelete}
+        deleteLoading={deleteLoading}
+        deleteModalOpen={deleteModalOpen}
+        forceNodeRemoval={forceNodeRemoval}
+        nodeToDelete={nodeToDelete}
+        setDeleteModalOpen={setDeleteModalOpen}
+        setForceDelete={setForceDelete}
+      />
+
+      <InstallSelectorModal
+        handleConfirmInstallCommand={handleConfirmInstallCommand}
+        installChannel={installChannel}
+        installSelectorOpen={installSelectorOpen}
+        installTargetNode={installTargetNode}
+        setInstallChannel={setInstallChannel}
+        setInstallSelectorOpen={setInstallSelectorOpen}
+      />
+
+      {/* 安装命令模态框 */}
+      <InstallCommandModal
+        currentNodeName={currentNodeName}
+        handleManualCopy={handleManualCopy}
+        installCommand={installCommand}
+        installCommandModal={installCommandModal}
+        setInstallCommandModal={setInstallCommandModal}
+      />
+
       {/* 版本选择升级模态框 */}
-      <Modal
-        backdrop="blur"
-        isOpen={upgradeModalOpen}
-        placement="center"
-        scrollBehavior="inside"
-        size="md"
-        onOpenChange={setUpgradeModalOpen}
-      >
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold">
-                  {upgradeTarget === "batch"
-                    ? `批量升级 (${selectedIds.size} 个节点)`
-                    : "升级节点"}
-                </h2>
-              </ModalHeader>
-              <ModalBody>
-                {releasesLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Spinner size="lg" />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Select
-                      label="版本通道"
-                      selectedKeys={[releaseChannel]}
-                      onSelectionChange={(keys) => {
-                        const selected =
-                          (Array.from(keys)[0] as ReleaseChannel) || "stable";
-
-                        setReleaseChannel(selected);
-                        setSelectedVersion("");
-                        void loadReleasesByChannel(selected);
-                      }}
-                    >
-                      <SelectItem key="stable" textValue="stable">
-                        正式版（纯数字版本，如 2.1.4）
-                      </SelectItem>
-                      <SelectItem key="dev" textValue="dev">
-                        测试版（含 alpha / beta / rc）
-                      </SelectItem>
-                    </Select>
-                    <Select
-                      label="选择版本"
-                      placeholder="留空则使用当前通道最新版本"
-                      selectedKeys={selectedVersion ? [selectedVersion] : []}
-                      onSelectionChange={(keys) => {
-                        const selected = Array.from(keys)[0] as string;
-
-                        setSelectedVersion(selected || "");
-                      }}
-                    >
-                      {releases.map((r) => (
-                        <SelectItem key={r.version} textValue={r.version}>
-                          <div className="flex justify-between items-center">
-                            <span>{r.version}</span>
-                            <span className="text-xs text-default-400">
-                              {r.publishedAt
-                                ? new Date(r.publishedAt).toLocaleDateString()
-                                : ""}
-                              {r.channel === "dev" && (
-                                <Chip
-                                  className="ml-1 shrink-0 whitespace-nowrap"
-                                  color="warning"
-                                  size="sm"
-                                  variant="flat"
-                                >
-                                  测试
-                                </Chip>
-                              )}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </Select>
-                    <p className="text-sm text-default-500">
-                      {selectedVersion
-                        ? `将升级到版本 ${selectedVersion}`
-                        : `未选择版本，将自动使用最新${releaseChannel === "stable" ? "正式" : "测试"}版`}
-                    </p>
-                  </div>
-                )}
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button
-                  color="warning"
-                  isDisabled={releasesLoading}
-                  onPress={handleConfirmUpgrade}
-                >
-                  确认升级
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      <NodeUpgradeModal
+        handleConfirmUpgrade={handleConfirmUpgrade}
+        loadReleasesByChannel={loadReleasesByChannel}
+        releaseChannel={releaseChannel}
+        releases={releases}
+        releasesLoading={releasesLoading}
+        selectedIds={selectedIds}
+        selectedVersion={selectedVersion}
+        setReleaseChannel={setReleaseChannel}
+        setSelectedVersion={setSelectedVersion}
+        setUpgradeModalOpen={setUpgradeModalOpen}
+        upgradeModalOpen={upgradeModalOpen}
+        upgradeTarget={upgradeTarget}
+      />
 
       {/* 批量删除确认模态框 */}
-      <Modal
-        backdrop="blur"
-        isOpen={batchDeleteModalOpen}
-        placement="center"
-        scrollBehavior="inside"
-        size="md"
-        onOpenChange={setBatchDeleteModalOpen}
-      >
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h2 className="text-xl font-bold">
-                  {batchForceDelete ? "确认批量强制移除" : "确认删除"}
-                </h2>
-              </ModalHeader>
-              <ModalBody>
-                <p>
-                  确定要{batchForceDelete ? "从面板移除" : "删除"}选中的{" "}
-                  <strong>{selectedIds.size}</strong> 个节点吗？
-                </p>
-                {!batchForceDelete && (
-                  <p className="text-small text-default-500">
-                    将逐项清理并卸载本地
-                    agent；离线节点上线后自动重试。有关联资源或清理失败的节点会保留并显示原因。
-                  </p>
-                )}
-                <NodeRemovalOptions
-                  disabled={batchLoading}
-                  force={batchForceDelete}
-                  onChange={setBatchForceDelete}
-                />
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>
-                  取消
-                </Button>
-                <Button
-                  color="danger"
-                  isLoading={batchLoading}
-                  onPress={handleBatchDelete}
-                >
-                  {batchLoading
-                    ? "处理中..."
-                    : batchForceDelete
-                      ? "确认强制移除"
-                      : "确认删除"}
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      <NodeBatchDeleteModal
+        batchDeleteModalOpen={batchDeleteModalOpen}
+        batchForceDelete={batchForceDelete}
+        batchLoading={batchLoading}
+        handleBatchDelete={handleBatchDelete}
+        selectedIds={selectedIds}
+        setBatchDeleteModalOpen={setBatchDeleteModalOpen}
+        setBatchForceDelete={setBatchForceDelete}
+      />
 
-      <Modal
-        isOpen={isFilterModalOpen}
-        placement="center"
-        size="md"
-        onOpenChange={setIsFilterModalOpen}
-      >
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                筛选条件
-              </ModalHeader>
-              <ModalBody>
-                <div className="flex flex-col gap-4 py-2">
-                  <div className="flex flex-col gap-2">
-                    <p className="text-sm font-medium">按到期状态筛选</p>
-                    <Select
-                      aria-label="按到期状态筛选"
-                      className="w-full"
-                      selectedKeys={[nodeFilterMode]}
-                      variant="bordered"
-                      onSelectionChange={(keys) => {
-                        const selected = Array.from(keys)[0] as
-                          | NodeFilterMode
-                          | undefined;
-
-                        setNodeFilterMode(selected || "all");
-                      }}
-                    >
-                      <SelectItem key="all">全部节点</SelectItem>
-                      <SelectItem key="expiringSoon">
-                        7天内续费 ({nodeExpiryStats.expiringSoon})
-                      </SelectItem>
-                      <SelectItem key="expired">
-                        已逾期 ({nodeExpiryStats.expired})
-                      </SelectItem>
-                      <SelectItem key="withExpiry">
-                        已启用续费提醒 ({nodeExpiryStats.withExpiry})
-                      </SelectItem>
-                    </Select>
-                  </div>
-                </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button
-                  color="default"
-                  variant="flat"
-                  onPress={resetNodeFilterMode}
-                >
-                  重置
-                </Button>
-                <Button color="primary" onPress={onClose}>
-                  完成
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+      <NodeFilterModal
+        isFilterModalOpen={isFilterModalOpen}
+        nodeExpiryStats={nodeExpiryStats}
+        nodeFilterMode={nodeFilterMode}
+        resetNodeFilterMode={resetNodeFilterMode}
+        setIsFilterModalOpen={setIsFilterModalOpen}
+        setNodeFilterMode={setNodeFilterMode}
+      />
     </AnimatedPage>
   );
 }

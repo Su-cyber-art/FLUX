@@ -37,7 +37,15 @@ import {
   ChartLine,
   Network,
 } from "lucide-react";
-import { ActionIcon, Loader, Tooltip as MantineTooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Loader,
+  Tooltip as MantineTooltip,
+  Badge,
+  Button,
+  Select,
+  Table,
+} from "@mantine/core";
 
 import toast from "@/lib/notifications";
 import { formatTraffic } from "@/utils/traffic";
@@ -48,27 +56,22 @@ import {
   getMonitorTunnelQualityHistory,
   getConfigByName,
 } from "@/api";
-import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Chip } from "@/components/ui/chip";
 import { IconTile } from "@/components/ui/icon-tile";
 import { EmptyStateCard } from "@/components/page-state";
-import { SectionHeader } from "@/components/section-header";
-import { Select, SelectItem } from "@/components/ui/select";
 import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
+  chartTick,
+  chartTooltipProps,
+  useChartPalette,
+} from "@/components/chart-theme";
+import { SectionHeader } from "@/components/section-header";
 import {
   DEFAULT_TUNNEL_QUALITY_INTERVAL_SEC,
   parseTunnelQualityIntervalSeconds,
   TUNNEL_QUALITY_INTERVAL_CONFIG_KEY,
   tunnelQualityIntervalLabel,
 } from "@/config/tunnel-quality";
+import { uiColor } from "@/components/ui/shared";
 
 interface TunnelMonitorViewProps {
   viewMode?: "list" | "grid";
@@ -243,20 +246,20 @@ function TimeRangeSelect({
 }) {
   return (
     <Select
-      isRequired
+      required
       aria-label="时间范围"
       className="w-28"
-      selectedKeys={[String(value)]}
-      onSelectionChange={(keys) => {
-        const v = Number(Array.from(keys)[0]);
+      data={TIME_RANGE_OPTIONS.map((opt) => ({
+        value: String(opt.key),
+        label: opt.label,
+      }))}
+      value={String(value)}
+      onChange={(value) => {
+        const v = Number(value);
 
         if (v > 0) onChange(v);
       }}
-    >
-      {TIME_RANGE_OPTIONS.map((opt) => (
-        <SelectItem key={opt.key}>{opt.label}</SelectItem>
-      ))}
-    </Select>
+    />
   );
 }
 
@@ -283,6 +286,8 @@ const QualityChartCard = React.memo(function QualityChartCard({
   tunnelId,
   onRefresh,
 }: QualityChartCardProps) {
+  const palette = useChartPalette();
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -320,25 +325,20 @@ const QualityChartCard = React.memo(function QualityChartCard({
             <ResponsiveContainer height="100%" width="100%">
               <LineChart data={data}>
                 <CartesianGrid opacity={0.3} strokeDasharray="3 3" />
-                <XAxis dataKey="time" fontSize={11} tick={{ fill: "#888" }} />
+                <XAxis dataKey="time" fontSize={11} tick={chartTick} />
                 <YAxis
                   fontSize={11}
                   label={{
                     value: "延迟 (ms)",
                     angle: -90,
                     position: "insideLeft",
-                    style: { fontSize: 11, fill: "#888" },
+                    style: { fontSize: 11, fill: "currentColor" },
                   }}
-                  tick={{ fill: "#888" }}
+                  tick={chartTick}
                   tickFormatter={(v: any) => `${Number(v).toFixed(0)}ms`}
                 />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(0,0,0,0.85)",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: 12,
-                  }}
+                  {...chartTooltipProps}
                   formatter={(value: unknown, name: string) => {
                     const n = Number(value);
 
@@ -352,14 +352,13 @@ const QualityChartCard = React.memo(function QualityChartCard({
 
                     return [`${n.toFixed(1)}ms`, label];
                   }}
-                  labelStyle={{ color: "#fff" }}
                 />
                 <Line
                   connectNulls
                   dataKey="entryToExit"
                   dot={false}
                   name="entryToExit"
-                  stroke="#10b981"
+                  stroke={palette.teal}
                   strokeWidth={2}
                   type="monotone"
                 />
@@ -368,7 +367,7 @@ const QualityChartCard = React.memo(function QualityChartCard({
                   dataKey="exitToBing"
                   dot={false}
                   name="exitToBing"
-                  stroke="#3b82f6"
+                  stroke={palette.blue}
                   strokeWidth={2}
                   type="monotone"
                 />
@@ -407,6 +406,7 @@ const TrafficChartCard = React.memo(function TrafficChartCard({
   tunnelId,
   onRefresh,
 }: TrafficChartCardProps) {
+  const palette = useChartPalette();
   const yFormatter = (value: unknown) => {
     const n = Number(value);
 
@@ -450,27 +450,18 @@ const TrafficChartCard = React.memo(function TrafficChartCard({
             <ResponsiveContainer height="100%" width="100%">
               <LineChart data={data}>
                 <CartesianGrid opacity={0.3} strokeDasharray="3 3" />
-                <XAxis dataKey="time" fontSize={11} tick={{ fill: "#888" }} />
+                <XAxis dataKey="time" fontSize={11} tick={chartTick} />
                 <YAxis
                   fontSize={11}
-                  tick={{ fill: "#888" }}
+                  tick={chartTick}
                   tickFormatter={yFormatter}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(0,0,0,0.85)",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: 12,
-                  }}
-                  formatter={yFormatter}
-                  labelStyle={{ color: "#fff" }}
-                />
+                <Tooltip {...chartTooltipProps} formatter={yFormatter} />
                 <Line
                   dataKey="bytesIn"
                   dot={false}
                   name="入站流量"
-                  stroke="#10b981"
+                  stroke={palette.teal}
                   strokeWidth={2}
                   type="monotone"
                 />
@@ -478,7 +469,7 @@ const TrafficChartCard = React.memo(function TrafficChartCard({
                   dataKey="bytesOut"
                   dot={false}
                   name="出站流量"
-                  stroke="#ef4444"
+                  stroke={palette.red}
                   strokeWidth={2}
                   type="monotone"
                 />
@@ -704,10 +695,11 @@ function TopologyNodeChip({
   borderColor?: string;
 }) {
   return (
-    <Chip
+    <Badge
       className={`shrink-0 font-mono shadow-sm ${borderColor}`}
+      color="gray"
       size="sm"
-      variant="flat"
+      variant="light"
     >
       <span className="flex items-center gap-1.5">
         <span>{name}</span>
@@ -717,7 +709,7 @@ function TopologyNodeChip({
           </span>
         ) : null}
       </span>
-    </Chip>
+    </Badge>
   );
 }
 
@@ -1232,13 +1224,14 @@ export function TunnelMonitorView({
             <h2 className="truncate text-base font-semibold text-foreground">
               {detailTunnel.name}
             </h2>
-            <Chip
-              dot
-              color={detailTunnel.status === 1 ? "success" : "danger"}
+            <Badge
+              color={uiColor(detailTunnel.status === 1 ? "success" : "danger")}
+              leftSection={<span className="badge-dot" />}
               size="xs"
+              variant="light"
             >
               {detailTunnel.status === 1 ? "启用" : "禁用"}
-            </Chip>
+            </Badge>
           </div>
         </div>
 
@@ -1361,9 +1354,9 @@ export function TunnelMonitorView({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3 mb-1">
-        <Chip color="primary" size="sm" variant="flat">
+        <Badge size="sm" variant="light">
           隧道 {tunnelStats.enabled}/{tunnelStats.total}
-        </Chip>
+        </Badge>
         {lastQualityUpdate ? (
           <div className="flex items-center gap-1.5 text-xs text-default-500">
             {monitorTunnelQualityEnabled ? (
@@ -1386,10 +1379,11 @@ export function TunnelMonitorView({
         ) : null}
         <div className="ml-auto">
           <Button
-            isLoading={tunnelsLoading}
-            size="sm"
-            variant="flat"
-            onPress={() => loadTunnels()}
+            color="gray"
+            loading={tunnelsLoading}
+            size="xs"
+            variant="light"
+            onClick={() => loadTunnels()}
           >
             <RefreshCw className="w-4 h-4 mr-1" />
             刷新
@@ -1513,95 +1507,109 @@ export function TunnelMonitorView({
         </div>
       ) : (
         <Card className="w-full">
-          <Table
-            aria-label="隧道列表"
-            className="overflow-x-auto min-w-full"
-            classNames={{
-              wrapper:
-                "bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg",
-              th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-              td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-              tr: "hover:bg-default-soft transition-colors",
-            }}
-          >
-            <TableHeader>
-              <TableColumn>状态</TableColumn>
-              <TableColumn>名称</TableColumn>
-              <TableColumn>入口→出口</TableColumn>
-              <TableColumn>出口→测试目标</TableColumn>
-              <TableColumn>更新时间</TableColumn>
-            </TableHeader>
-            <TableBody emptyContent="暂无隧道">
-              {tunnels.map((tunnel) => {
-                const quality = qualityMap[tunnel.id];
-                const isEnabled = tunnel.status === 1;
-                const targetLabel = probeTargetLabel(quality);
+          <div className="app-table-scroll bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg">
+            <Table
+              aria-label="隧道列表"
+              className="app-table overflow-x-auto min-w-full"
+              classNames={{
+                th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
+                td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
+                tr: "hover:bg-default-soft transition-colors",
+              }}
+            >
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>状态</Table.Th>
+                  <Table.Th>名称</Table.Th>
+                  <Table.Th>入口→出口</Table.Th>
+                  <Table.Th>出口→测试目标</Table.Th>
+                  <Table.Th>更新时间</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {tunnels.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={5}>
+                      <div className="p-8 text-center text-default-500">
+                        暂无隧道
+                      </div>
+                    </Table.Td>
+                  </Table.Tr>
+                ) : (
+                  tunnels.map((tunnel) => {
+                    const quality = qualityMap[tunnel.id];
+                    const isEnabled = tunnel.status === 1;
+                    const targetLabel = probeTargetLabel(quality);
 
-                return (
-                  <TableRow
-                    key={tunnel.id}
-                    className="cursor-pointer"
-                    onClick={() => setDetailTunnelId(tunnel.id)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        {isEnabled ? (
-                          <Wifi className="w-3.5 h-3.5 text-success" />
-                        ) : (
-                          <WifiOff className="w-3.5 h-3.5 text-danger" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-semibold text-sm whitespace-nowrap">
-                        {tunnel.name}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <UptimeHistoryBar
-                        history={qualityHistoryMap[tunnel.id]}
-                        latestValue={quality?.entryToExitLatency}
-                        type="entryToExit"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div
-                        aria-label={`出口到测试目标 ${targetLabel}`}
-                        className="space-y-1"
+                    return (
+                      <Table.Tr
+                        key={tunnel.id}
+                        className="cursor-pointer"
+                        onClick={() => setDetailTunnelId(tunnel.id)}
                       >
-                        <UptimeHistoryBar
-                          history={qualityHistoryMap[tunnel.id]}
-                          latestValue={quality?.exitToBingLatency}
-                          type="exitToBing"
-                        />
-                        <span className="block max-w-[160px] truncate text-[10px] text-default-400">
-                          {targetLabel}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {quality?.timestamp ? (
-                        <span className="text-xs text-default-500 flex items-center gap-1 whitespace-nowrap">
-                          {monitorTunnelQualityEnabled ? (
-                            <LiveDot />
+                        <Table.Td>
+                          <div className="flex items-center gap-1.5">
+                            {isEnabled ? (
+                              <Wifi className="w-3.5 h-3.5 text-success" />
+                            ) : (
+                              <WifiOff className="w-3.5 h-3.5 text-danger" />
+                            )}
+                          </div>
+                        </Table.Td>
+                        <Table.Td>
+                          <span className="font-semibold text-sm whitespace-nowrap">
+                            {tunnel.name}
+                          </span>
+                        </Table.Td>
+                        <Table.Td>
+                          <UptimeHistoryBar
+                            history={qualityHistoryMap[tunnel.id]}
+                            latestValue={quality?.entryToExitLatency}
+                            type="entryToExit"
+                          />
+                        </Table.Td>
+                        <Table.Td>
+                          <div
+                            aria-label={`出口到测试目标 ${targetLabel}`}
+                            className="space-y-1"
+                          >
+                            <UptimeHistoryBar
+                              history={qualityHistoryMap[tunnel.id]}
+                              latestValue={quality?.exitToBingLatency}
+                              type="exitToBing"
+                            />
+                            <span className="block max-w-[160px] truncate text-[10px] text-default-400">
+                              {targetLabel}
+                            </span>
+                          </div>
+                        </Table.Td>
+                        <Table.Td>
+                          {quality?.timestamp ? (
+                            <span className="text-xs text-default-500 flex items-center gap-1 whitespace-nowrap">
+                              {monitorTunnelQualityEnabled ? (
+                                <LiveDot />
+                              ) : (
+                                <WifiOff className="w-3.5 h-3.5 text-warning" />
+                              )}
+                              {new Date(quality.timestamp).toLocaleTimeString(
+                                "zh-CN",
+                              )}
+                            </span>
                           ) : (
-                            <WifiOff className="w-3.5 h-3.5 text-warning" />
+                            <span className="text-xs text-default-400">
+                              {monitorTunnelQualityEnabled
+                                ? "-"
+                                : "实时检测已关闭"}
+                            </span>
                           )}
-                          {new Date(quality.timestamp).toLocaleTimeString(
-                            "zh-CN",
-                          )}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-default-400">
-                          {monitorTunnelQualityEnabled ? "-" : "实时检测已关闭"}
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })
+                )}
+              </Table.Tbody>
+            </Table>
+          </div>
         </Card>
       )}
     </div>

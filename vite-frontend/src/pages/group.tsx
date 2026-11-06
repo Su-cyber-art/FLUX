@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActionIcon, Tooltip } from "@mantine/core";
+import {
+  ActionIcon,
+  Tooltip,
+  Button,
+  Badge,
+  TextInput,
+  Select,
+  MultiSelect,
+} from "@mantine/core";
 import {
   ArrowRight,
   Network,
@@ -10,6 +18,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { useDisclosure } from "@mantine/hooks";
 
 import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
@@ -17,18 +26,13 @@ import { PageEmptyState, PageLoadingState } from "@/components/page-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { SectionHeader } from "@/components/section-header";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Modal,
   ModalBody,
   ModalContent,
   ModalFooter,
   ModalHeader,
-  useDisclosure,
 } from "@/components/ui/modal";
-import { Select, SelectItem } from "@/components/ui/select";
-import { Chip } from "@/components/ui/chip";
 import {
   assignGroupPermission,
   assignTunnelsToGroup,
@@ -135,11 +139,10 @@ function GroupPanel({
         <SectionHeader
           actions={
             <Button
-              color="primary"
-              size="sm"
-              startContent={<Plus size={14} />}
-              variant="flat"
-              onPress={onCreate}
+              leftSection={<Plus size={14} />}
+              size="xs"
+              variant="light"
+              onClick={onCreate}
             >
               新建
             </Button>
@@ -169,9 +172,14 @@ function GroupPanel({
                         {item.name}
                       </span>
                       {item.status !== 1 && (
-                        <Chip dot color="warning" size="xs">
+                        <Badge
+                          color="orange"
+                          leftSection={<span className="badge-dot" />}
+                          size="xs"
+                          variant="light"
+                        >
                           停用
-                        </Chip>
+                        </Badge>
                       )}
                       <span className="shrink-0 text-xs text-default-500">
                         {item.members.length} {memberUnit}
@@ -187,20 +195,25 @@ function GroupPanel({
                           {item.members
                             .slice(0, MEMBER_PREVIEW_LIMIT)
                             .map((member) => (
-                              <Chip key={member} size="xs">
+                              <Badge
+                                key={member}
+                                color="gray"
+                                size="xs"
+                                variant="light"
+                              >
                                 {member}
-                              </Chip>
+                              </Badge>
                             ))}
                           {hidden > 0 && (
-                            <Chip
-                              color="primary"
+                            <Badge
                               size="xs"
                               title={item.members
                                 .slice(MEMBER_PREVIEW_LIMIT)
                                 .join("、")}
+                              variant="light"
                             >
                               +{hidden}
-                            </Chip>
+                            </Badge>
                           )}
                         </>
                       )}
@@ -211,9 +224,10 @@ function GroupPanel({
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <Button
-                      size="sm"
-                      variant="light"
-                      onPress={() => onAssign(item.id)}
+                      color="gray"
+                      size="xs"
+                      variant="subtle"
+                      onClick={() => onAssign(item.id)}
                     >
                       {assignLabel}
                     </Button>
@@ -273,30 +287,22 @@ export default function GroupPage() {
   } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
 
-  const {
-    isOpen: tunnelGroupModalOpen,
-    onOpen: onTunnelGroupModalOpen,
-    onClose: onTunnelGroupModalClose,
-    onOpenChange: onTunnelGroupModalChange,
-  } = useDisclosure();
-  const {
-    isOpen: userGroupModalOpen,
-    onOpen: onUserGroupModalOpen,
-    onClose: onUserGroupModalClose,
-    onOpenChange: onUserGroupModalChange,
-  } = useDisclosure();
-  const {
-    isOpen: tunnelAssignModalOpen,
-    onOpen: onTunnelAssignModalOpen,
-    onClose: onTunnelAssignModalClose,
-    onOpenChange: onTunnelAssignModalChange,
-  } = useDisclosure();
-  const {
-    isOpen: userAssignModalOpen,
-    onOpen: onUserAssignModalOpen,
-    onClose: onUserAssignModalClose,
-    onOpenChange: onUserAssignModalChange,
-  } = useDisclosure();
+  const [
+    tunnelGroupModalOpen,
+    { open: onTunnelGroupModalOpen, close: onTunnelGroupModalClose },
+  ] = useDisclosure();
+  const [
+    userGroupModalOpen,
+    { open: onUserGroupModalOpen, close: onUserGroupModalClose },
+  ] = useDisclosure();
+  const [
+    tunnelAssignModalOpen,
+    { open: onTunnelAssignModalOpen, close: onTunnelAssignModalClose },
+  ] = useDisclosure();
+  const [
+    userAssignModalOpen,
+    { open: onUserAssignModalOpen, close: onUserAssignModalClose },
+  ] = useDisclosure();
 
   const [editingTunnelGroup, setEditingTunnelGroup] =
     useState<TunnelGroup | null>(null);
@@ -733,44 +739,45 @@ export default function GroupPage() {
             <CardBody className="space-y-4 pt-0">
               <div className="grid gap-3 rounded-lg bg-default-soft p-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] md:items-end">
                 <Select
-                  items={userGroups}
+                  clearable
+                  searchable
+                  data={Array.from(userGroups).map((item) => ({
+                    value: String(item.id),
+                    label: item.name,
+                  }))}
                   label="用户分组"
                   placeholder="选择用户分组"
-                  selectedKeys={
-                    selectedUserGroupId ? [String(selectedUserGroupId)] : []
+                  value={
+                    selectedUserGroupId ? String(selectedUserGroupId) : null
                   }
-                  onSelectionChange={(keys) => {
-                    const key = Array.from(keys as Set<React.Key>)[0];
-
+                  onChange={(key) => {
                     setSelectedUserGroupId(key ? Number(key) : null);
                   }}
-                >
-                  {(item) => <SelectItem key={item.id}>{item.name}</SelectItem>}
-                </Select>
+                />
                 <span className="hidden pb-2 text-xs text-default-500 md:block">
                   可使用
                 </span>
                 <Select
-                  items={tunnelGroups}
+                  clearable
+                  searchable
+                  data={Array.from(tunnelGroups).map((item) => ({
+                    value: String(item.id),
+                    label: item.name,
+                  }))}
                   label="隧道分组"
                   placeholder="选择隧道分组"
-                  selectedKeys={
-                    selectedTunnelGroupId ? [String(selectedTunnelGroupId)] : []
+                  value={
+                    selectedTunnelGroupId ? String(selectedTunnelGroupId) : null
                   }
-                  onSelectionChange={(keys) => {
-                    const key = Array.from(keys as Set<React.Key>)[0];
-
+                  onChange={(key) => {
                     setSelectedTunnelGroupId(key ? Number(key) : null);
                   }}
-                >
-                  {(item) => <SelectItem key={item.id}>{item.name}</SelectItem>}
-                </Select>
+                />
                 <Button
-                  color="primary"
-                  isDisabled={!selectedUserGroupId || !selectedTunnelGroupId}
-                  isLoading={savingPermission}
-                  startContent={<Plus size={15} />}
-                  onPress={handleAssignPermission}
+                  disabled={!selectedUserGroupId || !selectedTunnelGroupId}
+                  leftSection={<Plus size={15} />}
+                  loading={savingPermission}
+                  onClick={handleAssignPermission}
                 >
                   授权
                 </Button>
@@ -789,25 +796,25 @@ export default function GroupPage() {
                       className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 transition-colors hover:bg-default-soft"
                     >
                       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm">
-                        <Chip color="secondary" size="sm">
+                        <Badge color="violet" size="sm" variant="light">
                           {item.userGroupName || `#${item.userGroupId}`}
-                        </Chip>
+                        </Badge>
                         <ArrowRight
                           className="shrink-0 text-default-400"
                           size={14}
                         />
-                        <Chip color="primary" size="sm">
+                        <Badge size="sm" variant="light">
                           {item.tunnelGroupName || `#${item.tunnelGroupId}`}
-                        </Chip>
+                        </Badge>
                         <span className="text-[11px] text-default-400">
                           {formatDate(item.createdTime)}
                         </span>
                       </div>
                       <Button
-                        color="danger"
-                        size="sm"
-                        variant="light"
-                        onPress={() =>
+                        color="red"
+                        size="xs"
+                        variant="subtle"
+                        onClick={() =>
                           setPendingDelete({
                             kind: "permission",
                             id: item.id,
@@ -828,13 +835,13 @@ export default function GroupPage() {
             confirmLabel={
               pendingDelete?.kind === "permission" ? "回收" : "删除"
             }
-            isOpen={pendingDelete !== null}
             loading={confirmLoading}
             message={
               pendingDelete?.kind === "permission"
                 ? `回收“${pendingDelete.name}”后，该用户分组将不能再使用这些隧道。`
                 : `确定删除“${pendingDelete?.name ?? ""}”吗？此操作无法撤销。`
             }
+            opened={pendingDelete !== null}
             title={
               pendingDelete?.kind === "permission" ? "回收权限" : "删除分组"
             }
@@ -843,89 +850,82 @@ export default function GroupPage() {
           />
 
           <Modal
-            backdrop="blur"
-            isOpen={tunnelGroupModalOpen}
-            onOpenChange={onTunnelGroupModalChange}
+            opened={tunnelGroupModalOpen}
+            onClose={onTunnelGroupModalClose}
           >
             <ModalContent>
               <ModalHeader>
                 {editingTunnelGroup ? "编辑隧道分组" : "新建隧道分组"}
               </ModalHeader>
               <ModalBody className="space-y-3">
-                <Input
+                <TextInput
                   label="分组名称"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
                 />
                 <Select
+                  data={[
+                    { value: "1", label: "启用" },
+                    { value: "0", label: "停用" },
+                  ]}
                   label="状态"
-                  selectedKeys={[groupStatus]}
-                  onSelectionChange={(keys) => {
-                    const key = Array.from(keys as Set<React.Key>)[0];
-
+                  value={groupStatus}
+                  onChange={(key) => {
                     if (key) {
                       setGroupStatus(String(key));
                     }
                   }}
-                >
-                  <SelectItem key="1">启用</SelectItem>
-                  <SelectItem key="0">停用</SelectItem>
-                </Select>
+                />
               </ModalBody>
               <ModalFooter>
-                <Button variant="light" onPress={onTunnelGroupModalClose}>
+                <Button
+                  color="gray"
+                  variant="subtle"
+                  onClick={onTunnelGroupModalClose}
+                >
                   取消
                 </Button>
-                <Button
-                  color="primary"
-                  isLoading={savingGroup}
-                  onPress={saveTunnelGroup}
-                >
+                <Button loading={savingGroup} onClick={saveTunnelGroup}>
                   保存
                 </Button>
               </ModalFooter>
             </ModalContent>
           </Modal>
 
-          <Modal
-            backdrop="blur"
-            isOpen={userGroupModalOpen}
-            onOpenChange={onUserGroupModalChange}
-          >
+          <Modal opened={userGroupModalOpen} onClose={onUserGroupModalClose}>
             <ModalContent>
               <ModalHeader>
                 {editingUserGroup ? "编辑用户分组" : "新建用户分组"}
               </ModalHeader>
               <ModalBody className="space-y-3">
-                <Input
+                <TextInput
                   label="分组名称"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
                 />
                 <Select
+                  data={[
+                    { value: "1", label: "启用" },
+                    { value: "0", label: "停用" },
+                  ]}
                   label="状态"
-                  selectedKeys={[groupStatus]}
-                  onSelectionChange={(keys) => {
-                    const key = Array.from(keys as Set<React.Key>)[0];
-
+                  value={groupStatus}
+                  onChange={(key) => {
                     if (key) {
                       setGroupStatus(String(key));
                     }
                   }}
-                >
-                  <SelectItem key="1">启用</SelectItem>
-                  <SelectItem key="0">停用</SelectItem>
-                </Select>
+                />
               </ModalBody>
               <ModalFooter>
-                <Button variant="light" onPress={onUserGroupModalClose}>
+                <Button
+                  color="gray"
+                  variant="subtle"
+                  onClick={onUserGroupModalClose}
+                >
                   取消
                 </Button>
-                <Button
-                  color="primary"
-                  isLoading={savingGroup}
-                  onPress={saveUserGroup}
-                >
+                <Button loading={savingGroup} onClick={saveUserGroup}>
                   保存
                 </Button>
               </ModalFooter>
@@ -933,28 +933,26 @@ export default function GroupPage() {
           </Modal>
 
           <Modal
-            backdrop="blur"
-            isOpen={tunnelAssignModalOpen}
-            onOpenChange={onTunnelAssignModalChange}
+            opened={tunnelAssignModalOpen}
+            onClose={onTunnelAssignModalClose}
           >
             <ModalContent>
               <ModalHeader>分配隧道 - {assignTunnelGroup?.name}</ModalHeader>
               <ModalBody className="min-w-0">
-                <Select
+                <MultiSelect
+                  searchable
                   className="min-w-0"
-                  classNames={{ trigger: "max-w-full" }}
-                  items={tunnels}
+                  classNames={{ input: "max-w-full" }}
+                  data={Array.from(tunnels).map((item) => ({
+                    value: String(item.id),
+                    label: item.name,
+                  }))}
                   label="选择隧道"
-                  selectedKeys={selectedTunnelKeys}
-                  selectionMode="multiple"
-                  onSelectionChange={(keys) => {
-                    setSelectedTunnelKeys(
-                      new Set(Array.from(keys as Set<React.Key>).map(String)),
-                    );
+                  value={Array.from(selectedTunnelKeys, String)}
+                  onChange={(values) => {
+                    setSelectedTunnelKeys(new Set(values));
                   }}
-                >
-                  {(item) => <SelectItem key={item.id}>{item.name}</SelectItem>}
-                </Select>
+                />
                 <p
                   className="w-full min-w-0 max-w-full text-xs text-default-500 truncate"
                   title={`当前已选：${selectedTunnelSummary}`}
@@ -966,43 +964,38 @@ export default function GroupPage() {
                 </p>
               </ModalBody>
               <ModalFooter>
-                <Button variant="light" onPress={onTunnelAssignModalClose}>
+                <Button
+                  color="gray"
+                  variant="subtle"
+                  onClick={onTunnelAssignModalClose}
+                >
                   取消
                 </Button>
-                <Button
-                  color="primary"
-                  isLoading={savingAssign}
-                  onPress={saveAssignTunnels}
-                >
+                <Button loading={savingAssign} onClick={saveAssignTunnels}>
                   保存
                 </Button>
               </ModalFooter>
             </ModalContent>
           </Modal>
 
-          <Modal
-            backdrop="blur"
-            isOpen={userAssignModalOpen}
-            onOpenChange={onUserAssignModalChange}
-          >
+          <Modal opened={userAssignModalOpen} onClose={onUserAssignModalClose}>
             <ModalContent>
               <ModalHeader>分配用户 - {assignUserGroup?.name}</ModalHeader>
               <ModalBody className="min-w-0">
-                <Select
+                <MultiSelect
+                  searchable
                   className="min-w-0"
-                  classNames={{ trigger: "max-w-full" }}
-                  items={users}
+                  classNames={{ input: "max-w-full" }}
+                  data={Array.from(users).map((item) => ({
+                    value: String(item.id),
+                    label: item.user,
+                  }))}
                   label="选择用户"
-                  selectedKeys={selectedUserKeys}
-                  selectionMode="multiple"
-                  onSelectionChange={(keys) => {
-                    setSelectedUserKeys(
-                      new Set(Array.from(keys as Set<React.Key>).map(String)),
-                    );
+                  value={Array.from(selectedUserKeys, String)}
+                  onChange={(values) => {
+                    setSelectedUserKeys(new Set(values));
                   }}
-                >
-                  {(item) => <SelectItem key={item.id}>{item.user}</SelectItem>}
-                </Select>
+                />
                 <p
                   className="w-full min-w-0 max-w-full text-xs text-default-500 truncate"
                   title={`当前已选：${selectedUserSummary}`}
@@ -1014,14 +1007,14 @@ export default function GroupPage() {
                 </p>
               </ModalBody>
               <ModalFooter>
-                <Button variant="light" onPress={onUserAssignModalClose}>
+                <Button
+                  color="gray"
+                  variant="subtle"
+                  onClick={onUserAssignModalClose}
+                >
                   取消
                 </Button>
-                <Button
-                  color="primary"
-                  isLoading={savingAssign}
-                  onPress={saveAssignUsers}
-                >
+                <Button loading={savingAssign} onClick={saveAssignUsers}>
                   保存
                 </Button>
               </ModalFooter>
