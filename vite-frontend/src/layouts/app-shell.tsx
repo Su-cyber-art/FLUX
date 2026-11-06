@@ -425,7 +425,11 @@ export default function ApplicationLayout() {
       </AppShell.Navbar>
       <AppShell.Main>
         <div ref={mainRef} data-scroll-container className="app-content">
-          <header key={location.pathname} className="app-page-heading">
+          {/* Sibling keys must differ from the route boundary's key below. */}
+          <header
+            key={`heading:${location.pathname}`}
+            className="app-page-heading"
+          >
             <div>
               <Group gap={8} mb={7}>
                 <Text c="dimmed" size="xs">
@@ -459,7 +463,7 @@ export default function ApplicationLayout() {
               </Button>
             </Alert>
           ) : (
-            <PageErrorBoundary key={location.pathname}>
+            <PageErrorBoundary key={`route:${location.pathname}`}>
               <div className="app-route">
                 <Suspense
                   fallback={<PageLoadingState message="正在加载页面…" />}
