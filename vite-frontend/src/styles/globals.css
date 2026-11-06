@@ -10,12 +10,29 @@
 :root {
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --background: #f5f7fa;
-  --foreground: #1c2738;
+  --background: #f3f5f9;
+  --foreground: #111b2c;
   --content1: #ffffff;
-  --border: #e4e9f0;
+  --content2: #f8fafc;
+  --border: #e4e8ef;
   --divider: var(--border);
-  --input: #d4dce7;
+  --input: #d5dce6;
+  /* Motion: one easing family so every surface settles the same way. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --duration-slow: 420ms;
+  /* Elevation: resting cards, hovered/raised cards, floating layers. */
+  --elevation-1: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.03);
+  --elevation-2: 0 2px 6px -1px rgb(15 23 42 / 0.06), 0 12px 28px -8px rgb(15 23 42 / 0.12);
+  --elevation-3: 0 6px 12px -4px rgb(15 23 42 / 0.08), 0 24px 56px -12px rgb(15 23 42 / 0.22);
+  --glass: color-mix(in srgb, var(--content1) 74%, transparent);
+  --glass-border: color-mix(in srgb, var(--border) 70%, transparent);
+  --skeleton-sheen: rgb(255 255 255 / 0.75);
+  --ambient-a: color-mix(in srgb, var(--mantine-primary-color-5) 11%, transparent);
+  --ambient-b: color-mix(in srgb, var(--mantine-color-violet-5) 7%, transparent);
   --ring: var(--mantine-primary-color-4);
   --default: #64748b;
   --primary: var(--mantine-primary-color-filled);
@@ -117,12 +134,20 @@
   --primary-900: var(--mantine-primary-color-9);
 }
 [data-mantine-color-scheme="dark"] {
-  --background: #101927;
-  --foreground: #e8edf5;
-  --content1: #151f2e;
-  --border: #2b374a;
+  --background: #0a111e;
+  --foreground: #e6ecf5;
+  --content1: #111a29;
+  --content2: #0e1624;
+  --border: #212c3e;
   --divider: var(--border);
-  --input: #3b485e;
+  --input: #34425a;
+  --elevation-1: 0 1px 2px rgb(0 0 0 / 0.28), inset 0 1px 0 rgb(255 255 255 / 0.025);
+  --elevation-2: 0 4px 10px -2px rgb(0 0 0 / 0.4), 0 18px 40px -12px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.04);
+  --elevation-3: 0 8px 16px -4px rgb(0 0 0 / 0.45), 0 32px 64px -16px rgb(0 0 0 / 0.65), inset 0 1px 0 rgb(255 255 255 / 0.05);
+  --glass: color-mix(in srgb, var(--content1) 70%, transparent);
+  --skeleton-sheen: rgb(255 255 255 / 0.05);
+  --ambient-a: color-mix(in srgb, var(--mantine-primary-color-6) 16%, transparent);
+  --ambient-b: color-mix(in srgb, var(--mantine-color-violet-7) 10%, transparent);
   --default: #94a3b8;
   --primary: var(--mantine-primary-color-4);
   --secondary: #b197fc;
@@ -136,12 +161,12 @@
   --warning-ink: var(--mantine-color-orange-3);
   --danger-ink: var(--mantine-color-red-3);
   --info-ink: var(--mantine-color-cyan-3);
-  --default-50: #151f2e;
-  --default-100: #1b2638;
-  --default-200: #263246;
-  --default-300: #354155;
-  --default-400: #526176;
-  --default-500: #8595aa;
+  --default-50: #111a29;
+  --default-100: #172234;
+  --default-200: #222e42;
+  --default-300: #2f3c53;
+  --default-400: #4f5d75;
+  --default-500: #8391a8;
   --default-600: #a6b3c5;
   --default-700: #cbd5e1;
   --default-800: #dfe7f1;
@@ -149,7 +174,16 @@
 }
 html, body, #root { min-height: 100%; }
 html { background: var(--background); color: var(--foreground); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body { margin: 0; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+body { margin: 0; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; overflow-x: hidden; }
+::selection { background: color-mix(in srgb, var(--mantine-primary-color-5) 26%, transparent); }
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--default-500) 38%, transparent) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 999px; background: color-mix(in srgb, var(--default-500) 36%, transparent) padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--default-500) 58%, transparent); }
+/* Theme switches reveal through a circular clip (see themes/context.tsx). */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) { z-index: 2; }
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .safe-top { padding-top: var(--safe-area-top); }
 .safe-bottom { padding-bottom: var(--safe-area-bottom); }

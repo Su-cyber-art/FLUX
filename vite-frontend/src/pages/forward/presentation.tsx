@@ -902,7 +902,7 @@ export const ForwardCard = ({
   return (
     <Card
       className={cn(
-        "h-full gap-4 p-4 transition-shadow hover:shadow-sm",
+        "h-full gap-4 p-4",
         selected && "border-primary-line bg-primary-soft",
       )}
     >

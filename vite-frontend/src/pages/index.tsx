@@ -221,7 +221,7 @@ export default function LoginPage() {
             节点 · 隧道 · 转发
           </p>
           <Title fw={650} lh={1.25} order={1} size={42}>
-            掌握每一条连接。
+            掌握<span className="auth-title-accent">每一条连接</span>。
           </Title>
           <Text c="dimmed" lh={1.8} mt="md" size="md">
             将转发规则、节点状态和访问权限集中到一个清晰的工作空间。
@@ -268,7 +268,12 @@ export default function LoginPage() {
         </section>
         <section className="auth-form-panel">
           <div className="auth-form">
-            <Paper withBorder p={{ base: 24, sm: 32 }} radius="lg" shadow="xs">
+            <Paper
+              withBorder
+              className="auth-card"
+              p={{ base: 24, sm: 32 }}
+              radius="xl"
+            >
               <Title order={2} size={24}>
                 登录控制台
               </Title>

@@ -29,7 +29,7 @@ export function QuotaCard({
   footer,
 }: QuotaCardProps) {
   return (
-    <Card className="p-5">
+    <Card className="quota-card p-5" data-tone={tone}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <IconTile size="sm" tone={tone}>
@@ -42,7 +42,7 @@ export function QuotaCard({
         {badge}
       </div>
       <div className="mt-4 flex min-w-0 items-baseline gap-1.5">
-        <span className="metric-value truncate text-[26px] font-semibold leading-tight text-foreground">
+        <span className="metric-value truncate text-[28px] font-semibold leading-tight text-foreground">
           {value}
         </span>
         {suffix && (

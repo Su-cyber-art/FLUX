@@ -159,6 +159,8 @@ export default function ApplicationLayout() {
         collapsed: { mobile: !mobileOpened },
       }}
       padding={0}
+      transitionDuration={280}
+      transitionTimingFunction="cubic-bezier(0.22, 1, 0.36, 1)"
     >
       <AppShell.Header className="app-header">
         <Group
@@ -228,8 +230,11 @@ export default function ApplicationLayout() {
                 }
                 color="gray"
                 variant="subtle"
-                onClick={() =>
-                  setMode(effectiveMode === "dark" ? "light" : "dark")
+                onClick={(event) =>
+                  setMode(effectiveMode === "dark" ? "light" : "dark", {
+                    x: event.clientX,
+                    y: event.clientY,
+                  })
                 }
               >
                 {effectiveMode === "dark" ? (
@@ -420,7 +425,7 @@ export default function ApplicationLayout() {
       </AppShell.Navbar>
       <AppShell.Main>
         <div ref={mainRef} data-scroll-container className="app-content">
-          <header className="app-page-heading">
+          <header key={location.pathname} className="app-page-heading">
             <div>
               <Group gap={8} mb={7}>
                 <Text c="dimmed" size="xs">
@@ -455,9 +460,13 @@ export default function ApplicationLayout() {
             </Alert>
           ) : (
             <PageErrorBoundary key={location.pathname}>
-              <Suspense fallback={<PageLoadingState message="正在加载页面…" />}>
-                <Outlet />
-              </Suspense>
+              <div className="app-route">
+                <Suspense
+                  fallback={<PageLoadingState message="正在加载页面…" />}
+                >
+                  <Outlet />
+                </Suspense>
+              </div>
             </PageErrorBoundary>
           )}
         </div>

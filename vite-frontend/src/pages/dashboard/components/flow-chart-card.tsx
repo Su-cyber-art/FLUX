@@ -99,7 +99,7 @@ export const FlowChartCard = ({
                     <stop
                       className="flow-chart-stop"
                       offset="0%"
-                      stopOpacity={0.28}
+                      stopOpacity={0.32}
                     />
                     <stop
                       className="flow-chart-stop"
@@ -139,7 +139,7 @@ export const FlowChartCard = ({
                     const value = Number(payload[0]?.value);
 
                     return (
-                      <div className="rounded-lg border border-divider bg-content1 px-3 py-2 shadow-sm">
+                      <div className="chart-tooltip">
                         <p className="text-xs text-default-500">{label}</p>
                         <p className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
                           {formatFlow(Number.isFinite(value) ? value : 0)}
@@ -149,14 +149,15 @@ export const FlowChartCard = ({
                   }}
                 />
                 <Area
-                  activeDot={{ r: 4, strokeWidth: 2 }}
+                  activeDot={{ r: 5, strokeWidth: 2.5 }}
                   className="flow-chart-area"
                   dataKey="flow"
                   fill="url(#dashboard-flow-fill)"
                   fillOpacity={1}
                   // The dashboard polls every few seconds; animating each refresh would replay the curve.
                   isAnimationActive={false}
-                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeWidth={2.25}
                   type="monotone"
                 />
               </AreaChart>

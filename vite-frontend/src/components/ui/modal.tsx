@@ -73,7 +73,12 @@ export function Modal({
             full: "95vw",
           }[size]
         }
-        transitionProps={{ duration: 150, transition: "fade" }}
+        transitionProps={{
+          duration: 220,
+          exitDuration: 160,
+          transition: "pop",
+          timingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
         zIndex={300}
         onClose={close}
       >

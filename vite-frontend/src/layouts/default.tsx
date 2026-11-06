@@ -24,7 +24,12 @@ export default function DefaultLayout({ children }: { children: ReactNode }) {
           aria-label="切换深浅色"
           color="gray"
           variant="subtle"
-          onClick={() => setMode(effectiveMode === "dark" ? "light" : "dark")}
+          onClick={(event) =>
+            setMode(effectiveMode === "dark" ? "light" : "dark", {
+              x: event.clientX,
+              y: event.clientY,
+            })
+          }
         >
           {effectiveMode === "dark" ? <Sun size={19} /> : <Moon size={19} />}
         </ActionIcon>

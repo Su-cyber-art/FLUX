@@ -12,7 +12,7 @@ export function Card({
       withBorder
       className={cn("app-card min-w-0", className)}
       data-slot="card"
-      radius="md"
+      radius="lg"
       {...props}
     />
   );

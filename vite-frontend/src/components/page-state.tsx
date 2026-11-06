@@ -28,7 +28,13 @@ export const PageEmptyState = ({ message, className }: StateProps) => (
     gap="sm"
     justify="center"
   >
-    <ThemeIcon color="gray" radius="xl" size={44} variant="light">
+    <ThemeIcon
+      className="empty-state-icon"
+      color="gray"
+      radius="xl"
+      size={44}
+      variant="light"
+    >
       <Inbox size={22} />
     </ThemeIcon>
     <Text c="dimmed" size="sm">
@@ -44,7 +50,13 @@ export const PageErrorState = ({ message, className }: StateProps) => (
     justify="center"
     role="alert"
   >
-    <ThemeIcon color="red" radius="xl" size={44} variant="light">
+    <ThemeIcon
+      className="empty-state-icon"
+      color="red"
+      radius="xl"
+      size={44}
+      variant="light"
+    >
       <CircleAlert size={22} />
     </ThemeIcon>
     <Text c="red" size="sm">
@@ -70,7 +82,13 @@ export const EmptyStateCard = ({
     className="flex flex-col items-center px-6 py-14 text-center"
     radius="md"
   >
-    <ThemeIcon color="gray" radius="xl" size={44} variant="light">
+    <ThemeIcon
+      className="empty-state-icon"
+      color="gray"
+      radius="xl"
+      size={44}
+      variant="light"
+    >
       {icon}
     </ThemeIcon>
     <Text fw={600} mt="md" size="md">
