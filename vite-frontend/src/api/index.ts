@@ -318,14 +318,23 @@ export const updateConfig = (name: string, value: string) =>
 export const getStorageSummary = () =>
   Network.get<StorageSummaryApiData>("/system/storage");
 
-export const getSystemUpgradeVersion = () =>
-  Network.post<SystemUpgradeVersionApiData>("/system/version");
+export const getSystemUpgradeVersion = (channel: ReleaseChannel = "stable") =>
+  Network.post<SystemUpgradeVersionApiData>("/system/version", { channel });
 
 export const getSystemUpgradeStatus = () =>
   Network.post<SystemUpgradeJob | null>(
     "/system/upgrade/status",
     {},
     { timeout: 5000 },
+  );
+
+// Lifts the maintenance flag left by an interrupted upgrade once the backend
+// confirms both services are healthy. The health check can take a while.
+export const recoverSystemUpgrade = () =>
+  Network.post<SystemUpgradeJob | null>(
+    "/system/upgrade/recover",
+    {},
+    { timeout: 90 * 1000 },
   );
 
 export const checkSystemUpgrade = (channel: ReleaseChannel = "stable") =>

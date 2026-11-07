@@ -584,6 +584,8 @@ export interface SystemUpgradeJob {
   finishedAt?: number;
   error?: string;
   backupPath?: string;
+  /** The API is still in maintenance mode because this job did not finish. */
+  maintenance?: boolean;
   events: { time: number; message: string }[];
 }
 

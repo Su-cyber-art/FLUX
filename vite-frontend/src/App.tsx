@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import ApplicationLayout from "@/layouts/app-shell";
@@ -8,20 +8,22 @@ import { isLoggedIn } from "@/utils/auth";
 import { siteConfig, updateSiteConfig } from "@/config/site";
 import { useSession } from "@/hooks/use-session";
 import { useThemeContext } from "@/themes/context";
+import { lazyPage } from "@/utils/lazy-page";
+import { pendingServerVersion } from "@/utils/version-sync";
 
-const IndexPage = lazy(() => import("@/pages/index"));
-const ChangePasswordPage = lazy(() => import("@/pages/change-password"));
-const DashboardPage = lazy(() => import("@/pages/dashboard"));
-const MonitorPage = lazy(() => import("@/pages/monitor"));
-const ForwardPage = lazy(() => import("@/pages/forward"));
-const TunnelPage = lazy(() => import("@/pages/tunnel"));
-const NodePage = lazy(() => import("@/pages/node"));
-const UserPage = lazy(() => import("@/pages/user"));
-const GroupPage = lazy(() => import("@/pages/group"));
-const ProfilePage = lazy(() => import("@/pages/profile"));
-const LimitPage = lazy(() => import("@/pages/limit"));
-const ConfigPage = lazy(() => import("@/pages/config"));
-const PanelSharingPage = lazy(() => import("@/pages/panel-sharing"));
+const IndexPage = lazyPage(() => import("@/pages/index"));
+const ChangePasswordPage = lazyPage(() => import("@/pages/change-password"));
+const DashboardPage = lazyPage(() => import("@/pages/dashboard"));
+const MonitorPage = lazyPage(() => import("@/pages/monitor"));
+const ForwardPage = lazyPage(() => import("@/pages/forward"));
+const TunnelPage = lazyPage(() => import("@/pages/tunnel"));
+const NodePage = lazyPage(() => import("@/pages/node"));
+const UserPage = lazyPage(() => import("@/pages/user"));
+const GroupPage = lazyPage(() => import("@/pages/group"));
+const ProfilePage = lazyPage(() => import("@/pages/profile"));
+const LimitPage = lazyPage(() => import("@/pages/limit"));
+const ConfigPage = lazyPage(() => import("@/pages/config"));
+const PanelSharingPage = lazyPage(() => import("@/pages/panel-sharing"));
 
 function RequireSession() {
   const session = useSession();
@@ -62,8 +64,29 @@ function LoginRoute() {
     <IndexPage />
   );
 }
+// Once the panel has been upgraded under an open tab, the next in-app
+// navigation becomes a full page load so the new release is used without
+// interrupting whatever the user is doing on the current page.
+function useReloadOnNavigationAfterUpgrade() {
+  const location = useLocation();
+  const initial = useRef(true);
+
+  useEffect(() => {
+    if (initial.current) {
+      initial.current = false;
+
+      return;
+    }
+    if (pendingServerVersion()?.upgradedDuringSession) {
+      window.location.reload();
+    }
+  }, [location.pathname]);
+}
+
 function App() {
   const { effectiveMode } = useThemeContext();
+
+  useReloadOnNavigationAfterUpgrade();
 
   // 处理自定义背景图片
   useEffect(() => {

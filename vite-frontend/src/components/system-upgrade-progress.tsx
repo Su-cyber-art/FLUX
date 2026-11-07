@@ -1,5 +1,6 @@
 import type { SystemUpgradeJob } from "@/api/types";
 
+import { useEffect, useState } from "react";
 import {
   Alert,
   Badge,
@@ -22,6 +23,10 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@/components/ui/modal";
+import { refreshApplication } from "@/utils/application-update";
+import { BUILD_VERSION } from "@/utils/version-sync";
+
+const AUTO_REFRESH_SECONDS = 5;
 
 const labels = [
   "检查发布文件",
@@ -51,12 +56,43 @@ export function SystemUpgradeProgress({
   reconnecting,
   opened,
   onClose,
+  onRecover,
 }: {
   job: SystemUpgradeJob | null;
   reconnecting: boolean;
   opened: boolean;
   onClose: () => void;
+  onRecover?: () => Promise<void>;
 }) {
+  // This tab still runs the previous release's code after a successful
+  // upgrade; load the new one automatically unless the user cancels.
+  const needsReload = Boolean(
+    job?.status === "succeeded" &&
+      BUILD_VERSION &&
+      BUILD_VERSION !== job.version,
+  );
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [recovering, setRecovering] = useState(false);
+
+  useEffect(() => {
+    setCountdown(needsReload && opened ? AUTO_REFRESH_SECONDS : null);
+  }, [needsReload, opened]);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown <= 0) {
+      refreshApplication().catch(() => setCountdown(null));
+
+      return;
+    }
+    const timer = setTimeout(
+      () => setCountdown((value) => (value === null ? null : value - 1)),
+      1000,
+    );
+
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
   if (!job) return null;
   const active = job.status === "running";
   const success = job.status === "succeeded";
@@ -122,7 +158,52 @@ export function SystemUpgradeProgress({
                   关闭此窗口不会中断升级。刷新页面后可继续查看进度。
                 </Text>
               )}
+              {countdown !== null && (
+                <Group gap="xs" justify="space-between">
+                  <Text c="dimmed" size="sm">
+                    新版本已就绪，{Math.max(countdown, 0)} 秒后自动刷新页面
+                  </Text>
+                  <Button
+                    size="compact-xs"
+                    variant="subtle"
+                    onClick={() => setCountdown(null)}
+                  >
+                    取消自动刷新
+                  </Button>
+                </Group>
+              )}
             </Stack>
+            {!active && job.maintenance && (
+              <Alert
+                color="yellow"
+                icon={<AlertCircle size={18} />}
+                title="面板仍处于维护状态"
+              >
+                <Stack gap="xs">
+                  <Text size="sm">
+                    升级没有正常结束，除升级相关功能外的操作暂时不可用。确认前后端服务正常后即可解除维护；如果检查未通过，请使用下方备份手动恢复。
+                  </Text>
+                  {onRecover && (
+                    <Group>
+                      <Button
+                        loading={recovering}
+                        size="xs"
+                        onClick={async () => {
+                          setRecovering(true);
+                          try {
+                            await onRecover();
+                          } finally {
+                            setRecovering(false);
+                          }
+                        }}
+                      >
+                        检查服务并解除维护
+                      </Button>
+                    </Group>
+                  )}
+                </Stack>
+              </Alert>
+            )}
             {job.error && (
               <Alert
                 color={restored ? "orange" : "red"}

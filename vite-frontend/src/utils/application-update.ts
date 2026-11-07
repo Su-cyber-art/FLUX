@@ -1,9 +1,17 @@
-const UPDATE_TIMEOUT = 20000;
-const INSTALL_TIMEOUT = 120000;
+const UPDATE_CHECK_TIMEOUT = 5000;
+const STALE_RELOAD_KEY = "flux:stale-asset-reload";
+const STALE_RELOAD_WINDOW = 30_000;
 let registration: Promise<ServiceWorkerRegistration | undefined> | undefined;
 let refreshTask: Promise<void> | undefined;
+let staleReloadStarted = false;
 
-export function registerApplicationUpdates(onNeedRefresh: () => void) {
+/**
+ * The worker only caches hashed bundles and an offline copy of the shell.
+ * Navigations are network-first and a new worker activates immediately, so
+ * there is no "waiting" worker to prompt for; version changes are detected
+ * from the API instead (see version-sync.ts).
+ */
+export function registerApplicationUpdates() {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
 
   const base = new URL(import.meta.env.BASE_URL, window.location.href);
@@ -13,106 +21,32 @@ export function registerApplicationUpdates(onNeedRefresh: () => void) {
       scope: base.pathname,
       updateViaCache: "none",
     })
-    .then((next) => {
-      const notify = () => {
-        if (next.waiting && navigator.serviceWorker.controller) onNeedRefresh();
-      };
-      const watchInstall = () => {
-        const worker = next.installing;
-
-        if (!worker) return;
-        const changed = () => {
-          if (worker.state === "installing") return;
-          worker.removeEventListener("statechange", changed);
-          notify();
-        };
-
-        worker.addEventListener("statechange", changed);
-        changed();
-      };
-
-      next.addEventListener("updatefound", watchInstall);
-      watchInstall();
-      notify();
-
-      return next;
-    })
     .catch(() => undefined);
 }
 
-function bounded<T>(task: Promise<T>): Promise<T> {
+function bounded<T>(task: Promise<T>, timeout: number): Promise<T | undefined> {
   let timer: ReturnType<typeof setTimeout>;
 
   return Promise.race([
     task,
-    new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () => reject(new Error("更新加载超时")),
-        UPDATE_TIMEOUT,
-      );
+    new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), timeout);
     }),
   ]).finally(() => clearTimeout(timer));
 }
 
-function waitForWorker(worker: ServiceWorker, controlling = false) {
-  return new Promise<void>((resolve, reject) => {
-    const finish = (error?: Error) => {
-      clearTimeout(timer);
-      worker.removeEventListener("statechange", changed);
-      navigator.serviceWorker.removeEventListener("controllerchange", changed);
-      if (error) reject(error);
-      else resolve();
-    };
-    const changed = () => {
-      if (worker.state === "redundant") {
-        finish(new Error("新页面安装失败"));
-      } else if (
-        controlling
-          ? navigator.serviceWorker.controller === worker
-          : ["installed", "activating", "activated"].includes(worker.state)
-      ) {
-        finish();
-      }
-    };
-    const timer = setTimeout(
-      () => finish(new Error("更新加载超时")),
-      controlling ? UPDATE_TIMEOUT : INSTALL_TIMEOUT,
-    );
-
-    worker.addEventListener("statechange", changed);
-    navigator.serviceWorker.addEventListener("controllerchange", changed);
-    changed();
-  });
-}
-
 async function applyUpdateAndReload() {
-  if ("serviceWorker" in navigator) {
+  // Not required for correctness (the reload fetches the new shell from the
+  // network), but it lets the new worker start precaching the new bundles.
+  try {
     const current = await bounded(
-      registration?.then(
-        (value) => value ?? navigator.serviceWorker.getRegistration(),
-      ) ?? navigator.serviceWorker.getRegistration(),
+      registration ?? Promise.resolve(undefined),
+      UPDATE_CHECK_TIMEOUT,
     );
 
-    if (current) {
-      // The upgrade can finish before the browser has checked or downloaded
-      // the new worker. A normal reload would still use its old cached HTML.
-      await bounded(current.update());
-      if (current.installing) await waitForWorker(current.installing);
-
-      const waiting = current.waiting;
-
-      if (waiting) {
-        const controlling = waitForWorker(waiting, true);
-
-        waiting.postMessage({ type: "SKIP_WAITING" });
-        await controlling;
-      } else if (
-        current.active &&
-        navigator.serviceWorker.controller !== current.active
-      ) {
-        await waitForWorker(current.active, true);
-      }
-    }
+    if (current) await bounded(current.update(), UPDATE_CHECK_TIMEOUT);
+  } catch {
+    // An unreachable sw.js must never block the reload.
   }
   window.location.reload();
 }
@@ -124,4 +58,28 @@ export function refreshApplication(): Promise<void> {
   });
 
   return refreshTask;
+}
+
+/**
+ * After an upgrade an open tab still references the previous release's
+ * bundles, which the new frontend container no longer serves. Reload once so
+ * the tab picks up the new release; a second failure within the window is a
+ * real error and is left to the error boundary.
+ */
+export function reloadForStaleAssets(): boolean {
+  // Several chunks can fail together; they all wait for the same reload.
+  if (staleReloadStarted) return true;
+  try {
+    const last = Number(sessionStorage.getItem(STALE_RELOAD_KEY) || 0);
+
+    if (Date.now() - last < STALE_RELOAD_WINDOW) return false;
+    sessionStorage.setItem(STALE_RELOAD_KEY, String(Date.now()));
+  } catch {
+    // Without storage there is no loop guard, so do not reload automatically.
+    return false;
+  }
+  staleReloadStarted = true;
+  window.location.reload();
+
+  return true;
 }

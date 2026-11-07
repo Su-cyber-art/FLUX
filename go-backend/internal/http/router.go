@@ -16,6 +16,7 @@ func NewRouter(h *handler.Handler, jwtSecret string) http.Handler {
 	wrapped = h.UpgradeMaintenance(wrapped)
 	wrapped = middleware.JWT(middleware.AuthOptions{JWTSecret: jwtSecret, GetUserAuthState: h.GetUserAuthState})(wrapped)
 	wrapped = middleware.RequestLog(wrapped)
+	wrapped = middleware.Version(handler.PanelVersion())(wrapped)
 	wrapped = middleware.CORS(wrapped)
 	return wrapped
 }

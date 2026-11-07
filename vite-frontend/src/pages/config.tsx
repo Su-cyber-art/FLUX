@@ -38,6 +38,7 @@ import {
   getStorageSummary,
   getSystemUpgradeVersion,
   importBackup,
+  recoverSystemUpgrade,
   runSystemUpgrade,
   updateAnnouncement,
   updateConfigs,
@@ -151,9 +152,20 @@ export default function ConfigPage() {
   const systemUpgradeInProgress =
     systemUpgradeExecuting || upgrade.job?.status === "running";
 
+  const previousUpgradeStatus = useRef(upgrade.job?.status);
+
   useEffect(() => {
-    if (upgrade.job?.status === "running") setUpgradeProgressOpen(true);
-  }, [upgrade.job?.id, upgrade.job?.status]);
+    const status = upgrade.job?.status;
+    const finishedHere =
+      previousUpgradeStatus.current === "running" && status !== "running";
+
+    previousUpgradeStatus.current = status;
+    // Show the result of an upgrade watched from this tab (it may have been
+    // sent to the background), and any job that left maintenance enabled.
+    if (status === "running" || finishedHere || upgrade.job?.maintenance) {
+      setUpgradeProgressOpen(true);
+    }
+  }, [upgrade.job?.id, upgrade.job?.status, upgrade.job?.maintenance]);
   const [systemUpgradeLoading, setSystemUpgradeLoading] = useState(true);
   const [systemUpgradeModalOpen, setSystemUpgradeModalOpen] = useState(false);
   const [systemUpgradeReleases, setSystemUpgradeReleases] = useState<
@@ -251,7 +263,7 @@ export default function ConfigPage() {
   const loadSystemUpgradeInfo = async (channel = updateChannel) => {
     setSystemUpgradeLoading(true);
     try {
-      const response = await getSystemUpgradeVersion();
+      const response = await getSystemUpgradeVersion(channel);
 
       if (response.code === 0 && response.data) {
         setSystemUpgradeInfo({
@@ -386,6 +398,18 @@ export default function ConfigPage() {
       }
     }
     setSystemUpgradeModalOpen(true);
+  };
+
+  const handleRecoverSystemUpgrade = async () => {
+    const response = await recoverSystemUpgrade();
+
+    if (response.code === 0) {
+      if (response.data) upgrade.track(response.data);
+      else upgrade.refresh();
+      toast.success("服务检查通过，已解除维护状态");
+    } else {
+      toast.error(response.msg || "解除维护状态失败");
+    }
   };
 
   const handleConfirmSystemUpgrade = async () => {
@@ -1502,6 +1526,7 @@ export default function ConfigPage() {
         opened={upgradeProgressOpen}
         reconnecting={upgrade.reconnecting}
         onClose={() => setUpgradeProgressOpen(false)}
+        onRecover={handleRecoverSystemUpgrade}
       />
     </div>
   );

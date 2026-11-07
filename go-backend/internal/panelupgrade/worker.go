@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -22,8 +23,10 @@ type Worker struct {
 	Docker        *Docker
 	Client        *http.Client
 	HealthTimeout time.Duration
-	dir           string
-	backup        string
+	// FreeSpace reports available bytes on a path's filesystem; nil uses statfs.
+	FreeSpace func(string) (uint64, error)
+	dir       string
+	backup    string
 }
 
 // RunFile is invoked by a detached container using the current backend image.
@@ -94,7 +97,7 @@ func (w *Worker) Run(ctx context.Context) (result error) {
 			}
 		}
 		if status != "rollback_failed" {
-			_ = os.Remove(filepath.Join(w.Plan.Deployment.HostDir, Directory, "maintenance"))
+			_ = os.Remove(MaintenancePath(w.Plan.Deployment.HostDir))
 		}
 		if finishErr := Finish(w.Plan.Deployment.HostDir, w.State, status, message); finishErr != nil {
 			result = errors.Join(result, finishErr)
@@ -139,11 +142,16 @@ func (w *Worker) Run(ctx context.Context) (result error) {
 	if err := w.prepareFiles(ctx); err != nil {
 		return err
 	}
+	// Running out of space while the backend is stopped would force a rollback,
+	// so make sure the backup fits before taking the panel offline.
+	if err := w.ensureSpace(w.databaseSize(ctx)+spaceMargin, "数据库备份"); err != nil {
+		return err
+	}
 	if err := w.stage("backing_up", "备份配置与数据库，面板将短暂离线"); err != nil {
 		return err
 	}
 	w.State.BackupPath = filepath.Join(Directory, w.Plan.ID, "backup")
-	if err := atomicWrite(filepath.Join(w.Plan.Deployment.HostDir, Directory, "maintenance"), []byte(w.Plan.ID), 0600); err != nil {
+	if err := atomicWrite(MaintenancePath(w.Plan.Deployment.HostDir), []byte(w.Plan.ID), 0600); err != nil {
 		return err
 	}
 	w.State.BackendStopped = true
@@ -169,9 +177,10 @@ func (w *Worker) Run(ctx context.Context) (result error) {
 	if err := w.Docker.WaitHealthy(ctx, w.Plan.Deployment, w.HealthTimeout); err != nil {
 		return err
 	}
-	if err := os.Remove(filepath.Join(w.Plan.Deployment.HostDir, Directory, "maintenance")); err != nil {
+	if err := os.Remove(MaintenancePath(w.Plan.Deployment.HostDir)); err != nil {
 		return err
 	}
+	w.cleanup(ctx)
 	return Finish(w.Plan.Deployment.HostDir, w.State, "succeeded", "升级完成，面板已恢复可用")
 }
 
@@ -340,6 +349,11 @@ func (w *Worker) download(ctx context.Context, name, path, expected string) erro
 	if res.ContentLength > maximum {
 		return errors.New("镜像包超过大小限制")
 	}
+	if res.ContentLength > 0 {
+		if err := w.ensureSpace(uint64(res.ContentLength)+spaceMargin, "下载 "+name); err != nil {
+			return err
+		}
+	}
 	w.State.Total = max(res.ContentLength, 0)
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
@@ -380,4 +394,79 @@ func (r *progressReader) Read(p []byte) (int, error) {
 		}
 	}
 	return n, err
+}
+
+// spaceMargin keeps headroom for state files, logs and filesystem overhead.
+const spaceMargin = 64 << 20
+
+func (w *Worker) ensureSpace(need uint64, purpose string) error {
+	measure := w.FreeSpace
+	if measure == nil {
+		measure = freeBytes
+	}
+	free, err := measure(w.dir)
+	if err != nil {
+		// An unmeasurable filesystem must not block the upgrade; the later
+		// write still fails safely before the backend is stopped.
+		return nil
+	}
+	if free < need {
+		return fmt.Errorf("部署目录磁盘空间不足：%s需要约 %s，当前可用 %s，请清理后重试", purpose, formatBytes(need), formatBytes(free))
+	}
+	return nil
+}
+
+// databaseSize estimates the backup size. A failed estimate returns 0 so the
+// margin alone is checked.
+func (w *Worker) databaseSize(ctx context.Context) uint64 {
+	if w.Plan.Deployment.DBType == "sqlite" {
+		var total uint64
+		_ = filepath.WalkDir(w.Plan.Deployment.DataDir, func(_ string, entry os.DirEntry, err error) error {
+			if err == nil && entry.Type().IsRegular() {
+				if info, infoErr := entry.Info(); infoErr == nil {
+					total += uint64(info.Size())
+				}
+			}
+			return nil
+		})
+		return total
+	}
+	sizeCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	out, err := w.Docker.output(sizeCtx, "exec", w.Plan.Deployment.Postgres, "sh", "-c", `export PGPASSWORD="$POSTGRES_PASSWORD"; exec psql -tAq -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select pg_database_size(current_database())"`)
+	if err != nil {
+		return 0
+	}
+	size, err := strconv.ParseUint(strings.TrimSpace(string(out)), 10, 64)
+	if err != nil {
+		return 0
+	}
+	// pg_dump's custom format is compressed and skips indexes, so the dump is
+	// well below the on-disk size; half of it is still a conservative bound.
+	return size / 2
+}
+
+// cleanup is best effort: the upgrade already succeeded, so failures here are
+// only recorded in the job log.
+func (w *Worker) cleanup(ctx context.Context) {
+	cleanupCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	jobs, jobErr := PruneJobs(w.Plan.Deployment.HostDir, w.Plan.ID, KeepJobs)
+	images := w.Docker.PruneImages(cleanupCtx, []string{w.Plan.Version, w.Plan.FromVersion}, []string{w.Plan.Deployment.BackendImage, w.Plan.Deployment.FrontendImage})
+	message := fmt.Sprintf("已清理 %d 份旧升级备份、%d 个旧版本镜像（保留最近 %d 次升级记录与上一版本镜像）", jobs, images, KeepJobs)
+	if jobErr != nil {
+		message = fmt.Sprintf("清理旧升级备份未完成：%v；已清理 %d 个旧版本镜像", jobErr, images)
+	}
+	w.State.Events = append(w.State.Events, Event{Time: time.Now().UnixMilli(), Message: message})
+}
+
+func formatBytes(value uint64) string {
+	switch {
+	case value >= 1<<30:
+		return fmt.Sprintf("%.1f GB", float64(value)/(1<<30))
+	case value >= 1<<20:
+		return fmt.Sprintf("%.0f MB", float64(value)/(1<<20))
+	default:
+		return fmt.Sprintf("%d KB", value>>10)
+	}
 }

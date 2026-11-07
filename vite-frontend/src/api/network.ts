@@ -6,6 +6,22 @@ import {
 } from "@/api/error-message";
 import { getPanelAddresses, isWebViewFunc } from "@/utils/panel";
 import { clearSession, getToken } from "@/utils/session";
+import { reportServerVersion } from "@/utils/version-sync";
+
+axios.interceptors.response.use(
+  (response) => {
+    reportServerVersion(response.headers?.["x-flux-version"]);
+
+    return response;
+  },
+  (error: unknown) => {
+    if (axios.isAxiosError(error)) {
+      reportServerVersion(error.response?.headers?.["x-flux-version"]);
+    }
+
+    return Promise.reject(error);
+  },
+);
 
 interface PanelAddress {
   name: string;

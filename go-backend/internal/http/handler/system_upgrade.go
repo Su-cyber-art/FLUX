@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"go-backend/internal/http/response"
@@ -27,6 +28,25 @@ var systemUpgradeReleaseBaseURL = githubHTMLBase
 var systemUpgradeAPIBaseURL = githubAPIBase
 var systemUpgradeHTTPGet = func(client *http.Client, url string) (*http.Response, error) {
 	return client.Get(url)
+}
+
+const (
+	// The settings page loads the version on every visit; unauthenticated
+	// GitHub API calls are limited to 60 per hour per IP.
+	systemReleaseCacheTTL    = 10 * time.Minute
+	systemCapabilityCacheTTL = 30 * time.Second
+)
+
+type systemUpgradeCache struct {
+	mu            sync.Mutex
+	releasesURL   string
+	releasesAt    time.Time
+	releases      []githubRelease
+	capabilityKey string
+	capabilityAt  time.Time
+	capability    systemUpgradeCapabilityData
+	// recovering prevents overlapping automatic maintenance recovery.
+	recovering bool
 }
 
 type systemUpgradeExecutor struct {
@@ -94,6 +114,9 @@ func newSystemUpgradeExecutor() *systemUpgradeExecutor {
 	return &systemUpgradeExecutor{deployDir: deployDir, backendContainer: backendContainer}
 }
 
+// PanelVersion is the release this backend process was deployed as.
+func PanelVersion() string { return currentPanelVersion() }
+
 func currentPanelVersion() string {
 	version := strings.TrimSpace(os.Getenv("FLUX_VERSION"))
 	if version == "" {
@@ -111,16 +134,28 @@ func (h *Handler) buildSystemUpgradeDownloadURL(version, filename string) string
 	return base
 }
 
-func (h *Handler) fetchSystemUpgradeReleases(perPage int) ([]githubRelease, error) {
+// fetchSystemUpgradeReleases returns a cached list younger than maxAge, or
+// fetches a fresh one (and caches it) when maxAge is zero or the cache is stale.
+func (h *Handler) fetchSystemUpgradeReleases(perPage int, maxAge time.Duration) ([]githubRelease, error) {
 	if perPage <= 0 {
 		perPage = 20
 	}
 
-	client := &http.Client{Timeout: 15 * time.Second}
 	url := fmt.Sprintf("%s/repos/%s/releases?per_page=%d", strings.TrimRight(systemUpgradeAPIBaseURL, "/"), githubRepo, perPage)
 	if enabled, proxyURL := h.getGithubProxyConfig(); enabled {
 		url = fmt.Sprintf("%s/%s", proxyURL, url)
 	}
+	cache := &h.systemUpgradeCache
+	if maxAge > 0 {
+		cache.mu.Lock()
+		cached, fresh := cache.releases, cache.releasesURL == url && time.Since(cache.releasesAt) < maxAge
+		cache.mu.Unlock()
+		if fresh {
+			return cached, nil
+		}
+	}
+
+	client := &http.Client{Timeout: 15 * time.Second}
 
 	resp, err := systemUpgradeHTTPGet(client, url)
 	if err != nil {
@@ -138,12 +173,15 @@ func (h *Handler) fetchSystemUpgradeReleases(perPage int) ([]githubRelease, erro
 		return nil, fmt.Errorf("解析GitHub API响应失败: %v", err)
 	}
 
+	cache.mu.Lock()
+	cache.releasesURL, cache.releasesAt, cache.releases = url, time.Now(), releases
+	cache.mu.Unlock()
 	return releases, nil
 }
 
-func (h *Handler) resolveSystemUpgradeLatestReleaseByChannel(channel string) (string, error) {
+func (h *Handler) resolveSystemUpgradeLatestReleaseByChannel(channel string, maxAge time.Duration) (string, error) {
 	normalizedChannel := normalizeReleaseChannel(channel)
-	releases, err := h.fetchSystemUpgradeReleases(50)
+	releases, err := h.fetchSystemUpgradeReleases(50, maxAge)
 	if err != nil {
 		return "", err
 	}
@@ -226,11 +264,15 @@ func (h *Handler) systemVersion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	channel := releaseChannelStable
+	var req systemUpgradeRequest
+	if err := decodeSystemUpgradeRequest(r, &req); err != nil {
+		response.WriteJSON(w, response.ErrDefault("请求参数错误"))
+		return
+	}
+	channel := normalizeReleaseChannel(req.Channel)
 	current := currentPanelVersion()
-	exec := newSystemUpgradeExecutor()
-	capability := exec.capability(r.Context())
-	latest, err := h.resolveSystemUpgradeLatestReleaseByChannel(channel)
+	capability := h.cachedSystemUpgradeCapability(r.Context())
+	latest, err := h.resolveSystemUpgradeLatestReleaseByChannel(channel, systemReleaseCacheTTL)
 	response.WriteJSON(w, response.OK(systemUpgradeVersionResponse(current, channel, latest, err, capability)))
 }
 
@@ -247,10 +289,10 @@ func (h *Handler) systemCheckUpdates(w http.ResponseWriter, r *http.Request) {
 	}
 	channel := normalizeReleaseChannel(req.Channel)
 	current := currentPanelVersion()
-	exec := newSystemUpgradeExecutor()
-	capability := exec.capability(r.Context())
+	capability := h.cachedSystemUpgradeCapability(r.Context())
 
-	githubReleases, err := h.fetchSystemUpgradeReleases(50)
+	// An explicit check always asks GitHub and refreshes the cache.
+	githubReleases, err := h.fetchSystemUpgradeReleases(50, 0)
 	if err != nil {
 		response.WriteJSON(w, response.Err(-2, fmt.Sprintf("获取版本列表失败: %v", err)))
 		return

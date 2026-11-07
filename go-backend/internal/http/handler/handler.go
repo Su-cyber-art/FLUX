@@ -50,6 +50,7 @@ type Handler struct {
 
 	upgradeMu                   sync.Mutex
 	systemUpgradeMu             sync.Mutex
+	systemUpgradeCache          systemUpgradeCache
 	pendingUpgradeRedeploy      map[int64]struct{}
 	nodeOnlineRedeployAt        map[int64]time.Time
 	nodeOnlineRedeployQueued    map[int64]struct{}
@@ -176,6 +177,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/system/check-updates", h.systemCheckUpdates)
 	mux.HandleFunc("/api/v1/system/upgrade", h.systemUpgrade)
 	mux.HandleFunc("/api/v1/system/upgrade/status", h.systemUpgradeStatus)
+	mux.HandleFunc("/api/v1/system/upgrade/recover", h.systemUpgradeRecover)
 	mux.HandleFunc("/api/v1/backup/export", h.backupExport)
 	mux.HandleFunc("/api/v1/backup/import", h.backupImport)
 	mux.HandleFunc("/api/v1/backup/restore", h.backupImport)

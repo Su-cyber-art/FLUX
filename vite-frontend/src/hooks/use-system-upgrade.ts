@@ -55,6 +55,7 @@ export function useSystemUpgrade(enabled: boolean) {
 
       if (disposed) return;
       let active = lastJob.current?.status === "running";
+      let maintenance = Boolean(lastJob.current?.maintenance);
 
       if (result.code === 0) {
         const latest = result.data ?? null;
@@ -63,11 +64,16 @@ export function useSystemUpgrade(enabled: boolean) {
         setJob(latest);
         setReconnecting(false);
         active = latest?.status === "running";
+        maintenance = Boolean(latest?.maintenance);
         cacheJob(latest);
       } else {
         setReconnecting(active);
       }
-      timer = setTimeout(() => void poll(), active ? 1500 : 10000);
+      // Idle panels are not polled; starting an upgrade calls track(), which
+      // restarts polling. A leftover maintenance flag is watched so automatic
+      // recovery shows up without a page reload.
+      if (active) timer = setTimeout(() => void poll(), 1500);
+      else if (maintenance) timer = setTimeout(() => void poll(), 5000);
     };
 
     void poll();

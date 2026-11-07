@@ -26,22 +26,25 @@ type Event struct {
 }
 
 type State struct {
-	ID               string  `json:"id"`
-	FromVersion      string  `json:"fromVersion"`
-	Version          string  `json:"version"`
-	Status           string  `json:"status"`
-	Stage            string  `json:"stage"`
-	Message          string  `json:"message"`
-	Downloaded       int64   `json:"downloaded"`
-	Total            int64   `json:"total"`
-	StartedAt        int64   `json:"startedAt"`
-	UpdatedAt        int64   `json:"updatedAt"`
-	FinishedAt       int64   `json:"finishedAt,omitempty"`
-	Error            string  `json:"error,omitempty"`
-	BackupPath       string  `json:"backupPath,omitempty"`
-	Events           []Event `json:"events"`
-	BackendStopped   bool    `json:"-"`
-	DatabaseBackedUp bool    `json:"-"`
+	ID          string  `json:"id"`
+	FromVersion string  `json:"fromVersion"`
+	Version     string  `json:"version"`
+	Status      string  `json:"status"`
+	Stage       string  `json:"stage"`
+	Message     string  `json:"message"`
+	Downloaded  int64   `json:"downloaded"`
+	Total       int64   `json:"total"`
+	StartedAt   int64   `json:"startedAt"`
+	UpdatedAt   int64   `json:"updatedAt"`
+	FinishedAt  int64   `json:"finishedAt,omitempty"`
+	Error       string  `json:"error,omitempty"`
+	BackupPath  string  `json:"backupPath,omitempty"`
+	Events      []Event `json:"events"`
+	// Maintenance is filled in by the API when it reports the job; the worker
+	// never persists it.
+	Maintenance      bool `json:"maintenance,omitempty"`
+	BackendStopped   bool `json:"-"`
+	DatabaseBackedUp bool `json:"-"`
 }
 
 func (s *State) Active() bool { return s != nil && s.Status == "running" }
