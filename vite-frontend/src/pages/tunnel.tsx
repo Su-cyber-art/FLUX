@@ -656,8 +656,8 @@ export default function TunnelPage() {
         : await createTunnel(data);
 
       if (response.code === 0) {
-        if (response.data?.runtimeSync?.status === "pending") {
-          toast.warning(response.msg || "配置已保存，运行配置待同步");
+        if (response.data?.runtimeStatus === "pending") {
+          toast.warning(response.msg || "配置已保存，部分节点运行时待同步");
         } else {
           toast.success(isEdit ? "更新成功" : "创建成功");
         }

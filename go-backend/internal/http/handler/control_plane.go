@@ -547,7 +547,22 @@ func buildForwardServiceDeleteNames(bases []string) []string {
 	return names
 }
 
+type forwardServiceControlOptions struct {
+	tolerateNotFound bool
+	tolerateOffline  bool
+	allowSelfHeal    bool
+	continueOnError  bool
+}
+
 func (h *Handler) controlForwardServices(forward *forwardRecord, commandType string, tolerateNotFound bool) error {
+	return h.controlForwardServicesWithOptions(forward, commandType, forwardServiceControlOptions{
+		tolerateNotFound: tolerateNotFound,
+		tolerateOffline:  true,
+		allowSelfHeal:    true,
+	})
+}
+
+func (h *Handler) controlForwardServicesWithOptions(forward *forwardRecord, commandType string, opts forwardServiceControlOptions) error {
 	if h == nil || forward == nil {
 		return errors.New("invalid forward control context")
 	}
@@ -574,6 +589,7 @@ func (h *Handler) controlForwardServices(forward *forwardRecord, commandType str
 	candidateTunnelIDs = append(candidateTunnelIDs, userTunnelIDs...)
 	candidateTunnelIDs = append(candidateTunnelIDs, allUserTunnelIDs...)
 	bases := buildForwardServiceBaseCandidates(forward.ID, forward.UserID, userTunnelID, candidateTunnelIDs)
+	var nodeErrors []error
 	if strings.EqualFold(strings.TrimSpace(commandType), "DeleteService") {
 		seen := map[int64]struct{}{}
 		for _, fp := range ports {
@@ -582,16 +598,20 @@ func (h *Handler) controlForwardServices(forward *forwardRecord, commandType str
 			}
 			seen[fp.NodeID] = struct{}{}
 			if err := h.deleteForwardServiceBasesOnNode(fp.NodeID, bases); err != nil {
-				if isNodeOfflineOrTimeoutError(err) {
+				if opts.tolerateOffline && isNodeOfflineOrTimeoutError(err) {
 					continue
 				}
-				if tolerateNotFound && isNotFoundError(err) {
+				if opts.tolerateNotFound && isNotFoundError(err) {
+					continue
+				}
+				if opts.continueOnError {
+					nodeErrors = append(nodeErrors, h.nodeCommandError(fp.NodeID, err))
 					continue
 				}
 				return err
 			}
 		}
-		return nil
+		return errors.Join(nodeErrors...)
 	}
 	seen := map[int64]struct{}{}
 	healed := false
@@ -601,37 +621,50 @@ func (h *Handler) controlForwardServices(forward *forwardRecord, commandType str
 		}
 		seen[fp.NodeID] = struct{}{}
 
-		nodeHandled, lastNotFoundErr, err := h.controlForwardServicesOnNode(fp.NodeID, bases, commandType)
-		if err != nil {
-			if isNodeOfflineOrTimeoutError(err) {
-				continue
-			}
-			return err
-		}
-
-		if !nodeHandled && lastNotFoundErr != nil && !healed && shouldSelfHealForwardServiceControl(commandType) {
-			if healErr := h.syncForwardServices(forward, "UpdateService", true); healErr != nil {
-				return healErr
-			}
-			healed = true
-			nodeHandled, lastNotFoundErr, err = h.controlForwardServicesOnNode(fp.NodeID, bases, commandType)
+		nodeErr := func() error {
+			nodeHandled, lastNotFoundErr, err := h.controlForwardServicesOnNode(fp.NodeID, bases, commandType)
 			if err != nil {
+				if opts.tolerateOffline && isNodeOfflineOrTimeoutError(err) {
+					return nil
+				}
 				return err
 			}
-		}
 
-		if nodeHandled {
-			continue
+			if opts.allowSelfHeal && !nodeHandled && lastNotFoundErr != nil && !healed && shouldSelfHealForwardServiceControl(commandType) {
+				if healErr := h.syncForwardServices(forward, "UpdateService", true); healErr != nil {
+					return healErr
+				}
+				healed = true
+				nodeHandled, lastNotFoundErr, err = h.controlForwardServicesOnNode(fp.NodeID, bases, commandType)
+				if err != nil {
+					return err
+				}
+			}
+
+			if nodeHandled || opts.tolerateNotFound {
+				return nil
+			}
+			if lastNotFoundErr != nil {
+				return lastNotFoundErr
+			}
+			return errors.New("service control failed")
+		}()
+		if nodeErr != nil {
+			if !opts.continueOnError {
+				return nodeErr
+			}
+			nodeErrors = append(nodeErrors, h.nodeCommandError(fp.NodeID, nodeErr))
 		}
-		if tolerateNotFound {
-			continue
-		}
-		if lastNotFoundErr != nil {
-			return lastNotFoundErr
-		}
-		return errors.New("service control failed")
 	}
-	return nil
+	return errors.Join(nodeErrors...)
+}
+
+func (h *Handler) nodeCommandError(nodeID int64, err error) error {
+	name := strconv.FormatInt(nodeID, 10)
+	if node, lookupErr := h.getNodeRecord(nodeID); lookupErr == nil && node != nil {
+		name = defaultString(strings.TrimSpace(node.Name), name)
+	}
+	return fmt.Errorf("节点 %s (ID %d): %w", name, nodeID, err)
 }
 
 func (h *Handler) controlForwardServicesOnNode(nodeID int64, bases []string, commandType string) (bool, error, error) {
@@ -1955,7 +1988,12 @@ func buildForwardServiceConfigs(baseName string, forward *forwardRecord, tunnel 
 			service["listener"].(map[string]interface{})["metadata"] = listenerMetadata
 		}
 		if tunnel != nil && tunnel.Type == 2 {
-			service["handler"].(map[string]interface{})["chain"] = fmt.Sprintf("chains_%d", forward.TunnelID)
+			handlerConfig := service["handler"].(map[string]interface{})
+			handlerConfig["chain"] = fmt.Sprintf("chains_%d", forward.TunnelID)
+			if handlerConfig["metadata"] == nil {
+				handlerConfig["metadata"] = map[string]interface{}{}
+			}
+			handlerConfig["metadata"].(map[string]interface{})["chain.strict"] = true
 		}
 		if tunnel != nil && tunnel.Type == 1 && strings.TrimSpace(node.InterfaceName) != "" {
 			serviceMetadata := ensureServiceMetadata(service)

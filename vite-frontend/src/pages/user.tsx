@@ -99,6 +99,9 @@ export default function UserPage() {
     maxConn: 0,
   });
   const [userFormLoading, setUserFormLoading] = useState(false);
+  const [userSubmitWarning, setUserSubmitWarning] = useState<string | null>(
+    null,
+  );
   const [userFlowInput, setUserFlowInput] = useState("1000");
   const [userFlowUnit, setUserFlowUnit] = useState<TrafficUnit>("GB");
   const [quotaResetLoading, setQuotaResetLoading] = useState(false);
@@ -379,6 +382,7 @@ export default function UserPage() {
   };
 
   const handleAdd = () => {
+    setUserSubmitWarning(null);
     setIsEdit(false);
     setUserFlowInput("1000");
     setUserFlowUnit("GB");
@@ -399,6 +403,7 @@ export default function UserPage() {
   };
 
   const handleEdit = async (user: User) => {
+    setUserSubmitWarning(null);
     setIsEdit(true);
     const trafficInput = trafficInputFor(user.flow, user.flowMiB);
 
@@ -480,6 +485,7 @@ export default function UserPage() {
     }
 
     setUserFormLoading(true);
+    setUserSubmitWarning(null);
     try {
       const submitData: any = {
         ...userForm,
@@ -522,7 +528,19 @@ export default function UserPage() {
           await loadUsers();
         }
       } else {
-        toast.error(response.msg || (isEdit ? "更新失败" : "创建失败"));
+        const userDisabled =
+          isEdit &&
+          response.data !== null &&
+          typeof response.data === "object" &&
+          "userDisabled" in response.data &&
+          response.data.userDisabled === true;
+
+        if (userDisabled) {
+          setUserSubmitWarning(response.msg);
+          await loadUsers();
+        } else {
+          toast.error(response.msg || (isEdit ? "更新失败" : "创建失败"));
+        }
       }
     } catch {
       toast.error(isEdit ? "更新失败" : "创建失败");
@@ -1012,6 +1030,7 @@ export default function UserPage() {
         userForm={userForm}
         userFormLoading={userFormLoading}
         userGroups={userGroups}
+        userSubmitWarning={userSubmitWarning}
         onUserModalClose={onUserModalClose}
       />
 

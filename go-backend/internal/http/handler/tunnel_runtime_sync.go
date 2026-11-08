@@ -4,32 +4,54 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
-
-	"go-backend/internal/http/response"
 )
 
-type tunnelRuntimeSyncResult struct {
-	Status string `json:"status"`
-	batchOperationResult
+// tunnelForwardSyncPendingError reports forwards whose runtime could not be
+// refreshed after a tunnel update. The tunnel configuration is already saved,
+// so callers surface it through tunnelRuntimePendingResponse, which keeps the
+// per-forward failures for the operator.
+type tunnelForwardSyncPendingError struct {
+	result batchOperationResult
+	cause  error
 }
 
-func writeTunnelRuntimePending(w http.ResponseWriter, tunnelID int64, reason string, result batchOperationResult) {
-	log.Printf("tunnel runtime synchronization pending tunnel_id=%d reason=%s failures=%d", tunnelID, reason, result.FailCount)
-	payload := response.OK(struct {
-		RuntimeSync tunnelRuntimeSyncResult `json:"runtimeSync"`
-	}{RuntimeSync: tunnelRuntimeSyncResult{Status: "pending", batchOperationResult: result}})
-	payload.Msg = "配置已保存，" + reason + "；请在节点恢复后重新下发配置"
-	response.WriteJSON(w, payload)
+func (e *tunnelForwardSyncPendingError) Error() string { return e.cause.Error() }
+func (e *tunnelForwardSyncPendingError) Unwrap() error { return e.cause }
+
+func tunnelForwardSyncFailures(err error) []batchFailureDetail {
+	var failures []batchFailureDetail
+	for _, leaf := range flattenJoinedErrors(err) {
+		var pending *tunnelForwardSyncPendingError
+		if errors.As(leaf, &pending) {
+			failures = append(failures, pending.result.Failures...)
+		}
+	}
+	return failures
 }
 
-func (h *Handler) syncUpdatedTunnelForwards(w http.ResponseWriter, tunnelID int64) bool {
+func flattenJoinedErrors(err error) []error {
+	if err == nil {
+		return nil
+	}
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		var out []error
+		for _, child := range joined.Unwrap() {
+			out = append(out, flattenJoinedErrors(child)...)
+		}
+		return out
+	}
+	return []error{err}
+}
+
+// syncUpdatedTunnelForwards pushes every forward of the tunnel after its entry
+// topology changed. It returns nil when all forwards were applied, otherwise a
+// pending error that lists the forwards still awaiting synchronization.
+func (h *Handler) syncUpdatedTunnelForwards(tunnelID int64) error {
 	forwards, err := h.listForwardsByTunnel(tunnelID)
 	if err != nil {
 		log.Printf("tunnel forward lookup failed tunnel_id=%d err=%v", tunnelID, err)
-		writeTunnelRuntimePending(w, tunnelID, "关联转发暂时无法读取", batchOperationResult{})
-		return false
+		return &tunnelForwardSyncPendingError{cause: fmt.Errorf("关联转发暂时无法读取: %w", err)}
 	}
 	var result batchOperationResult
 	for i := range forwards {
@@ -45,9 +67,12 @@ func (h *Handler) syncUpdatedTunnelForwards(w http.ResponseWriter, tunnelID int6
 			result.SuccessCount++
 		}
 	}
-	if result.FailCount > 0 {
-		writeTunnelRuntimePending(w, tunnelID, fmt.Sprintf("%d 条转发尚未同步", result.FailCount), result)
-		return false
+	if result.FailCount == 0 {
+		return nil
 	}
-	return true
+	log.Printf("tunnel forward synchronization pending tunnel_id=%d failures=%d", tunnelID, result.FailCount)
+	return &tunnelForwardSyncPendingError{
+		result: result,
+		cause:  fmt.Errorf("%d 条转发尚未同步，请在节点恢复后重新下发配置", result.FailCount),
+	}
 }

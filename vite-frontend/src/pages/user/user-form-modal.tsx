@@ -1,6 +1,7 @@
 import type * as React from "react";
 
 import {
+  Alert,
   Badge,
   Button,
   Group,
@@ -42,6 +43,8 @@ interface UserFormModalProps {
   userGroups: UserGroup[];
   userFormLoading: boolean;
   handleSubmitUser: () => Promise<void>;
+  // Set when the user was disabled but some forwards could not be paused yet.
+  userSubmitWarning: string | null;
 }
 
 export function UserFormModal({
@@ -60,6 +63,7 @@ export function UserFormModal({
   userGroups,
   userFormLoading,
   handleSubmitUser,
+  userSubmitWarning,
 }: UserFormModalProps) {
   return (
     <Modal opened={isUserModalOpen} size="xl" onClose={onUserModalClose}>
@@ -75,6 +79,16 @@ export function UserFormModal({
           </p>
         </ModalHeader>
         <ModalBody>
+          {userSubmitWarning ? (
+            <Alert
+              className="whitespace-pre-wrap break-words"
+              color="orange"
+              role="alert"
+              title="用户已禁用，部分转发尚未暂停"
+            >
+              {userSubmitWarning}
+            </Alert>
+          ) : null}
           <FormSection title="账号">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <TextInput

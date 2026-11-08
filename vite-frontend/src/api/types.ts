@@ -381,7 +381,11 @@ export interface TunnelMutationPayload {
 
 export interface TunnelMutationResult {
   // Saving configuration can succeed while an offline node is still pending.
-  runtimeSync?: BatchOperationResult & { status: "pending" };
+  runtimeStatus?: "pending";
+  tunnelId?: number;
+  message?: string;
+  // Forwards that could not be refreshed after the tunnel update.
+  failures?: BatchOperationFailure[];
 }
 
 export interface UserQuotaResetPayload {

@@ -26,16 +26,17 @@ func TestTunnelUpdateReportsSavedConfigurationWithPendingForwardSync(t *testing.
 		Code int    `json:"code"`
 		Msg  string `json:"msg"`
 		Data struct {
-			RuntimeSync tunnelRuntimeSyncResult `json:"runtimeSync"`
+			RuntimeStatus string               `json:"runtimeStatus"`
+			Failures      []batchFailureDetail `json:"failures"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(res.Body.Bytes(), &payload); err != nil {
 		t.Fatal(err)
 	}
-	if payload.Code != 0 || payload.Data.RuntimeSync.Status != "pending" || payload.Data.RuntimeSync.FailCount != 1 || len(payload.Data.RuntimeSync.Failures) != 1 {
+	if payload.Code != 0 || payload.Data.RuntimeStatus != "pending" || len(payload.Data.Failures) != 1 {
 		t.Fatalf("expected an explicit pending result instead of silent success: %s", res.Body.String())
 	}
-	if payload.Data.RuntimeSync.Failures[0].ID != 20 || payload.Data.RuntimeSync.Failures[0].Reason == "" || !strings.Contains(payload.Msg, "配置已保存") {
+	if payload.Data.Failures[0].ID != 20 || payload.Data.Failures[0].Reason == "" || !strings.Contains(payload.Msg, "配置已保存") {
 		t.Fatalf("missing actionable failure detail: %s", res.Body.String())
 	}
 	var tunnel model.Tunnel
@@ -50,8 +51,12 @@ func TestTunnelForwardLookupFailureIsReportedAsPending(t *testing.T) {
 	if err := h.repo.DB().Migrator().DropTable(&model.Forward{}); err != nil {
 		t.Fatal(err)
 	}
-	res := httptest.NewRecorder()
-	if h.syncUpdatedTunnelForwards(res, 1) || !strings.Contains(res.Body.String(), `"status":"pending"`) {
-		t.Fatalf("lookup failure was silently accepted: %s", res.Body.String())
+	err := h.syncUpdatedTunnelForwards(1)
+	if err == nil || !strings.Contains(err.Error(), "关联转发暂时无法读取") {
+		t.Fatalf("lookup failure was silently accepted: %v", err)
+	}
+	out := tunnelRuntimePendingResponse(1, err)
+	if out.Code != 0 || !strings.Contains(out.Msg, "配置已保存") {
+		t.Fatalf("lookup failure was not reported as pending: %+v", out)
 	}
 }
