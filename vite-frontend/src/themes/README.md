@@ -8,6 +8,18 @@
 - `data-mantine-color-scheme` 同时控制 Mantine 和 Tailwind dark 工具类。
 - 切换深浅色时，支持 View Transitions 的浏览器会从点击位置圆形展开新配色；`setMode(mode, { x, y })` 传入点击坐标，不传则从顶部中央展开。系统开启“减少动态效果”时直接切换。
 
+## 版式：托盘与卡片
+
+视觉语言参考 [WAOR/Monitor-SAO](https://github.com/WAOR/Monitor-SAO)（MIT）的元素设计，只借鉴样式，没有引入其代码。
+
+- 三层底色：画布 `--background` → 托盘 `--tray` → 卡片 `--content1`，卡片内的凹陷区用 `--content2`。描边用半透明的 `--border` / `--border-strong`，在任意一层上都成立。
+- 每个页面由 App Shell 包进一个 `.app-tray`（22px 圆角），顶部依次是胶囊标签 `.app-eyebrow`、大标题和说明；标题文案来自 `config/navigation.ts` 的 `heading`。仪表盘的标题是问候语，用户名使用 `.aurora-text` 渐变。
+- 指标卡用 `.stat-tile`（`StatCard` / `QuotaCard`）：小号标签、粗体等宽数字、弱化的单位与脚注。
+- Badge 的 light 变体带同色描边，作标签用；带 `.badge-dot` 前缀的自动变成全圆角状态胶囊。
+- `Progress` 全局渲染为分段方块条；`IconTile` 带同色描边，深色模式下加微光。
+- 西文与数字使用自托管的 Geist / Geist Mono 可变字体（`@fontsource-variable/*`，在 `main.tsx` 引入），中文回退到系统字体。
+- 中性色与强调色：`globals.css` 的 `--default-*` 和状态色阶，与 `context.tsx` 里覆盖的 Mantine `gray` / `dark` / `blue` / `violet` / `teal` / `orange` / `red` / `cyan` 色板保持一致，改动时两处同步。
+
 ## 材质与动效
 
 令牌集中在 `styles/globals.css`，页面直接引用，不要再写内联模糊、阴影或自定义缓动。

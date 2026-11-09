@@ -29,24 +29,26 @@ export function QuotaCard({
   footer,
 }: QuotaCardProps) {
   return (
-    <Card className="quota-card p-5" data-tone={tone}>
+    <Card className="stat-tile">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <IconTile size="sm" tone={tone}>
             <Icon size={16} />
           </IconTile>
-          <span className="truncate text-sm font-medium text-default-600">
+          <span className="truncate text-[13px] font-semibold text-default-600">
             {title}
           </span>
         </div>
         {badge}
       </div>
-      <div className="mt-4 flex min-w-0 items-baseline gap-1.5">
-        <span className="metric-value truncate text-[28px] font-semibold leading-tight text-foreground">
+      <div className="mt-3 flex min-w-0 items-baseline gap-1.5">
+        <span className="metric-value truncate text-[24px] leading-tight text-foreground">
           {value}
         </span>
         {suffix && (
-          <span className="truncate text-sm text-default-500">{suffix}</span>
+          <span className="truncate text-[13px] font-medium text-default-500">
+            {suffix}
+          </span>
         )}
       </div>
       {children && <div className="mt-3">{children}</div>}

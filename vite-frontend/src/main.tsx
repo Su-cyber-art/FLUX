@@ -12,6 +12,8 @@ import {
   reloadForStaleAssets,
 } from "@/utils/application-update";
 import { BUILD_VERSION, onServerVersionChange } from "@/utils/version-sync";
+import "@fontsource-variable/geist/wght.css";
+import "@fontsource-variable/geist-mono/wght.css";
 import "@/styles/globals.css";
 
 registerApplicationUpdates();

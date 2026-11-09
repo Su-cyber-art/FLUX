@@ -1,25 +1,8 @@
 @layer components {
-  /* Ambient light sits behind the whole shell; a custom wallpaper paints over it. */
+  /* Sidebar and canvas share one neutral ground; cards carry the content. */
   .app-shell {
     isolation: isolate;
     background: var(--background);
-  }
-  .has-custom-bg .app-shell::before {
-    display: none;
-  }
-  .app-shell::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(
-        1100px 560px at 88% -12%,
-        var(--ambient-a),
-        transparent 62%
-      ),
-      radial-gradient(820px 520px at 6% 108%, var(--ambient-b), transparent 64%);
   }
   .app-header,
   .app-navbar {
@@ -27,23 +10,49 @@
   }
   .app-header {
     z-index: 101;
-    background: var(--glass);
-    -webkit-backdrop-filter: saturate(180%) blur(16px);
-    backdrop-filter: saturate(180%) blur(16px);
-    border-color: var(--glass-border);
+    background: var(--background);
+    padding-left: var(--app-shell-navbar-offset, 0);
+    transition: padding-left var(--app-shell-transition-duration)
+      var(--app-shell-transition-timing-function);
   }
   .app-navbar {
     z-index: 102;
     top: 0;
     height: 100dvh;
     padding-top: 0;
-    background: var(--content1);
+    background: var(--background);
     transition-property: transform, top, height, width;
   }
-  .app-header {
-    padding-left: var(--app-shell-navbar-offset, 0);
-    transition: padding-left var(--app-shell-transition-duration)
-      var(--app-shell-transition-timing-function);
+  /* Desktop: the sidebar is a tray of its own, floating beside the page tray. */
+  .app-shell:not([data-mobile]) .app-navbar {
+    top: 16px;
+    left: 16px;
+    width: calc(var(--app-shell-navbar-width) - 16px);
+    height: calc(100dvh - 32px);
+    padding-top: 4px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--tray);
+  }
+  [data-mantine-color-scheme="dark"]
+    .app-shell:not([data-mobile])
+    .app-navbar {
+    box-shadow: 0 8px 32px -8px rgb(0 0 0 / 0.6);
+  }
+  /* Desktop: the page tray is a fixed panel as tall as the sidebar tray and
+     scrolls inside itself, so both panels share the same bottom edge. */
+  .app-shell:not([data-mobile]) .app-content {
+    display: flex;
+    max-width: none;
+    height: 100dvh;
+    padding: 16px;
+  }
+  .app-shell:not([data-mobile]) .app-tray {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Sticky bars inside measure from the tray's own top, not the header. */
+    --app-shell-header-height: 0px;
   }
   .app-shell[data-mobile] .app-navbar {
     top: var(--app-shell-header-height);
@@ -56,34 +65,47 @@
   }
   .app-nav-overlay {
     position: fixed;
-    inset: var(--app-shell-header-height, 64px) 0 0;
-    background: rgb(10 17 30 / 0.4);
+    inset: var(--app-shell-header-height, 56px) 0 0;
+    background: rgb(0 0 0 / 0.4);
     -webkit-backdrop-filter: blur(3px);
     backdrop-filter: blur(3px);
     z-index: 101;
     animation: fade-in var(--duration-base) var(--ease-out);
   }
+  .app-brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-right: 4px;
+  }
+  .app-brand-row.is-compact {
+    justify-content: center;
+    padding-right: 0;
+  }
   .app-brand {
     display: flex;
     align-items: center;
-    gap: 11px;
-    height: 80px;
-    min-height: 80px;
+    gap: 10px;
+    min-width: 0;
+    height: 56px;
+    min-height: 56px;
+    padding: 0 6px;
     text-decoration: none;
     color: var(--foreground);
-    border-bottom: 1px solid var(--border);
   }
   .app-brand.is-compact {
     justify-content: center;
+    padding: 0;
   }
   .app-brand-mark {
     position: relative;
-    width: 36px;
-    height: 36px;
-    border-radius: 11px;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
     background: linear-gradient(
       140deg,
-      var(--mantine-primary-color-4),
+      var(--mantine-primary-color-5),
       var(--mantine-primary-color-7)
     );
     color: white;
@@ -91,89 +113,63 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    box-shadow:
-      0 6px 16px -6px
-        color-mix(in srgb, var(--mantine-primary-color-6) 80%, transparent),
-      inset 0 1px 0 rgb(255 255 255 / 0.28);
-    transition:
-      transform var(--duration-base) var(--ease-spring),
-      box-shadow var(--duration-base) var(--ease-out);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14);
+    transition: transform var(--duration-base) var(--ease-spring);
   }
   .app-brand:hover .app-brand-mark,
   .auth-header a:hover .app-brand-mark {
     transform: rotate(-6deg) scale(1.05);
-    box-shadow:
-      0 10px 22px -8px
-        color-mix(in srgb, var(--mantine-primary-color-6) 90%, transparent),
-      inset 0 1px 0 rgb(255 255 255 / 0.28);
   }
   .app-nav-heading {
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font-size: 11px;
+    font-weight: 650;
     color: var(--default-400);
-    padding: 0 12px;
-    margin-bottom: 8px;
+    padding: 0 10px;
+    margin-bottom: 6px;
   }
   .app-nav-item {
     position: relative;
     border-radius: 9px;
-    min-height: 40px;
-    padding: 10px 12px;
+    min-height: 36px;
+    padding: 7px 10px;
     color: var(--default-600);
-    font-weight: 500;
+    font-weight: 550;
     transition:
       background-color var(--duration-fast) ease,
+      box-shadow var(--duration-fast) ease,
       color var(--duration-fast) ease;
   }
-  .app-nav-item::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 50%;
-    width: 3px;
-    height: 18px;
-    margin-top: -9px;
-    border-radius: 0 3px 3px 0;
-    background: var(--mantine-primary-color-filled);
-    transform: scaleY(0);
-    opacity: 0;
-    transition:
-      transform var(--duration-base) var(--ease-spring),
-      opacity var(--duration-fast) ease;
+  .app-nav-item .mantine-NavLink-label {
+    font-size: 13.5px;
+    line-height: 1.5;
   }
-  .app-nav-item .mantine-NavLink-section svg {
-    transition: transform var(--duration-base) var(--ease-spring);
+  .app-nav-item .mantine-NavLink-section {
+    margin-inline-end: 10px;
+    color: var(--default-500);
+    transition: color var(--duration-fast) ease;
   }
   .app-nav-item[data-active] {
-    font-weight: 600;
-    color: var(--primary-ink);
-    background: linear-gradient(
-      90deg,
-      var(--primary-soft),
-      color-mix(in srgb, var(--primary-soft) 45%, transparent)
-    );
+    font-weight: 700;
+    color: var(--foreground);
+    background: var(--content1);
+    box-shadow:
+      inset 0 0 0 1px var(--border),
+      var(--elevation-1);
   }
-  .app-nav-item[data-active]::before {
-    transform: scaleY(1);
-    opacity: 1;
-  }
-  .app-nav-item.is-compact::before {
-    left: -10px;
+  .app-nav-item[data-active] .mantine-NavLink-section {
+    color: var(--primary);
   }
   .app-nav-item:not([data-active]):not([data-disabled]):hover {
     color: var(--foreground);
-    background: var(--default-soft);
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
   }
-  .app-nav-item:not([data-disabled]):hover .mantine-NavLink-section svg {
-    transform: scale(1.1);
-  }
-  .app-nav-item:not([data-disabled]):active .mantine-NavLink-section svg {
-    transform: scale(0.94);
+  .app-nav-item:not([data-active]):not([data-disabled]):hover
+    .mantine-NavLink-section {
+    color: var(--default-700);
   }
   .app-nav-item.is-compact {
     justify-content: center;
-    padding: 12px;
+    padding: 9px;
   }
   .app-nav-item.is-compact .mantine-NavLink-section {
     margin: 0;
@@ -182,9 +178,25 @@
     display: none;
   }
   .app-sidebar-footer {
-    border-top: 1px solid var(--border);
-    padding: 14px 6px 6px;
-    min-height: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 8px 0 6px;
+  }
+  .app-sidebar-account {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .app-sidebar-footer.is-compact .app-sidebar-account {
+    flex-direction: column;
+    gap: 6px;
+  }
+  /* No scrollbar in the sidebar: a soft fade hints at more items below. */
+  .app-nav-scroll .mantine-ScrollArea-viewport {
+    padding-bottom: 20px;
+    -webkit-mask-image: linear-gradient(#000 calc(100% - 24px), transparent);
+    mask-image: linear-gradient(#000 calc(100% - 24px), transparent);
   }
   .app-quick-results {
     display: flex;
@@ -200,13 +212,13 @@
     gap: 12px;
     width: 100%;
     padding: 9px 10px;
-    border-radius: 10px;
+    border-radius: 8px;
     text-align: left;
     color: var(--foreground);
     transition: background-color var(--duration-fast) ease;
   }
   .app-quick-item[data-selected] {
-    background: var(--primary-soft);
+    background: var(--default-soft-hover);
   }
   .app-quick-item[data-selected] .app-quick-enter {
     opacity: 1;
@@ -226,24 +238,31 @@
     align-items: center;
     gap: 9px;
     border-radius: 999px;
-    padding: 4px 8px 4px 4px;
+    padding: 4px;
     transition: background-color var(--duration-fast) ease;
+  }
+  .app-user-menu.is-wide {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px 6px 6px;
+    border-radius: 10px;
   }
   .app-user-menu:hover,
   .app-user-menu[data-expanded] {
-    background: var(--default-soft);
+    background: color-mix(in srgb, var(--foreground) 6%, transparent);
   }
   .app-quick-search {
     display: flex;
     align-items: center;
     gap: 9px;
     color: var(--default-500);
-    background: color-mix(in srgb, var(--content1) 60%, transparent);
+    background: var(--content1);
     border: 1px solid var(--border);
-    padding: 7px 8px 7px 11px;
+    padding: 5px 6px 5px 10px;
     border-radius: 9px;
-    font-size: 12px;
-    width: 220px;
+    font-size: 13px;
+    width: 100%;
+    margin-top: 2px;
     transition:
       border-color var(--duration-fast) ease,
       box-shadow var(--duration-base) var(--ease-out),
@@ -251,17 +270,75 @@
   }
   .app-quick-search:hover {
     color: var(--default-700);
-    border-color: var(--primary-line);
-    box-shadow: 0 0 0 3px var(--primary-soft);
+    border-color: var(--default-300);
   }
   .app-quick-search span {
     flex: 1;
   }
   .app-content {
-    padding: 30px 32px 48px;
-    max-width: 1680px;
+    padding: 24px 28px 48px;
+    max-width: 1600px;
     margin: auto;
     min-width: 0;
+  }
+  /* Every page sits in one tray: eyebrow pill, title, then cards on top. */
+  .app-tray {
+    min-width: 0;
+    padding: clamp(14px, 2vw, 24px);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--tray);
+  }
+  [data-mantine-color-scheme="dark"] .app-tray {
+    box-shadow: 0 8px 32px -8px rgb(0 0 0 / 0.6);
+  }
+  .app-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    color: var(--foreground);
+    font-size: 11.5px;
+    font-weight: 650;
+    line-height: 1.5;
+  }
+  [data-mantine-color-scheme="dark"] .app-eyebrow {
+    background: rgb(255 255 255 / 0.08);
+    border-color: rgb(255 255 255 / 0.1);
+  }
+  .aurora-text {
+    background: linear-gradient(
+      100deg,
+      var(--mantine-color-violet-5),
+      var(--mantine-primary-color-6),
+      var(--mantine-color-violet-5)
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: aurora-flow 8s ease-in-out infinite;
+  }
+  [data-mantine-color-scheme="dark"] .aurora-text {
+    background-image: linear-gradient(
+      100deg,
+      var(--mantine-color-violet-4),
+      var(--mantine-primary-color-4),
+      var(--mantine-color-violet-4)
+    );
+  }
+  @keyframes aurora-flow {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
   }
   .app-header-title {
     display: flex;
@@ -284,7 +361,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 27px;
+    margin-bottom: 20px;
+  }
+  .app-page-heading h1 {
+    margin-top: 14px;
+    font-size: clamp(20px, 2vw, 24px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.25;
   }
   /* Route content fades in; direct children of AnimatedPage rise in a short stagger. */
   .app-route {
@@ -329,7 +413,20 @@
       transform var(--duration-base) var(--ease-out);
   }
   .app-card:hover {
-    box-shadow: var(--elevation-2);
+    border-color: var(--border-strong);
+  }
+  /* Stat tiles: small label, heavy tabular value, quiet caption. */
+  .stat-tile {
+    padding: 14px 16px;
+    border-radius: 14px;
+  }
+  .stat-tile:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px -3px rgb(0 0 0 / 0.06);
+  }
+  [data-mantine-color-scheme="dark"] .stat-tile:hover {
+    background: var(--default-200);
+    box-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.45);
   }
   .app-surface {
     background: var(--content1);
@@ -476,7 +573,7 @@
     overflow: hidden;
     border: 1px solid var(--border);
     border-radius: var(--mantine-radius-md);
-    background: #0b1220;
+    background: #111113;
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
   }
   .code-block-head {
@@ -1198,12 +1295,12 @@
     overflow-x: auto;
     scrollbar-width: none;
     position: sticky;
-    top: calc(var(--app-shell-header-height, 64px) + 8px);
+    top: calc(var(--app-shell-header-height, 56px) + 8px);
     z-index: 20;
     margin: -4px;
     padding: 4px;
     border-radius: 10px;
-    background: var(--glass);
+    background: color-mix(in srgb, var(--tray) 82%, transparent);
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
   }
@@ -1226,9 +1323,12 @@
     color: var(--foreground);
   }
   .config-nav-item[data-active] {
-    background: var(--primary-soft);
-    color: var(--primary-ink);
-    font-weight: 600;
+    background: var(--content1);
+    color: var(--foreground);
+    font-weight: 650;
+    box-shadow:
+      inset 0 0 0 1px var(--border),
+      var(--elevation-1);
   }
   @media (min-width: 75em) {
     .config-layout {
@@ -1242,11 +1342,11 @@
     }
   }
   .config-section {
-    scroll-margin-top: calc(var(--app-shell-header-height, 64px) + 64px);
+    scroll-margin-top: calc(var(--app-shell-header-height, 56px) + 64px);
   }
   @media (min-width: 75em) {
     .config-section {
-      scroll-margin-top: calc(var(--app-shell-header-height, 64px) + 16px);
+      scroll-margin-top: calc(var(--app-shell-header-height, 56px) + 16px);
     }
   }
   .settings-row {
@@ -1304,7 +1404,7 @@
     );
   }
   .wallpaper-preview[data-kind="theme"] {
-    background: linear-gradient(135deg, #f5f7fa 50%, #101927 50%);
+    background: linear-gradient(135deg, #f4f5f7 50%, #09090b 50%);
   }
   .wallpaper-preview img {
     position: absolute;
@@ -1353,7 +1453,7 @@
   }
   .app-batch-bar {
     position: sticky;
-    top: calc(var(--app-shell-header-height, 64px) + 12px);
+    top: calc(var(--app-shell-header-height, 56px) + 12px);
     z-index: 30;
     display: flex;
     flex-wrap: wrap;
@@ -1431,153 +1531,86 @@
     position: relative;
     min-height: 100dvh;
     background: var(--background);
-    overflow: hidden;
-    isolation: isolate;
   }
   .auth-header {
     position: absolute;
     inset: 0 0 auto;
     z-index: 2;
-    height: 72px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 clamp(20px, 4vw, 48px);
+    padding: 0 clamp(20px, 4vw, 40px);
+    border-bottom: 1px solid var(--border);
   }
-  .auth-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
-    min-height: 100dvh;
-  }
-  .auth-intro {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 120px clamp(40px, 6vw, 104px) 72px;
-    background: var(--content1);
-    border-right: 1px solid var(--border);
-  }
-  .auth-intro::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(var(--border) 1px, transparent 1px);
-    background-size: 22px 22px;
-    mask-image: radial-gradient(
-      ellipse 80% 70% at 35% 45%,
-      #000 20%,
-      transparent 75%
-    );
-  }
-  .auth-intro::after {
-    content: "";
-    position: absolute;
-    top: -200px;
-    left: -180px;
-    width: 640px;
-    height: 640px;
-    border-radius: 50%;
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--mantine-primary-color-5) 20%, transparent),
-      transparent 64%
-    );
-    pointer-events: none;
-    animation: aurora-drift 16s var(--ease-in-out) infinite alternate;
-  }
-  .auth-intro > * {
-    position: relative;
-    z-index: 1;
-    max-width: 520px;
-    animation: rise-in 640ms var(--ease-out) backwards;
-  }
-  .auth-intro > :nth-child(2) {
-    animation-delay: 60ms;
-  }
-  .auth-intro > :nth-child(3) {
-    animation-delay: 120ms;
-  }
-  .auth-intro > :nth-child(4) {
-    animation-delay: 180ms;
-  }
-  .auth-intro > :nth-child(5) {
-    animation-delay: 240ms;
-  }
-  .auth-title-accent {
-    background: linear-gradient(
-      100deg,
-      var(--mantine-primary-color-6),
-      var(--mantine-color-violet-5) 70%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  [data-mantine-color-scheme="dark"] .auth-title-accent {
-    background-image: linear-gradient(
-      100deg,
-      var(--mantine-primary-color-3),
-      var(--mantine-color-violet-3) 70%
-    );
-  }
-  .auth-form-panel {
-    position: relative;
-    isolation: isolate;
+  .auth-layout main {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 104px 56px 48px;
+    min-height: 100dvh;
+    padding: 96px 24px 48px;
   }
-  .auth-form-panel::before,
-  .auth-form-panel::after {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    border-radius: 50%;
-    pointer-events: none;
+  .auth-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 22px;
+    width: 100%;
+    max-width: 1080px;
+    padding: clamp(14px, 2vw, 24px);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--tray);
+    animation: rise-in 640ms var(--ease-out) backwards;
   }
-  .auth-form-panel::before {
-    top: 8%;
-    right: -140px;
-    width: 460px;
-    height: 460px;
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--mantine-color-violet-5) 16%, transparent),
-      transparent 66%
-    );
-    animation: aurora-drift 20s var(--ease-in-out) infinite alternate-reverse;
+  [data-mantine-color-scheme="dark"] .auth-grid {
+    box-shadow: 0 8px 32px -8px rgb(0 0 0 / 0.6);
   }
-  .auth-form-panel::after {
-    bottom: -180px;
-    left: 4%;
-    width: 520px;
-    height: 520px;
-    background: radial-gradient(
-      circle,
-      color-mix(in srgb, var(--mantine-primary-color-5) 14%, transparent),
-      transparent 66%
-    );
-    animation: aurora-drift 24s var(--ease-in-out) infinite alternate;
+  .auth-intro {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 8px 8px 4px;
+  }
+  .auth-intro h1 {
+    margin-top: 16px;
+    font-size: clamp(24px, 2.6vw, 30px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+  }
+  .auth-feature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--content1);
+    box-shadow: var(--elevation-1);
+  }
+  .auth-form-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: clamp(22px, 3vw, 32px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--content1);
+    box-shadow: var(--elevation-1);
+  }
+  .auth-form-panel:only-child {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
   }
   .auth-form {
     width: 100%;
-    max-width: 400px;
-    animation: rise-in 640ms var(--ease-out) 80ms backwards;
-  }
-  .auth-card {
-    background: var(--glass);
-    border-color: var(--glass-border);
-    -webkit-backdrop-filter: saturate(170%) blur(20px);
-    backdrop-filter: saturate(170%) blur(20px);
-    box-shadow: var(--elevation-3);
   }
   .auth-network {
     display: flex;
     align-items: center;
-    margin: 40px 0 36px;
+    margin: 28px 0 24px;
   }
   .auth-network-node {
     display: flex;
@@ -1587,7 +1620,7 @@
     width: 92px;
     padding: 14px 0 12px;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 12px;
     background: var(--content1);
     font-size: 12px;
     color: var(--default-600);
@@ -1641,14 +1674,6 @@
       transform: translateX(230%);
     }
   }
-  @keyframes aurora-drift {
-    from {
-      transform: translate3d(0, 0, 0) scale(1);
-    }
-    to {
-      transform: translate3d(60px, 40px, 0) scale(1.12);
-    }
-  }
   @keyframes node-breathe {
     0%,
     100% {
@@ -1669,7 +1694,8 @@
   }
   .metric-value {
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.04em;
+    font-weight: 760;
+    letter-spacing: -0.015em;
   }
   .monitor-summary {
     display: grid;
@@ -1778,16 +1804,11 @@
   }
   .flow-chart .recharts-area-curve {
     stroke: var(--primary);
-    filter: drop-shadow(
-      0 6px 8px color-mix(in srgb, var(--primary) 30%, transparent)
-    );
+    stroke-width: 1.75;
   }
   .flow-chart .recharts-active-dot .recharts-dot {
     fill: var(--primary);
     stroke: var(--content1);
-    filter: drop-shadow(
-      0 0 6px color-mix(in srgb, var(--primary) 60%, transparent)
-    );
   }
   .flow-chart .recharts-tooltip-cursor {
     stroke: var(--border);
@@ -1870,23 +1891,9 @@
   .mantine-Button-root[data-variant="filled"]:where(
       :not(:disabled, [data-disabled], [data-loading])
     ) {
-    background-image: linear-gradient(
-      180deg,
-      rgb(255 255 255 / 0.1),
-      rgb(255 255 255 / 0)
-    );
     box-shadow:
-      0 1px 2px rgb(15 23 42 / 0.12),
-      0 4px 12px -4px color-mix(in srgb, var(--button-bg) 60%, transparent),
-      inset 0 1px 0 rgb(255 255 255 / 0.16);
-  }
-  .mantine-Button-root[data-variant="filled"]:where(
-      :not(:disabled, [data-disabled], [data-loading])
-    ):hover {
-    box-shadow:
-      0 1px 2px rgb(15 23 42 / 0.12),
-      0 8px 20px -6px color-mix(in srgb, var(--button-bg) 70%, transparent),
-      inset 0 1px 0 rgb(255 255 255 / 0.16);
+      0 1px 2px rgb(24 24 27 / 0.14),
+      inset 0 1px 0 rgb(255 255 255 / 0.14);
   }
   .mantine-Button-root[data-variant="default"]:where(
       :not(:disabled, [data-disabled])
@@ -1982,92 +1989,95 @@
       0 0 0 12px color-mix(in srgb, var(--default-soft) 50%, transparent);
   }
 
-  /* Dashboard quota tiles: tone-tinted glow that blooms on hover. */
-  .quota-card {
-    overflow: hidden;
+  /* Tags: tinted fill with a matching hairline. Mantine's xs/sm badges drop
+     to 9–10px, too small for CJK labels. */
+  .mantine-Badge-root {
+    font-size: max(11px, var(--badge-fz));
+    letter-spacing: 0;
   }
-  .quota-card > * {
-    position: relative;
-    z-index: 1;
+  .mantine-Badge-root[data-variant="light"] {
+    border-color: color-mix(in srgb, var(--badge-color) 26%, transparent);
   }
-  .quota-card::before {
-    content: "";
-    position: absolute;
-    z-index: 0;
-    top: -70px;
-    right: -70px;
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: radial-gradient(
-      circle,
-      color-mix(
-        in srgb,
-        var(--quota-tone, var(--primary-ink)) 15%,
-        transparent
-      ),
-      transparent 70%
+  .mantine-Badge-label {
+    font-weight: 650;
+  }
+  /* A leading dot makes it a status pill. */
+  .mantine-Badge-root:has(.badge-dot) {
+    border-radius: 999px;
+  }
+  .mantine-InputWrapper-label {
+    font-weight: 600;
+  }
+  /* Icon tiles: hairline in the icon's own color; dark mode adds a HUD glow. */
+  .mantine-ThemeIcon-root[data-variant="light"] {
+    border: 1px solid color-mix(in srgb, var(--ti-color) 22%, transparent);
+  }
+  [data-mantine-color-scheme="dark"]
+    .mantine-ThemeIcon-root[data-variant="light"] {
+    background: color-mix(in srgb, var(--ti-color) 12%, rgb(0 0 0 / 0.45));
+    box-shadow: 0 0 7px -1px color-mix(in srgb, var(--ti-color) 25%, transparent);
+  }
+  /* Meters read as rows of blocks rather than one smooth bar. */
+  .mantine-Progress-root {
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--foreground) 9%, transparent);
+    -webkit-mask-image: repeating-linear-gradient(
+      90deg,
+      #000 0 7px,
+      transparent 7px 10px
     );
-    pointer-events: none;
-    transition: transform 600ms var(--ease-out);
+    mask-image: repeating-linear-gradient(
+      90deg,
+      #000 0 7px,
+      transparent 7px 10px
+    );
   }
-  .quota-card:hover {
-    transform: translateY(-2px);
+  .mantine-Progress-section {
+    border-radius: 0;
   }
-  .quota-card:hover::before {
-    transform: scale(1.25);
+  .mantine-SegmentedControl-root {
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--foreground) 4%, transparent);
   }
-  .quota-card[data-tone="secondary"] {
-    --quota-tone: var(--secondary-ink);
+  .mantine-SegmentedControl-indicator {
+    border-radius: 8px;
   }
-  .quota-card[data-tone="success"] {
-    --quota-tone: var(--success-ink);
-  }
-  .quota-card[data-tone="warning"] {
-    --quota-tone: var(--warning-ink);
-  }
-  .quota-card[data-tone="danger"] {
-    --quota-tone: var(--danger-ink);
-  }
-  .quota-card[data-tone="default"] {
-    --quota-tone: var(--default-ink);
-  }
-  .quota-card[data-tone="info"] {
-    --quota-tone: var(--info-ink);
+  .mantine-SegmentedControl-label {
+    font-weight: 600;
   }
   @media (max-width: 62em) {
-    .auth-intro {
-      padding: 112px 32px 56px;
+    .auth-grid {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 480px;
     }
-    .auth-form-panel {
-      padding: 104px 32px 40px;
+    .auth-intro {
+      display: none;
     }
     .app-content {
-      padding: 24px;
+      padding: 20px;
     }
   }
   @media (max-width: 47.99em) {
     .app-header {
       padding-left: 0;
     }
-    .app-brand {
-      height: 68px;
-      min-height: 68px;
-    }
     .app-content {
-      padding: 22px max(16px, env(safe-area-inset-left))
-        calc(36px + var(--safe-area-bottom))
-        max(16px, env(safe-area-inset-right));
+      padding: 12px max(10px, env(safe-area-inset-left))
+        calc(28px + var(--safe-area-bottom))
+        max(10px, env(safe-area-inset-right));
+    }
+    .app-tray {
+      padding: 14px 12px;
+      border-radius: 18px;
     }
     .app-header > .mantine-Group-root {
       padding-left: max(12px, env(safe-area-inset-left));
       padding-right: max(12px, env(safe-area-inset-right));
     }
     .app-page-heading {
-      margin-bottom: 22px;
-    }
-    .app-page-heading h1 {
-      font-size: 23px;
+      margin-bottom: 16px;
     }
     .app-modal-viewport {
       padding: max(12px, env(safe-area-inset-top))
@@ -2091,16 +2101,13 @@
       height: calc(64px + var(--safe-area-top));
       padding: var(--safe-area-top) 20px 0;
     }
+    .auth-layout main {
+      padding: calc(84px + var(--safe-area-top)) 12px
+        calc(28px + var(--safe-area-bottom));
+    }
     .auth-grid {
-      display: block;
-    }
-    .auth-intro {
-      display: none;
-    }
-    .auth-form-panel {
-      min-height: 100dvh;
-      padding: calc(88px + var(--safe-area-top)) 20px
-        calc(32px + var(--safe-area-bottom));
+      padding: 12px;
+      border-radius: 18px;
     }
     .monitor-summary {
       grid-template-columns: repeat(2, minmax(0, 1fr));

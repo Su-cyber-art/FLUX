@@ -16,6 +16,7 @@ export const navigation = [
   {
     path: "/dashboard",
     title: "仪表盘",
+    heading: "仪表盘",
     description: "查看流量用量、隧道权限与网络概况。",
     group: "工作空间",
     icon: LayoutDashboard,
@@ -23,6 +24,7 @@ export const navigation = [
   {
     path: "/monitor",
     title: "运行监控",
+    heading: "节点矩阵与实时监控",
     description: "跟踪节点资源、服务可用性与隧道质量。",
     group: "工作空间",
     icon: Activity,
@@ -30,6 +32,7 @@ export const navigation = [
   {
     path: "/forward",
     title: "转发规则",
+    heading: "转发规则与流量策略",
     description: "管理入口端口、目标地址与流量转发策略。",
     group: "网络服务",
     icon: ArrowLeftRight,
@@ -37,6 +40,7 @@ export const navigation = [
   {
     path: "/tunnel",
     title: "隧道管理",
+    heading: "隧道与转发链路",
     description: "配置入口、中继与出口，组织转发链路。",
     group: "网络服务",
     icon: Network,
@@ -45,6 +49,7 @@ export const navigation = [
   {
     path: "/node",
     title: "节点管理",
+    heading: "节点集群与部署状态",
     description: "管理本地与远程节点，查看连接和部署状态。",
     group: "网络服务",
     icon: Server,
@@ -53,6 +58,7 @@ export const navigation = [
   {
     path: "/user",
     title: "用户管理",
+    heading: "用户配额与访问权限",
     description: "管理用户配额、隧道访问和监控权限。",
     group: "访问与管理",
     icon: Users,
@@ -61,6 +67,7 @@ export const navigation = [
   {
     path: "/group",
     title: "分组权限",
+    heading: "用户组与隧道组授权",
     description: "通过用户组与隧道组统一分配访问权限。",
     group: "访问与管理",
     icon: ShieldCheck,
@@ -69,6 +76,7 @@ export const navigation = [
   {
     path: "/limit",
     title: "限速策略",
+    heading: "带宽限速策略",
     description: "集中配置带宽限制，按需应用到用户与规则。",
     group: "访问与管理",
     icon: Gauge,
@@ -77,6 +85,7 @@ export const navigation = [
   {
     path: "/panel-sharing",
     title: "面板共享",
+    heading: "面板共享与远程节点",
     description: "分享节点资源，接入其他面板的远程节点。",
     group: "访问与管理",
     icon: Share2,
@@ -85,6 +94,7 @@ export const navigation = [
   {
     path: "/config",
     title: "系统设置",
+    heading: "全局配置与外观",
     description: "管理全局配置、外观、公告与数据备份。",
     group: "系统",
     icon: Settings,
@@ -93,6 +103,7 @@ export const navigation = [
   {
     path: "/profile",
     title: "个人中心",
+    heading: "账号与安全设置",
     description: "查看账号信息并管理个人安全设置。",
     group: "系统",
     icon: UserRound,

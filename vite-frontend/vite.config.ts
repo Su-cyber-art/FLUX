@@ -16,7 +16,7 @@ export default defineConfig({
         short_name: "FLVX",
         description: "FLVX forwarding management panel",
         theme_color: "#2563eb",
-        background_color: "#f6f7fb",
+        background_color: "#f4f5f7",
         display: "standalone",
         start_url: "/",
         scope: "/",

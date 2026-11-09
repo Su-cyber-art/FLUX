@@ -4,7 +4,6 @@ import {
   Button,
   Divider,
   Group,
-  Paper,
   PasswordInput,
   Stack,
   Text,
@@ -217,13 +216,14 @@ export default function LoginPage() {
     <DefaultLayout>
       <div className="auth-grid">
         <section className="auth-intro">
-          <p className="mb-4 text-xs font-semibold tracking-[0.18em] text-primary-ink">
+          <span className="app-eyebrow">
+            <Network size={13} strokeWidth={2.2} />
             节点 · 隧道 · 转发
-          </p>
-          <Title fw={650} lh={1.25} order={1} size={42}>
-            掌握<span className="auth-title-accent">每一条连接</span>。
+          </span>
+          <Title lh={1.25} order={1}>
+            掌握<span className="aurora-text">每一条连接</span>
           </Title>
-          <Text c="dimmed" lh={1.8} mt="md" size="md">
+          <Text c="dimmed" lh={1.7} mt="xs" size="sm">
             将转发规则、节点状态和访问权限集中到一个清晰的工作空间。
           </Text>
           <div aria-hidden className="auth-network">
@@ -248,14 +248,14 @@ export default function LoginPage() {
               目标服务
             </div>
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="mt-auto flex flex-col gap-3">
             {AUTH_FEATURES.map((feature) => (
-              <div key={feature.title} className="flex items-start gap-3">
+              <div key={feature.title} className="auth-feature">
                 <IconTile size="sm" tone={feature.tone}>
                   <feature.icon size={15} />
                 </IconTile>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-[13px] font-semibold text-foreground">
                     {feature.title}
                   </p>
                   <p className="mt-0.5 text-xs text-default-500">
@@ -268,13 +268,8 @@ export default function LoginPage() {
         </section>
         <section className="auth-form-panel">
           <div className="auth-form">
-            <Paper
-              withBorder
-              className="auth-card"
-              p={{ base: 24, sm: 32 }}
-              radius="xl"
-            >
-              <Title order={2} size={24}>
+            <div>
+              <Title order={2} size={22}>
                 登录控制台
               </Title>
               <Text c="dimmed" mb={28} mt={6} size="sm">
@@ -335,9 +330,9 @@ export default function LoginPage() {
                   </Button>
                 </>
               )}
-            </Paper>
+            </div>
             <VersionFooter
-              containerClassName="mt-6 flex items-center justify-center gap-3"
+              containerClassName="mt-8 flex items-center gap-3"
               poweredClassName="text-xs text-default-400"
               version={isWebView ? config.app_version : config.version}
               versionClassName="text-xs text-default-400"

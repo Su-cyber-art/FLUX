@@ -5,7 +5,6 @@ import {
   Alert,
   AppShell,
   Avatar,
-  Badge,
   Box,
   Burger,
   Button,
@@ -23,16 +22,13 @@ import {
 } from "@mantine/core";
 import { useDisclosure, useHotkeys } from "@mantine/hooks";
 import {
-  ChevronDown,
-  ChevronRight,
+  ChevronsUpDown,
   LogOut,
-  Menu as MenuIcon,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
   Settings,
-  ShieldCheck,
   Sun,
   UserRound,
 } from "lucide-react";
@@ -56,6 +52,17 @@ import {
 import { getMonitorAccess } from "@/api";
 import { safeLogout } from "@/utils/logout";
 
+const greeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour < 6) return "夜深了";
+  if (hour < 11) return "早上好";
+  if (hour < 13) return "中午好";
+  if (hour < 18) return "下午好";
+
+  return "晚上好";
+};
+
 export default function ApplicationLayout() {
   const session = useSession();
   const config = useSiteConfig();
@@ -75,7 +82,7 @@ export default function ApplicationLayout() {
   const [monitorAllowed, setMonitorAllowed] = useState<boolean | null>(
     session.isAdmin ? true : null,
   );
-  const mainRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLElement>(null);
   const [headingHidden, setHeadingHidden] = useState(false);
   const current =
@@ -98,7 +105,7 @@ export default function ApplicationLayout() {
   };
 
   useHotkeys([["mod+K", () => openSearch()]]);
-  // Track whether the page heading sits under the fixed header (64px).
+  // Track whether the page heading sits under the fixed header.
   useEffect(() => {
     const heading = headingRef.current;
 
@@ -163,15 +170,119 @@ export default function ApplicationLayout() {
     });
   };
 
+  const userName = session.name || "用户";
+  const roleName = session.isAdmin ? "管理员" : "成员";
+  const themeLabel = effectiveMode === "dark" ? "切换浅色模式" : "切换深色模式";
+  const themeToggle = (
+    <Tooltip label={themeLabel} position={isMobile ? "bottom" : "right"}>
+      <ActionIcon
+        aria-label={themeLabel}
+        color="gray"
+        variant="subtle"
+        onClick={(event) =>
+          setMode(effectiveMode === "dark" ? "light" : "dark", {
+            x: event.clientX,
+            y: event.clientY,
+          })
+        }
+      >
+        {effectiveMode === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+      </ActionIcon>
+    </Tooltip>
+  );
+  // Desktop keeps the account in the sidebar; phones keep it in the top bar.
+  const userMenu = (
+    <Menu
+      withinPortal
+      position={isMobile ? "bottom-end" : compact ? "right-end" : "top-start"}
+      shadow="md"
+      width={210}
+      zIndex={450}
+    >
+      <Menu.Target>
+        <UnstyledButton
+          aria-label="账号菜单"
+          className={`app-user-menu ${isMobile || compact ? "" : "is-wide"}`}
+        >
+          <Avatar color="initials" name={userName} radius="xl" size={28} />
+          {!isMobile && !compact && (
+            <div className="min-w-0 flex-1">
+              <Text truncate fw={650} lh={1.3} size="13px">
+                {userName}
+              </Text>
+              <Text c="dimmed" lh={1.3} size="11px">
+                {roleName}
+              </Text>
+            </div>
+          )}
+          {!compact && (
+            <ChevronsUpDown className="shrink-0 text-default-500" size={14} />
+          )}
+        </UnstyledButton>
+      </Menu.Target>
+      <Menu.Dropdown>
+        <div className="flex items-center gap-2.5 px-3 pb-2.5 pt-2">
+          <Avatar color="initials" name={userName} radius="xl" size={34} />
+          <div className="min-w-0">
+            <Text truncate fw={600} size="sm">
+              {userName}
+            </Text>
+            <Text c="dimmed" size="xs">
+              {roleName}
+            </Text>
+          </div>
+        </div>
+        <Menu.Divider />
+        <Menu.Item
+          component={Link}
+          leftSection={<UserRound size={15} />}
+          to="/profile"
+        >
+          个人中心
+        </Menu.Item>
+        {session.isAdmin && (
+          <Menu.Item
+            component={Link}
+            leftSection={<Settings size={15} />}
+            to="/config"
+          >
+            系统设置
+          </Menu.Item>
+        )}
+        <Menu.Divider />
+        <Menu.Item
+          color="red"
+          leftSection={<LogOut size={15} />}
+          onClick={() => safeLogout()}
+        >
+          退出登录
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
+  );
+  const sidebarToggle = (
+    <Tooltip label={compact ? "展开侧栏" : "收起侧栏"} position="right">
+      <ActionIcon
+        aria-label={compact ? "展开侧栏" : "收起侧栏"}
+        color="gray"
+        variant="subtle"
+        onClick={toggleSidebar}
+      >
+        {compact ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+      </ActionIcon>
+    </Tooltip>
+  );
+
   return (
     <AppShell
       className="app-shell"
       data-mobile={isMobile || undefined}
+      // Desktop has no top bar: both trays start at the same edge.
       header={{
-        height: isMobile ? "calc(64px + env(safe-area-inset-top, 0px))" : 64,
+        height: isMobile ? "calc(56px + env(safe-area-inset-top, 0px))" : 0,
       }}
       navbar={{
-        width: compact ? 76 : 244,
+        width: compact ? 78 : 248,
         breakpoint: isMobile ? 100000 : "sm",
         collapsed: { mobile: !mobileOpened },
       }}
@@ -179,61 +290,28 @@ export default function ApplicationLayout() {
       transitionDuration={280}
       transitionTimingFunction="cubic-bezier(0.22, 1, 0.36, 1)"
     >
-      <AppShell.Header className="app-header">
-        <Group
-          h="100%"
-          justify="space-between"
-          px={isMobile ? "md" : "lg"}
-          wrap="nowrap"
-        >
-          <Group className="min-w-0" gap="sm" wrap="nowrap">
-            {isMobile ? (
+      {isMobile && (
+        <AppShell.Header className="app-header">
+          <Group h="100%" justify="space-between" px="md" wrap="nowrap">
+            <Group className="min-w-0" gap="sm" wrap="nowrap">
               <Burger
                 aria-label="切换导航菜单"
                 opened={mobileOpened}
                 size="sm"
                 onClick={toggleMobile}
               />
-            ) : (
-              <ActionIcon
-                aria-label={compact ? "展开侧栏" : "收起侧栏"}
-                color="gray"
-                variant="subtle"
-                onClick={toggleSidebar}
-              >
-                {compact ? (
-                  <PanelLeftOpen size={19} />
-                ) : (
-                  <PanelLeftClose size={19} />
-                )}
-              </ActionIcon>
-            )}
-            {/* The page name joins the trail only once the big heading has scrolled away. */}
-            <Group className="min-w-0" gap={8} wrap="nowrap">
-              <Text c="dimmed" size="sm" visibleFrom="sm">
-                控制台
-              </Text>
-              <ChevronRight
-                className="text-default-400 hidden sm:block"
-                size={13}
-              />
-              <Text truncate c="dimmed" size="sm">
-                {current.group}
-              </Text>
+              {/* The page name shows once the big heading has scrolled away. */}
               <span
                 aria-hidden={!headingHidden}
                 className="app-header-title"
                 data-visible={headingHidden || undefined}
               >
-                <ChevronRight className="text-default-400 shrink-0" size={13} />
-                <Text truncate fw={600} size="sm">
+                <Text truncate fw={650} size="sm">
                   {current.title}
                 </Text>
               </span>
             </Group>
-          </Group>
-          <Group gap={isMobile ? 8 : 16} wrap="nowrap">
-            {isMobile ? (
+            <Group gap={8} wrap="nowrap">
               <ActionIcon
                 aria-label="搜索页面"
                 color="gray"
@@ -242,109 +320,12 @@ export default function ApplicationLayout() {
               >
                 <Search size={18} />
               </ActionIcon>
-            ) : (
-              <UnstyledButton className="app-quick-search" onClick={openSearch}>
-                <Search size={15} />
-                <span>搜索页面</span>
-                <Kbd size="xs">⌘ K</Kbd>
-              </UnstyledButton>
-            )}
-            <Tooltip
-              label={effectiveMode === "dark" ? "切换浅色模式" : "切换深色模式"}
-            >
-              <ActionIcon
-                aria-label={
-                  effectiveMode === "dark" ? "切换浅色模式" : "切换深色模式"
-                }
-                color="gray"
-                variant="subtle"
-                onClick={(event) =>
-                  setMode(effectiveMode === "dark" ? "light" : "dark", {
-                    x: event.clientX,
-                    y: event.clientY,
-                  })
-                }
-              >
-                {effectiveMode === "dark" ? (
-                  <Sun size={18} />
-                ) : (
-                  <Moon size={18} />
-                )}
-              </ActionIcon>
-            </Tooltip>
-            <Menu
-              withinPortal
-              position="bottom-end"
-              shadow="md"
-              width={210}
-              zIndex={450}
-            >
-              <Menu.Target>
-                <UnstyledButton className="app-user-menu">
-                  <Avatar
-                    color="initials"
-                    name={session.name || "用户"}
-                    radius="xl"
-                    size={32}
-                  />
-                  <div className="hidden md:block">
-                    <Text fw={600} size="xs">
-                      {session.name || "用户"}
-                    </Text>
-                    <Text c="dimmed" size="10px">
-                      {session.isAdmin ? "管理员" : "成员"}
-                    </Text>
-                  </div>
-                  <ChevronDown className="text-default-500" size={13} />
-                </UnstyledButton>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <div className="flex items-center gap-2.5 px-3 pb-2.5 pt-2">
-                  <Avatar
-                    color="initials"
-                    name={session.name || "用户"}
-                    radius="xl"
-                    size={34}
-                  />
-                  <div className="min-w-0">
-                    <Text truncate fw={600} size="sm">
-                      {session.name || "用户"}
-                    </Text>
-                    <Text c="dimmed" size="xs">
-                      {session.isAdmin ? "管理员" : "成员"}
-                    </Text>
-                  </div>
-                </div>
-                <Menu.Divider />
-                <Menu.Item
-                  component={Link}
-                  leftSection={<UserRound size={15} />}
-                  to="/profile"
-                >
-                  个人中心
-                </Menu.Item>
-                {session.isAdmin && (
-                  <Menu.Item
-                    component={Link}
-                    leftSection={<Settings size={15} />}
-                    to="/config"
-                  >
-                    系统设置
-                  </Menu.Item>
-                )}
-                <Menu.Divider />
-                <Menu.Item
-                  color="red"
-                  leftSection={<LogOut size={15} />}
-                  onClick={() => safeLogout()}
-                >
-                  退出登录
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+              {themeToggle}
+              {userMenu}
+            </Group>
           </Group>
-        </Group>
-      </AppShell.Header>
+        </AppShell.Header>
+      )}
       {isMobile && mobileOpened && (
         <button
           aria-label="关闭导航菜单"
@@ -352,40 +333,58 @@ export default function ApplicationLayout() {
           onClick={closeMobile}
         />
       )}
-      <AppShell.Navbar className="app-navbar" p={compact ? 10 : 16}>
-        <Link
-          aria-label={`${config.name} 首页`}
-          className={`app-brand ${compact ? "is-compact" : ""}`}
-          to="/dashboard"
-        >
-          <div className="app-brand-mark">
-            <BrandLogo size={23} />
-          </div>
-          {!compact && (
-            <div className="min-w-0">
-              <Text truncate fw={750} lh={1.3} size="lg">
+      <AppShell.Navbar className="app-navbar" p={compact ? 8 : 12}>
+        <div className={`app-brand-row ${compact ? "is-compact" : ""}`}>
+          <Link
+            aria-label={`${config.name} 首页`}
+            className={`app-brand ${compact ? "is-compact" : ""}`}
+            to="/dashboard"
+          >
+            <div className="app-brand-mark">
+              <BrandLogo size={18} />
+            </div>
+            {!compact && (
+              <Text truncate fw={650} lh={1.3} size="15px">
                 {config.name}
               </Text>
-              <Text c="dimmed" mt={3} size="10px">
-                流量转发控制台
-              </Text>
-            </div>
-          )}
-        </Link>
+            )}
+          </Link>
+          {!isMobile && !compact && sidebarToggle}
+        </div>
+        {!isMobile &&
+          (compact ? (
+            <Tooltip label="搜索页面" position="right">
+              <ActionIcon
+                aria-label="搜索页面"
+                className="mx-auto mt-1"
+                color="gray"
+                size="lg"
+                variant="subtle"
+                onClick={openSearch}
+              >
+                <Search size={17} />
+              </ActionIcon>
+            </Tooltip>
+          ) : (
+            <UnstyledButton className="app-quick-search" onClick={openSearch}>
+              <Search size={15} />
+              <span>搜索页面</span>
+              <Kbd size="xs">⌘ K</Kbd>
+            </UnstyledButton>
+          ))}
         <AppShell.Section
           grow
+          className="app-nav-scroll"
           component={ScrollArea}
-          mt="lg"
-          offsetScrollbars={false}
-          scrollbarSize={4}
-          // Only while scrolling: a thin bar on hover reads as a stray divider.
-          type="scroll"
+          mt="md"
+          // The bar overlapped the items; the viewport fades out instead.
+          type="never"
         >
           {Array.from(new Set(available.map((item) => item.group))).map(
             (group) => (
-              <Box key={group} mb="lg">
+              <Box key={group} mb="md">
                 {!compact && <Text className="app-nav-heading">{group}</Text>}
-                <Stack gap={4}>
+                <Stack gap={2}>
                   {available
                     .filter((item) => item.group === group)
                     .map((item) => {
@@ -407,7 +406,7 @@ export default function ApplicationLayout() {
                             component={Link}
                             disabled={disabled}
                             label={compact ? null : item.title}
-                            leftSection={<Icon size={18} strokeWidth={1.7} />}
+                            leftSection={<Icon size={16} strokeWidth={1.8} />}
                             to={item.path}
                             onClick={(event) => {
                               if (disabled) event.preventDefault();
@@ -422,85 +421,82 @@ export default function ApplicationLayout() {
             ),
           )}
         </AppShell.Section>
-        <AppShell.Section className="app-sidebar-footer">
-          {compact ? (
-            <Tooltip label="系统设置" position="right">
-              <ActionIcon
-                color="gray"
-                component={Link}
-                size="lg"
-                to={session.isAdmin ? "/config" : "/profile"}
-                variant="subtle"
-              >
-                <MenuIcon size={17} />
-              </ActionIcon>
-            </Tooltip>
-          ) : (
-            <>
-              <Group gap={7} mb={6}>
-                <ShieldCheck className="text-default-500" size={14} />
-                <Text c="dimmed" size="xs">
-                  {session.isAdmin ? "管理工作空间" : "个人工作空间"}
-                </Text>
-              </Group>
-              <VersionFooter
-                containerClassName="flex flex-wrap items-center gap-x-2 gap-y-1"
-                poweredClassName="text-[11px] text-default-400"
-                version={config.version}
-                versionClassName="text-[11px] text-default-500"
-              />
-            </>
+        <AppShell.Section
+          className={`app-sidebar-footer ${compact ? "is-compact" : ""}`}
+        >
+          {!isMobile && (
+            <div className="app-sidebar-account">
+              {userMenu}
+              {themeToggle}
+              {compact && sidebarToggle}
+            </div>
+          )}
+          {!compact && (
+            <VersionFooter
+              containerClassName="flex flex-wrap items-center gap-x-2 gap-y-1 px-1.5"
+              poweredClassName="text-[11px] text-default-400"
+              version={config.version}
+              versionClassName="text-[11px] text-default-500"
+            />
           )}
         </AppShell.Section>
       </AppShell.Navbar>
       <AppShell.Main>
-        <div ref={mainRef} data-scroll-container className="app-content">
-          {/* Sibling keys must differ from the route boundary's key below. */}
-          <header
-            key={`heading:${location.pathname}`}
-            ref={headingRef}
-            className="app-page-heading"
-          >
-            <div>
-              <Group gap={10} wrap="nowrap">
-                <Title fw={650} order={1} size={26}>
-                  {current.title}
+        <div className="app-content">
+          <section ref={mainRef} data-scroll-container className="app-tray">
+            {/* Sibling keys must differ from the route boundary's key below. */}
+            <header
+              key={`heading:${location.pathname}`}
+              ref={headingRef}
+              className="app-page-heading"
+            >
+              <div>
+                <span className="app-eyebrow">
+                  <current.icon size={13} strokeWidth={2.2} />
+                  {current.path === "/dashboard" ? "概览" : current.title}
+                </span>
+                <Title order={1}>
+                  {current.path === "/dashboard" ? (
+                    <>
+                      {greeting()}，
+                      <span className="aurora-text">
+                        {session.name || "用户"}
+                      </span>
+                    </>
+                  ) : (
+                    current.heading
+                  )}
                 </Title>
-                {session.isAdmin && (
-                  <Badge color="gray" size="xs" variant="light">
-                    管理端
-                  </Badge>
-                )}
-              </Group>
-              <Text c="dimmed" mt={6} size="sm">
-                {current.description}
-              </Text>
-            </div>
-          </header>
-          {denied ? (
-            <Alert color="orange" title="暂无访问权限">
-              请联系管理员授权。
-              <Button
-                component={Link}
-                mt="md"
-                size="xs"
-                to="/dashboard"
-                variant="light"
-              >
-                返回仪表盘
-              </Button>
-            </Alert>
-          ) : (
-            <PageErrorBoundary key={`route:${location.pathname}`}>
-              <div className="app-route">
-                <Suspense
-                  fallback={<PageLoadingState message="正在加载页面…" />}
-                >
-                  <Outlet />
-                </Suspense>
+                <Text c="dimmed" mt={6} size="sm">
+                  {current.description}
+                </Text>
               </div>
-            </PageErrorBoundary>
-          )}
+            </header>
+            {denied ? (
+              <Alert color="orange" title="暂无访问权限">
+                请联系管理员授权。
+                <Button
+                  component={Link}
+                  mt="md"
+                  size="xs"
+                  to="/dashboard"
+                  variant="light"
+                >
+                  返回仪表盘
+                </Button>
+              </Alert>
+            ) : (
+              <PageErrorBoundary key={`route:${location.pathname}`}>
+                <div className="app-route">
+                  <Suspense
+                    fallback={<PageLoadingState message="正在加载页面…" />}
+                  >
+                    <Outlet />
+                  </Suspense>
+                </div>
+              </PageErrorBoundary>
+            )}
+          </section>
         </div>
       </AppShell.Main>
       <Modal opened={searchOpened} size="md" onClose={closeSearch}>
