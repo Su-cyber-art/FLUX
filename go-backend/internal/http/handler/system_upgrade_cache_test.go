@@ -17,8 +17,12 @@ func fakeReleases(t *testing.T) *int {
 	t.Helper()
 	calls := 0
 	previous := systemUpgradeHTTPGet
-	systemUpgradeHTTPGet = func(*http.Client, string) (*http.Response, error) {
+	systemUpgradeHTTPGet = func(_ *http.Client, url string) (*http.Response, error) {
 		calls++
+		// The GitHub proxy is enabled by default; API calls must bypass it.
+		if !strings.HasPrefix(url, systemUpgradeAPIBaseURL+"/") {
+			t.Errorf("release list must query the GitHub API directly, got %s", url)
+		}
 		body := `[{"tag_name":"3.4.0-beta.1"},{"tag_name":"3.3.0"},{"tag_name":"3.2.0"}]`
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body))}, nil
 	}

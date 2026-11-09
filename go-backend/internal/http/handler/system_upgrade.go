@@ -141,10 +141,10 @@ func (h *Handler) fetchSystemUpgradeReleases(perPage int, maxAge time.Duration) 
 		perPage = 20
 	}
 
+	// Always query api.github.com directly: gh-proxy style mirrors (ghfast.top,
+	// the default proxy, ...) only relay github.com downloads and reject or
+	// hang on API requests. The proxy is applied to release asset downloads only.
 	url := fmt.Sprintf("%s/repos/%s/releases?per_page=%d", strings.TrimRight(systemUpgradeAPIBaseURL, "/"), githubRepo, perPage)
-	if enabled, proxyURL := h.getGithubProxyConfig(); enabled {
-		url = fmt.Sprintf("%s/%s", proxyURL, url)
-	}
 	cache := &h.systemUpgradeCache
 	if maxAge > 0 {
 		cache.mu.Lock()
