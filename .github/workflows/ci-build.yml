@@ -74,6 +74,9 @@ jobs:
       - name: Build
         run: go build -v ./...
 
+      - name: Test repository and SQLite upgrade migrations
+        run: go test ./internal/store/repo -count=1
+
   backend-postgres-contract:
     name: Go Backend PostgreSQL Contract
     runs-on: ubuntu-latest

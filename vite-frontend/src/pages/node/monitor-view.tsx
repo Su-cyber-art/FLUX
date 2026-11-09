@@ -46,7 +46,6 @@ import {
 } from "@/pages/node/node-metrics-chart-card";
 import { RealtimeMetricGrid } from "@/pages/node/realtime-metric-grid";
 import { ServiceMonitorPanel } from "@/pages/node/service-monitor-panel";
-import { useNodeRealtime } from "@/pages/node/use-node-realtime";
 
 /* ─── Memoized Node Metrics Chart sub-component ─────────────────── */
 const DEFAULT_SERVICE_MONITOR_LIMITS: ServiceMonitorLimitsApiData = {
@@ -63,10 +62,19 @@ interface MonitorViewProps {
     number,
     { id: number; name: string; connectionStatus: string; version?: string }
   >;
+  realtimeNodeMetrics: Record<number, RealtimeNodeMetric>;
+  wsConnected: boolean;
+  wsConnecting: boolean;
   viewMode?: "list" | "grid";
 }
 
-export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
+export function MonitorView({
+  nodeMap,
+  realtimeNodeMetrics,
+  wsConnected,
+  wsConnecting,
+  viewMode = "grid",
+}: MonitorViewProps) {
   const palette = useChartPalette();
   const [detailNodeId, setDetailNodeId] = useState<number | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
@@ -117,118 +125,13 @@ export function MonitorView({ nodeMap, viewMode = "grid" }: MonitorViewProps) {
   const [resultsLimit, setResultsLimit] = useState(50);
   const [resultsLoading, setResultsLoading] = useState(false);
 
-  const [realtimeNodeStatus, setRealtimeNodeStatus] = useState<
-    Record<number, "online" | "offline">
-  >({});
-  const [realtimeNodeMetrics, setRealtimeNodeMetrics] = useState<
-    Record<number, RealtimeNodeMetric>
-  >({});
-
-  const nodes = useMemo(() => {
-    return Array.from(nodeMap.values()).map((n) => {
-      const status = realtimeNodeStatus[n.id];
-
-      if (!status) {
-        return n;
-      }
-
-      return {
-        ...n,
-        connectionStatus: status,
-      };
-    });
-  }, [nodeMap, realtimeNodeStatus]);
+  const nodes = useMemo(() => Array.from(nodeMap.values()), [nodeMap]);
 
   const onlineNodes = nodes.filter((n) => n.connectionStatus === "online");
   const preferredNodeId = onlineNodes[0]?.id ?? nodes[0]?.id ?? 0;
 
   const resolvedServiceMonitorLimits =
     serviceMonitorLimits ?? DEFAULT_SERVICE_MONITOR_LIMITS;
-
-  const handleRealtimeMessage = useCallback((message: any) => {
-    const nodeId = Number(message?.id ?? 0);
-
-    if (!nodeId || Number.isNaN(nodeId)) {
-      return;
-    }
-
-    const type = String(message?.type ?? "");
-    const payload = message?.data;
-
-    if (type === "status") {
-      const status = Number(payload);
-
-      setRealtimeNodeStatus((prev) => ({
-        ...prev,
-        [nodeId]: status === 1 ? "online" : "offline",
-      }));
-
-      return;
-    }
-
-    if (type === "metric") {
-      let raw = payload;
-
-      if (typeof raw === "string") {
-        try {
-          raw = JSON.parse(raw);
-        } catch {
-          return;
-        }
-      }
-      if (!raw || typeof raw !== "object") {
-        return;
-      }
-
-      const metric = raw as Record<string, unknown>;
-      const receivedAt = Date.now();
-      const incomingUptime = Number(metric.uptime ?? 0);
-
-      setRealtimeNodeMetrics((prev) => {
-        const normalized: RealtimeNodeMetric = {
-          receivedAt,
-          cpuUsage: Number(metric.cpuUsage ?? metric.cpu_usage ?? 0),
-          memoryUsage: Number(metric.memoryUsage ?? metric.memory_usage ?? 0),
-          diskUsage: Number(metric.diskUsage ?? metric.disk_usage ?? 0),
-          netInBytes: Number(metric.netInBytes ?? metric.bytes_received ?? 0),
-          netOutBytes: Number(
-            metric.netOutBytes ?? metric.bytes_transmitted ?? 0,
-          ),
-          netInSpeed: Number(metric.netInSpeed ?? metric.net_in_speed ?? 0),
-          netOutSpeed: Number(metric.netOutSpeed ?? metric.net_out_speed ?? 0),
-          load1: Number(metric.load1 ?? 0),
-          load5: Number(metric.load5 ?? 0),
-          load15: Number(metric.load15 ?? 0),
-          tcpConns: Number(metric.tcpConns ?? metric.tcp_conns ?? 0),
-          udpConns: Number(metric.udpConns ?? metric.udp_conns ?? 0),
-          uptime: incomingUptime || prev[nodeId]?.uptime || 0,
-        };
-
-        return {
-          ...prev,
-          [nodeId]: normalized,
-        };
-      });
-      setRealtimeNodeStatus((prev) => ({
-        ...prev,
-        [nodeId]: "online",
-      }));
-
-      return;
-    }
-
-    if (type === "info") {
-      setRealtimeNodeStatus((prev) => ({
-        ...prev,
-        [nodeId]: "online",
-      }));
-    }
-  }, []);
-
-  const { wsConnected, wsConnecting } = useNodeRealtime({
-    onMessage: handleRealtimeMessage,
-    enabled: !accessDenied,
-  });
 
   useEffect(() => {
     if (!selectedNodeId && preferredNodeId > 0) {
