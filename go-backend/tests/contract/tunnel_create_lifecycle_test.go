@@ -14,7 +14,7 @@ import (
 )
 
 func TestTunnelDeleteWaitsForCreateRuntime(t *testing.T) {
-	router, r := setupContractRouter(t, "create-lifecycle")
+	router, r, h := setupContractRouterWithHandler(t, "create-lifecycle")
 	server := httptest.NewServer(router)
 	defer server.Close()
 	token, err := auth.GenerateToken(1, "admin", 0, "create-lifecycle")
@@ -45,6 +45,9 @@ func TestTunnelDeleteWaitsForCreateRuntime(t *testing.T) {
 	})
 	defer stopExit()
 	defer unblock()
+	waitNodeStatus(t, r, entry, 1)
+	waitNodeStatus(t, r, exit, 1)
+	waitNodeOnlineRedeploySettled(t, h, entry, exit)
 	post := func(path string, payload interface{}) *httptest.ResponseRecorder {
 		raw, _ := json.Marshal(payload)
 		req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(raw))
@@ -165,7 +168,7 @@ func TestRedesiredRelayKeepsOldPortReservedUntilReplacementAcknowledged(t *testi
 }
 
 func testPendingTunnelRemoval(t *testing.T, failCleanup, readd bool) {
-	router, r := setupContractRouter(t, "pending-removal")
+	router, r, h := setupContractRouterWithHandler(t, "pending-removal")
 	server := httptest.NewServer(router)
 	defer server.Close()
 	token, err := auth.GenerateToken(1, "admin", 0, "pending-removal")
@@ -203,6 +206,10 @@ func testPendingTunnelRemoval(t *testing.T, failCleanup, readd bool) {
 	defer stopMiddle()
 	stopExit := startMockNodeSession(t, server.URL, "removal-exit-secret")
 	defer stopExit()
+	waitNodeStatus(t, r, entry, 1)
+	waitNodeStatus(t, r, middle, 1)
+	waitNodeStatus(t, r, exit, 1)
+	waitNodeOnlineRedeploySettled(t, h, entry, middle, exit)
 	post := func(path string, payload interface{}) *httptest.ResponseRecorder {
 		raw, _ := json.Marshal(payload)
 		req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(raw))

@@ -17,17 +17,18 @@ import (
 )
 
 func TestNewRelayTunnelEmitsMatchingPrivateEndpointAuthentication(t *testing.T) {
-	router, r := setupContractRouter(t, "relay-auth-contract")
-	assertNewRelayTunnelEndpointAuthentication(t, router, r)
+	router, r, h := setupContractRouterWithHandler(t, "relay-auth-contract")
+	assertNewRelayTunnelEndpointAuthentication(t, router, r, h)
 }
 
 func TestPostgresNewRelayTunnelEmitsMatchingPrivateEndpointAuthentication(t *testing.T) {
 	r := ownerNamesRepository(t, "postgres")()
-	router := httpserver.NewRouter(handler.New(r, "relay-auth-contract"), "relay-auth-contract")
-	assertNewRelayTunnelEndpointAuthentication(t, router, r)
+	h := handler.New(r, "relay-auth-contract")
+	router := httpserver.NewRouter(h, "relay-auth-contract")
+	assertNewRelayTunnelEndpointAuthentication(t, router, r, h)
 }
 
-func assertNewRelayTunnelEndpointAuthentication(t *testing.T, router http.Handler, r *repo.Repository) {
+func assertNewRelayTunnelEndpointAuthentication(t *testing.T, router http.Handler, r *repo.Repository, h *handler.Handler) {
 	t.Helper()
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -76,6 +77,9 @@ func assertNewRelayTunnelEndpointAuthentication(t *testing.T, router http.Handle
 	defer stopEntry()
 	stopExit := startMockNodeSessionWithCommandRecorder(t, server.URL, "exit-management-secret", record)
 	defer stopExit()
+	waitNodeStatus(t, r, entry, 1)
+	waitNodeStatus(t, r, exit, 1)
+	waitNodeOnlineRedeploySettled(t, h, entry, exit)
 	payload := map[string]interface{}{"name": "authenticated-new-tunnel", "type": 2, "inNodeId": []map[string]interface{}{{"nodeId": entry, "protocol": "tls"}}, "outNodeId": []map[string]interface{}{{"nodeId": exit, "protocol": "tls"}}}
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/tunnel/create", bytes.NewReader(body))
@@ -178,7 +182,7 @@ func assertNewRelayTunnelEndpointAuthentication(t *testing.T, router http.Handle
 }
 
 func TestFederatedRelayRequiresVersionedAuthAndRejectsDowngrade(t *testing.T) {
-	router, r := setupContractRouter(t, "provider-auth-contract")
+	router, r, h := setupContractRouterWithHandler(t, "provider-auth-contract")
 	server := httptest.NewServer(router)
 	defer server.Close()
 	node := insertContractNode(t, r, "provider-auth", "192.0.2.30", "45000-45010", "provider-management", 1)
@@ -198,6 +202,8 @@ func TestFederatedRelayRequiresVersionedAuthAndRejectsDowngrade(t *testing.T) {
 		return false, ""
 	})
 	defer stop()
+	waitNodeStatus(t, r, node, 1)
+	waitNodeOnlineRedeploySettled(t, h, node)
 	post := func(path string, payload interface{}) *httptest.ResponseRecorder {
 		b, _ := json.Marshal(payload)
 		req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(b))
@@ -421,7 +427,7 @@ func TestNewFederatedTunnelAuthenticatesEveryRelayHop(t *testing.T) {
 }
 
 func TestRelayAuthenticationSurvivesInsertingBeforeExistingMiddle(t *testing.T) {
-	router, r := setupContractRouter(t, "insert-auth-contract")
+	router, r, h := setupContractRouterWithHandler(t, "insert-auth-contract")
 	server := httptest.NewServer(router)
 	defer server.Close()
 	token, _ := auth.GenerateToken(1, "admin", 0, "insert-auth-contract")
@@ -447,6 +453,8 @@ func TestRelayAuthenticationSurvivesInsertingBeforeExistingMiddle(t *testing.T) 
 			return false, ""
 		})
 		defer stop()
+		waitNodeStatus(t, r, id, 1)
+		waitNodeOnlineRedeploySettled(t, h, id)
 	}
 	node := func(id int64) map[string]interface{} { return map[string]interface{}{"nodeId": id, "protocol": "tls"} }
 	payload := map[string]interface{}{"name": "insert-auth", "type": 2, "inNodeId": []map[string]interface{}{node(ids[0])}, "chainNodes": [][]map[string]interface{}{{node(ids[1])}}, "outNodeId": []map[string]interface{}{node(ids[3])}}
@@ -476,7 +484,7 @@ func TestRelayAuthenticationSurvivesInsertingBeforeExistingMiddle(t *testing.T) 
 }
 
 func TestConvertingDirectTunnelRequiresRelayAuthentication(t *testing.T) {
-	router, r := setupContractRouter(t, "relay-auth-contract")
+	router, r, h := setupContractRouterWithHandler(t, "relay-auth-contract")
 	server := httptest.NewServer(router)
 	defer server.Close()
 	token, err := auth.GenerateToken(1, "admin", 0, "relay-auth-contract")
@@ -515,6 +523,9 @@ func TestConvertingDirectTunnelRequiresRelayAuthentication(t *testing.T) {
 	defer stopEntry()
 	stopExit := startMockNodeSessionWithCommandRecorder(t, server.URL, "exit-management-secret", record)
 	defer stopExit()
+	waitNodeStatus(t, r, entry, 1)
+	waitNodeStatus(t, r, exit, 1)
+	waitNodeOnlineRedeploySettled(t, h, entry, exit)
 	payload := map[string]interface{}{"name": "authenticated-new-tunnel", "type": 1, "inNodeId": []map[string]interface{}{{"nodeId": entry, "protocol": "tls"}}, "outNodeId": []map[string]interface{}{{"nodeId": exit, "protocol": "tls"}}}
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/tunnel/create", bytes.NewReader(body))

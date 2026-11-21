@@ -13,7 +13,7 @@ import (
 )
 
 func TestConcurrentCreatesReserveLocalPortsBeforeFederationAcknowledgment(t *testing.T) {
-	provider, pr := setupContractRouter(t, "port-provider")
+	provider, pr, ph := setupContractRouterWithHandler(t, "port-provider")
 	entered, release := make(chan struct{}), make(chan struct{})
 	var gateOnce, releaseOnce sync.Once
 	unblock := func() { releaseOnce.Do(func() { close(release) }) }
@@ -30,6 +30,8 @@ func TestConcurrentCreatesReserveLocalPortsBeforeFederationAcknowledgment(t *tes
 	stop := startMockNodeSession(t, ps.URL, "provider-port-exit-secret")
 	defer stop()
 	defer unblock()
+	waitNodeStatus(t, pr, exit, 1)
+	waitNodeOnlineRedeploySettled(t, ph, exit)
 	consumer, cr := setupContractRouter(t, "port-consumer")
 	token, err := auth.GenerateToken(1, "admin", 0, "port-consumer")
 	if err != nil {
