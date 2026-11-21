@@ -1,12 +1,11 @@
 import { Progress } from "@mantine/core";
-import { Activity, Clock } from "lucide-react";
+import { Activity, ArrowDown, ArrowUp, Clock } from "lucide-react";
 
 import {
   DistroIcon,
   getDistroColor,
   parseDistroFromVersion,
 } from "@/components/distro-icon";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { uiColor } from "@/components/ui/shared";
 import {
   RealtimeNodeMetric,
@@ -14,6 +13,30 @@ import {
   formatUptime,
   getColorByUsage,
 } from "@/pages/node/monitor-format";
+
+const DASH = "—";
+
+function UsageKv({ label, value }: { label: string; value: number | null }) {
+  return (
+    <div className="mon-kv">
+      <span className="mon-kv-label">{label}</span>
+      <span className={`mon-kv-value ${value === null ? "mon-muted" : ""}`}>
+        {value === null ? DASH : `${value.toFixed(1)}%`}
+      </span>
+      {value === null ? (
+        <div className="mon-usage-track mt-1 w-full" />
+      ) : (
+        <Progress
+          className="mt-1"
+          color={uiColor(getColorByUsage(value))}
+          radius="xl"
+          size={4}
+          value={value}
+        />
+      )}
+    </div>
+  );
+}
 
 export function ServerCard({
   node,
@@ -26,119 +49,63 @@ export function ServerCard({
 }) {
   const isOnline = node.connectionStatus === "online";
   const distro = parseDistroFromVersion(node.version);
-  const distroColor = getDistroColor(distro);
+  const live = isOnline && metric ? metric : null;
 
   return (
-    <Card
-      className="group relative hover:-translate-y-1 shadow-sm transition-all duration-300 h-full flex flex-col cursor-pointer"
+    <button
+      className="mon-tile"
+      data-idle={live ? undefined : ""}
+      type="button"
       onClick={onClick}
     >
-      {/* Dynamic top gradient bar based on status */}
-      <div
-        className={`absolute top-0 left-0 right-0 h-1 ${isOnline ? "bg-success" : "bg-danger"}`}
-      />
+      <div className="mon-tile-head">
+        <DistroIcon
+          className="h-4 w-4 shrink-0 text-default-400"
+          distro={distro}
+          style={{ color: isOnline ? getDistroColor(distro) : undefined }}
+        />
+        <span className="mon-tile-name">{node.name}</span>
+        <span
+          className="status-dot mon-tile-sub"
+          data-tone={isOnline ? (live ? "success" : "warning") : "danger"}
+        >
+          {isOnline ? (live ? "在线" : "等待上报") : "离线"}
+        </span>
+      </div>
 
-      {/* Decorative background glow */}
-      <div
-        className={`absolute -right-8 -top-8 w-24 h-24 rounded-full blur-2xl opacity-10 transition-opacity group-hover:opacity-20 ${isOnline ? "bg-success" : "bg-danger"}`}
-      />
-
-      <CardHeader className="pb-2 pt-5 px-5 flex flex-row justify-between items-start gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="relative flex-shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-default-soft flex items-center justify-center border border-divider">
-              <DistroIcon
-                className="w-5 h-5"
-                distro={distro}
-                style={{ color: isOnline ? distroColor : undefined }}
-              />
-            </div>
-            <span
-              className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${isOnline ? "bg-success" : "bg-danger"}`}
-            />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <h3 className="font-semibold text-foreground text-sm truncate">
-              {node.name}
-            </h3>
-            <div className="flex items-center gap-1.5 text-[11px] text-default-500 mt-0.5">
-              <span className="font-mono">{isOnline ? "在线" : "离线"}</span>
-            </div>
-          </div>
+      <div className="mon-tile-metrics">
+        <UsageKv label="CPU" value={live ? live.cpuUsage : null} />
+        <UsageKv label="内存" value={live ? live.memoryUsage : null} />
+        <div className="mon-kv">
+          <span className="mon-kv-label inline-flex items-center gap-1">
+            <ArrowUp size={11} />
+            上传
+          </span>
+          <span className={`mon-kv-value ${live ? "" : "mon-muted"}`}>
+            {live ? formatBytesPerSecond(live.netOutSpeed) : DASH}
+          </span>
         </div>
-      </CardHeader>
-
-      <CardBody className="py-3 px-5 flex-1 flex flex-col justify-end gap-4 z-10 w-full overflow-hidden">
-        <div className="grid grid-cols-2 gap-5 w-full">
-          <div className="space-y-1.5 min-w-0">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-default-500">CPU</span>
-              <span className="font-mono font-medium">
-                {isOnline && metric ? `${metric.cpuUsage.toFixed(1)}%` : "-"}
-              </span>
-            </div>
-            <Progress
-              color={uiColor(getColorByUsage(metric?.cpuUsage))}
-              size={4}
-              value={isOnline && metric ? metric.cpuUsage : 0}
-            />
-          </div>
-          <div className="space-y-1.5 min-w-0">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-default-500">内存</span>
-              <span className="font-mono font-medium">
-                {isOnline && metric ? `${metric.memoryUsage.toFixed(1)}%` : "-"}
-              </span>
-            </div>
-            <Progress
-              color={uiColor(getColorByUsage(metric?.memoryUsage))}
-              size={4}
-              value={isOnline && metric ? metric.memoryUsage : 0}
-            />
-          </div>
+        <div className="mon-kv">
+          <span className="mon-kv-label inline-flex items-center gap-1">
+            <ArrowDown size={11} />
+            下载
+          </span>
+          <span className={`mon-kv-value ${live ? "" : "mon-muted"}`}>
+            {live ? formatBytesPerSecond(live.netInSpeed) : DASH}
+          </span>
         </div>
+      </div>
 
-        <div className="flex items-center justify-between p-2.5 rounded-lg bg-default-soft border border-divider mt-1 w-full">
-          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <div className="flex items-center gap-1 text-[10px] text-default-500">
-              <span className="text-primary-ink inline-block font-bold">↑</span>
-              <span>上传</span>
-            </div>
-            <span className="font-mono text-xs font-semibold truncate">
-              {isOnline && metric
-                ? formatBytesPerSecond(metric.netOutSpeed)
-                : "-"}
-            </span>
-          </div>
-          <div className="w-px h-6 bg-divider mx-2" />
-          <div className="flex flex-col gap-0.5 items-end min-w-0 flex-1">
-            <div className="flex items-center gap-1 text-[10px] text-default-500">
-              <span>下载</span>
-              <span className="text-success-ink inline-block font-bold">↓</span>
-            </div>
-            <span className="font-mono text-xs font-semibold truncate">
-              {isOnline && metric
-                ? formatBytesPerSecond(metric.netInSpeed)
-                : "-"}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center mt-1 pt-3 border-t border-divider/50 w-full overflow-hidden">
-          <div className="flex items-center gap-1.5 text-[11px] text-default-500 min-w-0">
-            <Clock className="w-3.5 h-3.5 text-default-400 shrink-0" />
-            <span className="font-mono truncate">
-              {metric ? formatUptime(metric.uptime) : "-"}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-default-500 shrink-0 ml-2">
-            <Activity className="w-3.5 h-3.5 text-default-400" />
-            <span className="font-mono">
-              Load: {metric ? metric.load1.toFixed(2) : "-"}
-            </span>
-          </div>
-        </div>
-      </CardBody>
-    </Card>
+      <div className="mon-tile-foot">
+        <span>
+          <Clock className="shrink-0" size={12} />
+          {metric ? formatUptime(metric.uptime) : DASH}
+        </span>
+        <span className="shrink-0 tabular-nums">
+          <Activity className="shrink-0" size={12} />
+          负载 {metric ? metric.load1.toFixed(2) : DASH}
+        </span>
+      </div>
+    </button>
   );
 }

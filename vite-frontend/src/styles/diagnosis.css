@@ -1,0 +1,164 @@
+@layer components {
+  .diagnosis-results {
+    container: diagnosis / inline-size;
+    display: grid;
+    gap: 20px;
+  }
+  .diagnosis-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 14px 0;
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--default-50);
+  }
+  .diagnosis-summary > div {
+    min-width: 0;
+    text-align: center;
+  }
+  .diagnosis-summary > div + div {
+    border-left: 1px solid var(--border);
+  }
+  .diagnosis-summary dt {
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .diagnosis-count {
+    margin: 4px 0 0;
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+  }
+  .diagnosis-section {
+    min-width: 0;
+  }
+  .diagnosis-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 9px;
+  }
+  .diagnosis-section-heading h3 {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .diagnosis-entries {
+    display: grid;
+    gap: 10px;
+  }
+  .diagnosis-entry {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--mantine-radius-md);
+    background: var(--content1);
+    animation: rise-in var(--duration-slow) var(--ease-out) backwards;
+  }
+  .diagnosis-entry[data-status="failed"] {
+    border-color: var(--mantine-color-red-outline);
+  }
+  .diagnosis-route {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    min-width: 0;
+  }
+  .diagnosis-route > .mantine-Badge-root {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .diagnosis-status-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--mantine-color-teal-light);
+    color: var(--mantine-color-teal-light-color);
+  }
+  .diagnosis-entry[data-status="failed"] .diagnosis-status-icon {
+    background: var(--mantine-color-red-light);
+    color: var(--mantine-color-red-light-color);
+  }
+  .diagnosis-entry[data-status="pending"] .diagnosis-status-icon {
+    background: var(--mantine-color-orange-light);
+  }
+  .diagnosis-route-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .diagnosis-route-text h4 {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .diagnosis-target {
+    margin: 3px 0 0;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+  }
+  .diagnosis-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: center;
+    margin: 12px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .diagnosis-metrics > div {
+    min-width: 0;
+    text-align: center;
+  }
+  .diagnosis-metrics dt {
+    font-size: 11px;
+    color: var(--default-500);
+  }
+  .diagnosis-metrics dt span {
+    font-size: 10px;
+  }
+  .diagnosis-metrics dd {
+    margin: 4px 0 0;
+    font-size: 20px;
+    line-height: 1.4;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .diagnosis-metrics dd > span:not(.mantine-Badge-root) {
+    font-size: 12px;
+    margin-left: 2px;
+    color: var(--default-500);
+  }
+  .diagnosis-message {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    overflow-wrap: anywhere;
+  }
+  @container diagnosis (min-width: 44rem) {
+    .diagnosis-entry {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
+      align-items: center;
+    }
+    .diagnosis-metrics {
+      margin: 0;
+      padding: 0 0 0 18px;
+      border-top: 0;
+      border-left: 1px solid var(--border);
+    }
+    .diagnosis-message {
+      margin: 0;
+      padding: 0 0 0 18px;
+      border-top: 0;
+      border-left: 1px solid var(--border);
+    }
+  }
+}

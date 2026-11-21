@@ -34,14 +34,12 @@ export function NodeDeleteModal({
   return (
     <Modal
       opened={deleteModalOpen}
-      size="2xl"
+      size="md"
       onClose={() => setDeleteModalOpen(false)}
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold">
-            {forceNodeRemoval ? "确认强制移除" : "确认删除"}
-          </h2>
+          <h2>{forceNodeRemoval ? "确认强制移除" : "确认删除"}</h2>
         </ModalHeader>
         <ModalBody>
           <p>

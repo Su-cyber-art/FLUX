@@ -1,15 +1,11 @@
 import { useState } from "react";
-import { Skeleton, Badge, Button, ActionIcon } from "@mantine/core";
-import {
-  ArrowDownUp,
-  ArrowLeftRight,
-  CalendarClock,
-  Copy,
-  RotateCcw,
-} from "lucide-react";
+import { Skeleton, Button, ActionIcon } from "@mantine/core";
+import { ArrowDownUp, ArrowLeftRight, CalendarClock, Copy } from "lucide-react";
 
 import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
+import { KpiCell, KpiStrip } from "@/components/stat-card";
+import { UsageBar } from "@/components/usage-meter";
 import {
   Modal,
   ModalContent,
@@ -21,7 +17,6 @@ import { AnnouncementModal } from "@/pages/dashboard/components/announcement-mod
 import { FlowChartCard } from "@/pages/dashboard/components/flow-chart-card";
 import { ForwardOverview } from "@/pages/dashboard/components/forward-overview";
 import { NodeExpiryPanel } from "@/pages/dashboard/components/node-expiry-panel";
-import { QuotaCard, UsageBar } from "@/pages/dashboard/components/quota-card";
 import { TunnelAccessList } from "@/pages/dashboard/components/tunnel-access-list";
 import {
   UNLIMITED,
@@ -40,20 +35,38 @@ import {
   formatFlowLimit,
   formatTraffic,
 } from "@/utils/traffic";
-import { uiColor } from "@/components/ui/shared";
 
 function DashboardSkeleton() {
   return (
     <div aria-busy="true" className="flex flex-col gap-5" role="status">
       <span className="sr-only">正在加载数据…</span>
-      <div className="grid gap-4 md:grid-cols-3">
-        {[0, 1, 2].map((key) => (
-          <Skeleton key={key} h={156} radius="md" />
-        ))}
-      </div>
-      <Skeleton h={360} radius="md" />
-      <Skeleton h={220} radius="md" />
+      <Skeleton h={118} radius="md" />
+      <Skeleton h={300} radius="md" />
+      <Skeleton h={200} radius="md" />
     </div>
+  );
+}
+
+/** Usage percentage beside a KPI label, tinted only once it needs attention. */
+function UsagePercent({
+  percent,
+  digits,
+}: {
+  percent: number;
+  digits: number;
+}) {
+  const tone = usageTone(percent);
+
+  return (
+    <span
+      className={cn(
+        tone === "danger" && "text-danger-ink",
+        tone === "warning" && "text-warning-ink",
+        tone === "primary" && "text-default-500",
+      )}
+    >
+      {percent.toFixed(digits)}%
+    </span>
   );
 }
 
@@ -145,93 +158,76 @@ export default function DashboardPage() {
         />
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <QuotaCard
-          badge={
-            !flowUnlimited && (
-              <Badge
-                color={uiColor(usageTone(flowPercent))}
-                size="sm"
-                variant="light"
-              >
-                {flowPercent.toFixed(1)}%
-              </Badge>
-            )
+      <KpiStrip columns={3} label="账户概览">
+        <KpiCell
+          aside={
+            !flowUnlimited && <UsagePercent digits={1} percent={flowPercent} />
           }
-          footer={
-            <>
-              <RotateCcw size={12} />
+          caption={
+            <span>
               {resetText === "不重置" || !resetText
                 ? "流量不自动重置"
                 : `每月 ${userInfo.flowResetTime} 日重置 · ${resetText}`}
-            </>
+            </span>
           }
-          icon={ArrowDownUp}
-          suffix={`/ ${formatFlowLimit(userInfo.flow, userInfo.flowMiB)}`}
-          title="流量用量"
-          tone="primary"
+          icon={<ArrowDownUp />}
+          label="流量用量"
+          meter={
+            <UsageBar
+              label="流量用量"
+              percent={flowPercent}
+              unlimited={flowUnlimited}
+            />
+          }
+          unit={`/ ${formatFlowLimit(userInfo.flow, userInfo.flowMiB)}`}
           value={formatTraffic(usedFlow)}
-        >
-          <UsageBar
-            label="流量用量"
-            percent={flowPercent}
-            unlimited={flowUnlimited}
-          />
-        </QuotaCard>
-
-        <QuotaCard
-          badge={
+        />
+        <KpiCell
+          aside={
             !forwardUnlimited && (
-              <Badge
-                color={uiColor(usageTone(forwardPercent))}
-                size="sm"
-                variant="light"
-              >
-                {forwardPercent.toFixed(0)}%
-              </Badge>
+              <UsagePercent digits={0} percent={forwardPercent} />
             )
           }
-          footer={
-            forwardList.length > 0
-              ? `分布在 ${tunnelCount} 条隧道`
-              : "还没有转发规则"
+          caption={
+            <span>
+              {forwardList.length > 0
+                ? `分布在 ${tunnelCount} 条隧道`
+                : "还没有转发规则"}
+            </span>
           }
-          icon={ArrowLeftRight}
-          suffix={`/ ${formatCount(userInfo.num)}`}
-          title="转发规则"
-          tone="secondary"
+          icon={<ArrowLeftRight />}
+          label="转发规则"
+          meter={
+            <UsageBar
+              label="转发规则"
+              percent={forwardPercent}
+              unlimited={forwardUnlimited}
+            />
+          }
+          unit={`/ ${formatCount(userInfo.num)}`}
           value={forwardList.length}
-        >
-          <UsageBar
-            label="转发规则"
-            percent={forwardPercent}
-            unlimited={forwardUnlimited}
-          />
-        </QuotaCard>
-
-        <QuotaCard
-          badge={
-            <Badge
-              color={uiColor(accountExpiry.tone)}
-              leftSection={<span className="badge-dot" />}
-              size="sm"
-              variant="light"
-            >
-              {accountExpiry.text}
-            </Badge>
+        />
+        <KpiCell
+          caption={
+            <>
+              <span className="status-dot" data-tone={accountExpiry.tone}>
+                {accountExpiry.text}
+              </span>
+              <span className="text-default-400">·</span>
+              <span>{isAdmin ? "管理员账户" : "成员账户"}</span>
+            </>
           }
-          footer={isAdmin ? "管理员账户" : "成员账户"}
-          icon={CalendarClock}
-          title="账户有效期"
-          tone={accountExpiry.tone}
+          icon={<CalendarClock />}
+          label="账户有效期"
+          meter={<div aria-hidden className="h-1" />}
           value={formatExpiryDate(userInfo.expTime)}
         />
-      </div>
+      </KpiStrip>
 
       <div
         className={cn(
           "grid gap-5",
-          showReminders && "xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]",
+          showReminders && "xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]",
         )}
       >
         <FlowChartCard
@@ -280,11 +276,9 @@ export default function DashboardPage() {
               {addressModal?.addresses.map((address) => (
                 <li
                   key={address}
-                  className="flex items-center justify-between gap-3 px-3 py-2"
+                  className="flex items-center justify-between gap-3 px-3 py-1.5"
                 >
-                  <code className="min-w-0 truncate font-mono text-sm text-foreground">
-                    {address}
-                  </code>
+                  <code className="mono-value min-w-0 truncate">{address}</code>
                   <ActionIcon
                     aria-label={`复制 ${address}`}
                     color="gray"

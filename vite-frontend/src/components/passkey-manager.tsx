@@ -6,7 +6,6 @@ import {
   Group,
   Loader,
   PasswordInput,
-  SimpleGrid,
   Stack,
   Text,
   TextInput,
@@ -22,7 +21,6 @@ import {
   listPasskeys,
   type PasskeyItem,
 } from "@/api";
-import { IconTile } from "@/components/ui/icon-tile";
 import { toast } from "@/lib/notifications";
 import { createPasskey } from "@/utils/passkey";
 
@@ -141,109 +139,109 @@ export function PasskeyManager() {
   };
 
   return (
-    <div className="settings-row">
-      <div>
+    <div data-wide className="settings-row">
+      <div className="settings-row-text">
         <p className="settings-row-label">通行证密钥</p>
         <p className="settings-row-desc">
           绑定后可直接选择密钥并使用设备解锁登录，无需输入用户名和验证码。绑定和删除均需验证当前密码。
         </p>
       </div>
-      <Stack gap="sm">
-        <SimpleGrid cols={{ base: 1, xs: 2 }} spacing="sm">
-          <PasswordInput
-            autoComplete="current-password"
-            disabled={busy !== null}
-            label="当前密码"
-            placeholder="输入当前登录密码"
-            size="sm"
-            value={password}
-            visibilityToggleButtonProps={{ "aria-label": "显示或隐藏当前密码" }}
-            onChange={(event) => setPassword(event.currentTarget.value)}
-          />
-          <TextInput
-            disabled={busy !== null}
-            label="密钥名称（可选）"
-            maxLength={100}
-            placeholder="例如：我的手机"
-            size="sm"
-            value={name}
-            onChange={(event) => setName(event.currentTarget.value)}
-          />
-        </SimpleGrid>
-        <Group>
-          <Button
-            disabled={busy !== null && busy !== "register"}
-            leftSection={<Plus size={16} />}
-            loading={busy === "register"}
-            size="sm"
-            variant="light"
-            onClick={() => void register()}
-          >
-            绑定通行证密钥
-          </Button>
-        </Group>
-        {loadError ? (
-          <Alert color="red" title="密钥列表加载失败">
-            <Text size="sm">{loadError}</Text>
-            <Button
-              disabled={busy !== null}
-              mt="sm"
-              size="xs"
-              variant="light"
-              onClick={() => void refresh()}
-            >
-              重试
-            </Button>
-          </Alert>
-        ) : loading ? (
-          <Group gap="xs" role="status">
-            <Loader size="sm" />
-            <Text c="dimmed" size="sm">
-              正在加载密钥…
-            </Text>
-          </Group>
-        ) : items.length === 0 ? (
-          <Text c="dimmed" size="xs">
-            尚未绑定通行证密钥。
-          </Text>
-        ) : (
-          <div className="overflow-hidden rounded-[10px] border border-divider">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-3 border-divider px-3 py-2.5 [&+&]:border-t"
+      <div className="settings-row-control">
+        <Stack gap="sm">
+          {loadError ? (
+            <Alert color="red" title="密钥列表加载失败">
+              <Text size="sm">{loadError}</Text>
+              <Button
+                disabled={busy !== null}
+                mt="sm"
+                size="xs"
+                variant="light"
+                onClick={() => void refresh()}
               >
-                <IconTile size="sm" tone="primary">
-                  <KeyRound size={15} />
-                </IconTile>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {item.name}
-                  </p>
-                  <p className="truncate text-xs text-default-500">
-                    创建于 {new Date(item.createdAt).toLocaleDateString()}
-                    {item.lastUsedAt
-                      ? ` · 最近使用 ${new Date(item.lastUsedAt).toLocaleDateString()}`
-                      : " · 尚未使用"}
-                  </p>
+                重试
+              </Button>
+            </Alert>
+          ) : loading ? (
+            <Group gap="xs" role="status">
+              <Loader size="xs" />
+              <Text c="dimmed" size="sm">
+                正在加载密钥…
+              </Text>
+            </Group>
+          ) : items.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-divider px-3 py-2.5 text-xs text-default-500">
+              尚未绑定通行证密钥。
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-divider">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 border-divider px-3 py-2 [&+&]:border-t"
+                >
+                  <KeyRound className="shrink-0 text-default-500" size={15} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium text-foreground">
+                      {item.name}
+                    </p>
+                    <p className="truncate text-xs text-default-500">
+                      创建于 {new Date(item.createdAt).toLocaleDateString()}
+                      {item.lastUsedAt
+                        ? ` · 最近使用 ${new Date(item.lastUsedAt).toLocaleDateString()}`
+                        : " · 尚未使用"}
+                    </p>
+                  </div>
+                  <Tooltip label="删除密钥（需当前密码）">
+                    <ActionIcon
+                      aria-label={`删除密钥 ${item.name}`}
+                      color="red"
+                      disabled={busy !== null && busy !== item.id}
+                      loading={busy === item.id}
+                      variant="subtle"
+                      onClick={() => void remove(item.id)}
+                    >
+                      <Trash2 size={15} />
+                    </ActionIcon>
+                  </Tooltip>
                 </div>
-                <Tooltip label="删除密钥（需当前密码）">
-                  <ActionIcon
-                    aria-label={`删除密钥 ${item.name}`}
-                    color="red"
-                    disabled={busy !== null && busy !== item.id}
-                    loading={busy === item.id}
-                    variant="subtle"
-                    onClick={() => void remove(item.id)}
-                  >
-                    <Trash2 size={16} />
-                  </ActionIcon>
-                </Tooltip>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+          <div className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+            <PasswordInput
+              autoComplete="current-password"
+              disabled={busy !== null}
+              label="当前密码"
+              placeholder="输入当前登录密码"
+              size="sm"
+              value={password}
+              visibilityToggleButtonProps={{
+                "aria-label": "显示或隐藏当前密码",
+              }}
+              onChange={(event) => setPassword(event.currentTarget.value)}
+            />
+            <TextInput
+              disabled={busy !== null}
+              label="密钥名称（可选）"
+              maxLength={100}
+              placeholder="例如：我的手机"
+              size="sm"
+              value={name}
+              onChange={(event) => setName(event.currentTarget.value)}
+            />
+            <Button
+              disabled={busy !== null && busy !== "register"}
+              leftSection={<Plus size={14} />}
+              loading={busy === "register"}
+              size="sm"
+              variant="default"
+              onClick={() => void register()}
+            >
+              绑定密钥
+            </Button>
           </div>
-        )}
-      </Stack>
+        </Stack>
+      </div>
     </div>
   );
 }

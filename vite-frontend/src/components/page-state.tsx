@@ -32,11 +32,11 @@ export const PageEmptyState = ({ message, className }: StateProps) => (
     <ThemeIcon
       className="empty-state-icon"
       color="gray"
-      radius="xl"
-      size={44}
+      radius="md"
+      size={36}
       variant="light"
     >
-      <Inbox size={22} />
+      <Inbox size={18} />
     </ThemeIcon>
     <Text c="dimmed" size="sm">
       {message}
@@ -54,11 +54,11 @@ export const PageErrorState = ({ message, className }: StateProps) => (
     <ThemeIcon
       className="empty-state-icon"
       color="red"
-      radius="xl"
-      size={44}
+      radius="md"
+      size={36}
       variant="light"
     >
-      <CircleAlert size={22} />
+      <CircleAlert size={18} />
     </ThemeIcon>
     <Text c="red" size="sm">
       {message}
@@ -84,17 +84,17 @@ export const EmptyStateCard = ({
   action?: React.ReactNode;
   tone?: "primary" | "default";
 }) => (
-  <Card className="items-center px-6 py-14 text-center">
+  <Card className="items-center border-dashed px-6 py-12 text-center">
     <ThemeIcon
       className="empty-state-icon"
       color={tone === "default" ? "gray" : undefined}
-      radius="xl"
-      size={44}
+      radius="md"
+      size={36}
       variant="light"
     >
       {icon}
     </ThemeIcon>
-    <Text fw={600} mt="md" size="md">
+    <Text fw={600} mt="sm" size="sm">
       {title}
     </Text>
     {description && (
@@ -102,6 +102,6 @@ export const EmptyStateCard = ({
         {description}
       </Text>
     )}
-    {action && <div className="mt-5">{action}</div>}
+    {action && <div className="mt-4">{action}</div>}
   </Card>
 );

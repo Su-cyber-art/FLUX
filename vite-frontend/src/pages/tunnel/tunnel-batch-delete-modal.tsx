@@ -72,7 +72,7 @@ export function TunnelBatchDeleteModal({
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-lg font-bold sm:text-xl">批量删除隧道</h2>
+          <h2>批量删除隧道</h2>
           <p className="text-xs font-normal leading-5 text-default-500 sm:text-sm">
             即将删除这 {selectedTunnelIdList.length}{" "}
             条隧道，删除前会先检查是否有关联规则。

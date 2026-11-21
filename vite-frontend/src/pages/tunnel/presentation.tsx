@@ -228,13 +228,11 @@ export const renderBestExitState = (state?: BestExitState) => {
     isWaiting && !summaryText.includes("等待")
       ? `等待探测 · ${summaryText}`
       : summaryText;
-  const className = isWaiting
-    ? "border-warning-line bg-warning-soft text-warning-ink"
-    : "border-success-line bg-success-soft text-success-ink";
 
   return (
     <span
-      className={`inline-flex max-w-full items-center rounded border px-1.5 py-0.5 text-[11px] leading-4 ${className}`}
+      className="status-dot tunnel-best-exit"
+      data-tone={isWaiting ? "warning" : "success"}
       title={bestExitDetailTitle(state)}
     >
       <span className="min-w-0 truncate">最优出口：{displaySummary}</span>

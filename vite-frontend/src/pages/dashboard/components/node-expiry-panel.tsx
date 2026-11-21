@@ -1,10 +1,8 @@
-import { Link } from "react-router-dom";
-import { Button, Badge } from "@mantine/core";
-import { ChevronRight, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { type SemanticColor, uiColor } from "@/components/ui/shared";
-import { SectionHeader } from "@/components/section-header";
+import { Card } from "@/components/ui/card";
+import { type SemanticColor } from "@/components/ui/shared";
+import { PanelHead } from "@/pages/dashboard/components/panel";
 import { type DashboardNodeExpiryItem } from "@/pages/dashboard/use-dashboard-data";
 import {
   getNodeRenewalCycleLabel,
@@ -44,68 +42,48 @@ export function NodeExpiryPanel({
   const hidden = reminders.length - VISIBLE_LIMIT;
 
   return (
-    <Card className="border-warning-line">
-      <CardHeader className="pb-3">
-        <SectionHeader
-          count={reminders.length}
-          description="7 天内需要续费或已逾期的节点"
-          icon={TriangleAlert}
-          title="节点到期提醒"
-        />
-      </CardHeader>
-      <CardBody className="flex flex-1 flex-col pt-0">
-        <ul className="divide-y divide-divider">
-          {reminders.slice(0, VISIBLE_LIMIT).map((node) => {
-            const snapshot = getNodeRenewalSnapshot(
-              node.expiryTime,
-              node.renewalCycle,
-            );
-            const status = getStatus(snapshot.nextDueTime, snapshot.state);
-            const details = [
-              snapshot.nextDueTime
-                ? new Date(snapshot.nextDueTime).toLocaleDateString("zh-CN")
-                : "",
-              getNodeRenewalCycleLabel(node.renewalCycle),
-              node.remark?.trim(),
-            ].filter(Boolean);
+    <Card className="dash-panel">
+      <PanelHead
+        count={reminders.length}
+        icon={<TriangleAlert className="text-warning-ink" size={13} />}
+        link={{ to: "/node", label: "节点管理" }}
+        title="节点到期提醒"
+      />
+      <ul className="dash-list flex-1">
+        {reminders.slice(0, VISIBLE_LIMIT).map((node) => {
+          const snapshot = getNodeRenewalSnapshot(
+            node.expiryTime,
+            node.renewalCycle,
+          );
+          const status = getStatus(snapshot.nextDueTime, snapshot.state);
+          const details = [
+            snapshot.nextDueTime
+              ? new Date(snapshot.nextDueTime).toLocaleDateString("zh-CN")
+              : "",
+            getNodeRenewalCycleLabel(node.renewalCycle),
+            node.remark?.trim(),
+          ].filter(Boolean);
 
-            return (
-              <li key={node.id} className="py-3 first:pt-0">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {node.name}
-                  </p>
-                  <Badge
-                    className="shrink-0"
-                    color={uiColor(status.tone)}
-                    size="sm"
-                    variant="light"
-                  >
-                    {status.label}
-                  </Badge>
-                </div>
-                <p className="mt-1 truncate text-xs text-default-500">
-                  {details.join(" · ")}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-divider pt-3">
-          <span className="text-xs text-default-500">
-            {hidden > 0 ? `另有 ${hidden} 个节点未显示` : "按续费周期自动推算"}
-          </span>
-          <Button
-            component={Link}
-            rightSection={<ChevronRight size={14} />}
-            size="compact-sm"
-            to="/node"
-            variant="subtle"
-          >
-            节点管理
-          </Button>
-        </div>
-      </CardBody>
+          return (
+            <li key={node.id} className="dash-row dash-expiry-row">
+              <p className="dash-row-name" title={node.name}>
+                {node.name}
+              </p>
+              <span className="status-dot" data-tone={status.tone}>
+                {status.label}
+              </span>
+              <p className="dash-row-meta col-span-2">{details.join(" · ")}</p>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="dash-panel-foot">
+        <span>
+          {hidden > 0
+            ? `另有 ${hidden} 个节点未显示`
+            : "7 天内需要续费或已逾期的节点，按续费周期自动推算"}
+        </span>
+      </div>
     </Card>
   );
 }

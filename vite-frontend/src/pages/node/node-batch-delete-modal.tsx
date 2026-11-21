@@ -38,9 +38,7 @@ export function NodeBatchDeleteModal({
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold">
-            {batchForceDelete ? "确认批量强制移除" : "确认删除"}
-          </h2>
+          <h2>{batchForceDelete ? "确认批量强制移除" : "确认删除"}</h2>
         </ModalHeader>
         <ModalBody>
           <p>

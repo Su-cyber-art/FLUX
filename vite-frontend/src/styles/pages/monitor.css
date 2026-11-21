@@ -1,0 +1,710 @@
+@layer components {
+  /* ─── KPI strip (dashboard + monitor) ─────────────────────────────
+     One bordered surface; the 1px grid gap over a border-colored backdrop
+     draws the hairline dividers, also when cells wrap onto a second row. */
+  .kpi-strip {
+    gap: 1px;
+    overflow: hidden;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .kpi-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 14px 18px 15px;
+    background: var(--content1);
+  }
+  .kpi-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    color: var(--default-500);
+  }
+  .kpi-label-icon {
+    display: inline-flex;
+    flex: none;
+    color: var(--default-400);
+  }
+  .kpi-label-icon svg {
+    width: 13px;
+    height: 13px;
+  }
+  .kpi-label-aside {
+    flex: none;
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-value {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+    color: var(--foreground);
+  }
+  .kpi-value-main {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .kpi-unit {
+    flex: none;
+    font-size: 13px;
+    color: var(--default-500);
+    white-space: nowrap;
+  }
+  .kpi-meter {
+    padding-top: 2px;
+  }
+  .kpi-meter .mantine-Progress-root {
+    --progress-size: 4px !important;
+  }
+  .kpi-caption {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--default-500);
+    white-space: nowrap;
+  }
+  .kpi-caption > * {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .kpi-caption .status-dot {
+    font-size: 12px;
+    flex: none;
+  }
+  .kpi-strip-single {
+    display: grid;
+    height: 100%;
+  }
+  @container (min-width: 64rem) {
+    .kpi-value-main {
+      font-size: 26px;
+    }
+  }
+
+  /* ─── Panels: one card, a header row, hairline-separated rows ───── */
+  .dash-panel {
+    container-type: inline-size;
+    overflow: hidden;
+  }
+  .dash-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dash-panel-head[data-flush] {
+    border-bottom: 0;
+  }
+  .dash-panel-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+  .dash-panel-title small {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--default-500);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .dash-panel-desc {
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--default-500);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dash-panel-link {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 2px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--primary-ink);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: opacity var(--duration-fast) ease;
+  }
+  .dash-panel-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .dash-panel-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .dash-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .dash-list-head {
+    display: none;
+    gap: 4px 16px;
+    padding: 7px 16px;
+    background: var(--content2);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .dash-row {
+    display: grid;
+    gap: 4px 16px;
+    align-items: center;
+    min-width: 0;
+    padding: 10px 16px;
+    font-size: 13px;
+    transition: background-color var(--duration-fast) ease;
+  }
+  .dash-row + .dash-row {
+    border-top: 1px solid var(--border);
+  }
+  .dash-row:hover {
+    background: color-mix(in srgb, var(--content2) 70%, transparent);
+  }
+  .dash-row-name {
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 500;
+    color: var(--foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dash-row-meta {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    color: var(--default-500);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dash-route {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 6px;
+    min-width: 0;
+  }
+  .dash-route-arrow {
+    flex: none;
+    color: var(--default-400);
+  }
+  .dash-addr {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 1px 2px;
+    margin: 0 -2px;
+    border-radius: 4px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+  }
+  .dash-addr:hover .mono-value {
+    color: var(--foreground);
+  }
+  .dash-addr:focus-visible {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 1px;
+  }
+  .dash-addr .mono-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--duration-fast) ease;
+  }
+  .dash-addr-more {
+    flex: none;
+    font-size: 11.5px;
+    color: var(--default-500);
+    font-variant-numeric: tabular-nums;
+  }
+  .dash-addr-copy {
+    flex: none;
+    color: var(--default-400);
+    opacity: 0;
+    transition: opacity var(--duration-fast) ease;
+  }
+  .dash-addr:hover .dash-addr-copy,
+  .dash-addr:focus-visible .dash-addr-copy {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    .dash-addr-copy {
+      opacity: 0.6;
+    }
+  }
+  .dash-traffic {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--default-500);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .dash-traffic-total {
+    min-width: 72px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--foreground);
+    text-align: right;
+  }
+  .dash-meter-text {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: var(--default-500);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .dash-meter-text b {
+    font-weight: 500;
+    color: var(--foreground);
+  }
+  .dash-meter .mantine-Progress-root {
+    --progress-size: 4px !important;
+  }
+
+  /* Forward rules: name | tunnel | entry → target | traffic */
+  .dash-forward-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name traffic"
+      "route route"
+      "tunnel tunnel";
+  }
+  .dash-forward-row > :nth-child(1) {
+    grid-area: name;
+  }
+  .dash-forward-row > :nth-child(2) {
+    grid-area: tunnel;
+  }
+  .dash-forward-row > :nth-child(3) {
+    grid-area: route;
+  }
+  .dash-forward-row > :nth-child(4) {
+    grid-area: traffic;
+    justify-self: end;
+  }
+  @container (min-width: 50rem) {
+    .dash-forward-row {
+      grid-template-columns:
+        minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 2.6fr)
+        minmax(210px, auto);
+      grid-template-areas: "name tunnel route traffic";
+    }
+    .dash-list-head.dash-forward-row {
+      display: grid;
+    }
+    .dash-forward-row .dash-route {
+      flex-wrap: nowrap;
+      gap: 6px;
+    }
+  }
+
+  /* Tunnel access: name | billing | expiry | flow | rules */
+  .dash-tunnel-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 16px;
+  }
+  .dash-tunnel-row > .dash-tunnel-meters {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  @container (min-width: 50rem) {
+    .dash-tunnel-row {
+      grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 1.8fr);
+    }
+    .dash-tunnel-row > .dash-tunnel-meters {
+      grid-column: auto;
+    }
+  }
+
+  /* Node expiry: name + details | status */
+  .dash-expiry-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+  }
+
+  /* Compact chart empty state: one line, not a giant placeholder. */
+  .chart-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 96px;
+    margin: 0;
+    padding: 16px;
+    font-size: 12.5px;
+    color: var(--default-500);
+    text-align: center;
+  }
+  .chart-empty svg {
+    flex: none;
+    color: var(--default-400);
+  }
+  .chart-empty[data-tone="danger"] {
+    color: var(--danger-ink);
+  }
+  .chart-empty[data-tone="danger"] svg {
+    color: var(--danger-ink);
+  }
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .chart-legend-item::before {
+    content: "";
+    width: 10px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--legend-color, var(--default-400));
+  }
+  .chart-stat {
+    min-width: 0;
+    text-align: right;
+  }
+  .chart-stat dt {
+    font-size: 11.5px;
+    color: var(--default-500);
+    white-space: nowrap;
+  }
+  .chart-stat dd {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--foreground);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .chart-frame {
+    color: var(--default-500);
+  }
+
+  /* ─── Monitor ───────────────────────────────────────────────────── */
+  /* Legacy monitor empty class, now the compact chart empty look. */
+  .monitor-chart-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 96px;
+    margin: 0;
+    padding: 16px;
+    color: var(--default-500);
+    font-size: 12.5px;
+    text-align: center;
+  }
+  .mon-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .mon-statusline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .mon-statusline .status-dot {
+    font-size: 12px;
+  }
+  .mon-statusline b {
+    font-weight: 500;
+    color: var(--foreground);
+    font-variant-numeric: tabular-nums;
+  }
+  .mon-sep {
+    width: 1px;
+    height: 12px;
+    background: var(--border);
+  }
+
+  /* Node / tunnel matrix (grid view): compact tiles. */
+  .mon-matrix {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .mon-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px 16px;
+    text-align: left;
+    background: var(--content1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) ease,
+      background-color var(--duration-fast) ease;
+  }
+  .mon-tile:hover {
+    border-color: var(--border-strong);
+  }
+  .mon-tile:focus-visible {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 2px;
+  }
+  .mon-tile-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .mon-tile-name {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mon-tile-sub {
+    margin-left: auto;
+    flex: none;
+  }
+  .mon-tile-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 16px;
+  }
+  .mon-kv {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .mon-kv-label {
+    font-size: 11.5px;
+    color: var(--default-500);
+  }
+  .mon-kv-value {
+    margin: 0;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--foreground);
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mon-tile-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .mon-tile-foot > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Usage cell: thin bar + value */
+  .mon-usage {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .mon-usage-track {
+    width: 48px;
+    height: 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  }
+  .mon-usage .mantine-Progress-root {
+    width: 48px;
+    --progress-size: 4px !important;
+  }
+  .mon-usage-value {
+    min-width: 40px;
+    font-size: 12.5px;
+    color: var(--default-600);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .mon-muted,
+  .mon-kv-value.mon-muted {
+    color: var(--default-400);
+  }
+  .mon-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    font-size: 12.5px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .mon-stack > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .mon-stack svg {
+    color: var(--default-400);
+  }
+
+  /* Detail view header */
+  .mon-detail-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+  }
+  .mon-detail-title {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Tabs-like selector pills for service monitors. */
+  .monitor-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--content1);
+    color: var(--default-600);
+    font-size: 12.5px;
+    transition:
+      background-color var(--duration-fast) ease,
+      border-color var(--duration-fast) ease,
+      color var(--duration-fast) ease;
+  }
+  .monitor-pill:hover {
+    background: var(--content2);
+  }
+  .monitor-pill[aria-pressed="true"] {
+    border-color: var(--primary-line);
+    background: var(--primary-soft);
+    color: var(--primary-ink);
+    font-weight: 500;
+  }
+  .monitor-pill .status-dot::before {
+    width: 6px;
+    height: 6px;
+    box-shadow: none;
+  }
+  .mon-infobar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    min-width: 0;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--default-500);
+  }
+
+  /* Uptime history bars (tunnel monitor) */
+  .mon-beats {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .mon-beat {
+    width: 4px;
+    height: 14px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  }
+  .mon-beat[data-tone="success"] {
+    background: var(--success);
+  }
+  .mon-beat[data-tone="warning"] {
+    background: var(--warning);
+  }
+  .mon-beat[data-tone="danger"] {
+    background: var(--danger);
+  }
+
+  /* Legacy summary grid kept for any older markup. */
+  .metric-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+}

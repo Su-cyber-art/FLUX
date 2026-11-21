@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import { ActionIcon, Tooltip, Badge, Button, TextInput } from "@mantine/core";
+import { ActionIcon, Tooltip, Button, TextInput } from "@mantine/core";
 import { Gauge, Plus, SearchX, SquarePen, Trash2 } from "lucide-react";
 
 import toast from "@/lib/notifications";
 import { PageToolbar } from "@/components/page-toolbar";
 import { AnimatedPage } from "@/components/animated-page";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { SearchBar } from "@/components/search-bar";
 import { Card } from "@/components/ui/card";
 import {
@@ -21,7 +22,6 @@ import {
   deleteSpeedLimit,
 } from "@/api";
 import { EmptyStateCard, PageLoadingState } from "@/components/page-state";
-import { IconTile } from "@/components/ui/icon-tile";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 
 interface SpeedLimitRule {
@@ -221,7 +221,7 @@ export default function LimitPage() {
   const speedLabel = (speed: number) =>
     `≈ ${(speed / 8).toFixed(speed % 8 === 0 ? 0 : 1)} MB/s`;
   const ruleActions = (rule: SpeedLimitRule) => (
-    <>
+    <div className="access-actions">
       <Tooltip label="编辑">
         <ActionIcon
           aria-label={`编辑 ${rule.name}`}
@@ -229,7 +229,7 @@ export default function LimitPage() {
           variant="subtle"
           onClick={() => handleEdit(rule)}
         >
-          <SquarePen size={16} />
+          <SquarePen size={15} />
         </ActionIcon>
       </Tooltip>
       <Tooltip label="删除">
@@ -239,22 +239,19 @@ export default function LimitPage() {
           variant="subtle"
           onClick={() => handleDelete(rule)}
         >
-          <Trash2 size={16} />
+          <Trash2 size={15} />
         </ActionIcon>
       </Tooltip>
-    </>
+    </div>
   );
-  const ruleStatus = (rule: SpeedLimitRule) =>
-    rule.status === 1 ? null : (
-      <Badge
-        color="orange"
-        leftSection={<span className="badge-dot" />}
-        size="xs"
-        variant="light"
-      >
-        停用
-      </Badge>
-    );
+  const ruleStatus = (rule: SpeedLimitRule) => (
+    <span
+      className="status-dot"
+      data-tone={rule.status === 1 ? "success" : "warning"}
+    >
+      {rule.status === 1 ? "启用" : "停用"}
+    </span>
+  );
 
   return (
     <AnimatedPage>
@@ -276,23 +273,21 @@ export default function LimitPage() {
       />
 
       {rules.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-default-500">
           <span>
             共{" "}
-            <span className="font-semibold text-foreground">
+            <span className="font-semibold tabular-nums text-foreground">
               {filteredRules.length}
             </span>{" "}
             条策略
             {filteredRules.length !== rules.length &&
               `（已筛选，全部 ${rules.length} 条）`}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+          <span className="status-dot" data-tone="success">
             启用 {enabledCount}
           </span>
           {filteredRules.length - enabledCount > 0 && (
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+            <span className="status-dot" data-tone="warning">
               停用 {filteredRules.length - enabledCount}
             </span>
           )}
@@ -325,120 +320,102 @@ export default function LimitPage() {
           />
         )
       ) : viewMode === "list" ? (
-        <div className="overflow-hidden rounded-[10px] border border-divider bg-content1">
+        <div className="access-table limit-table">
+          <div className="access-table-head" role="presentation">
+            <span className="limit-cell-name">策略名称</span>
+            <span className="limit-cell-speed">带宽上限</span>
+            <span className="limit-cell-bytes">约合</span>
+            <span className="limit-cell-status">状态</span>
+            <span className="limit-cell-actions" />
+          </div>
           {filteredRules.map((rule) => (
-            <div
-              key={rule.id}
-              className="flex items-center gap-3 border-divider px-4 py-3 transition-colors hover:bg-default-soft [&+&]:border-t"
-            >
-              <IconTile
-                size="sm"
-                tone={rule.status === 1 ? "primary" : "default"}
+            <div key={rule.id} className="access-table-row">
+              <span
+                className="limit-cell-name truncate font-medium text-foreground"
+                title={rule.name}
               >
-                <Gauge size={15} />
-              </IconTile>
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-sm font-medium text-foreground">
-                    {rule.name}
-                  </span>
-                  {ruleStatus(rule)}
-                </div>
-                <p className="text-xs text-default-500">
-                  {speedLabel(rule.speed)}
-                </p>
-              </div>
-              <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">
-                {rule.speed} Mbps
+                {rule.name}
               </span>
-              <div className="flex shrink-0 items-center gap-0.5">
-                {ruleActions(rule)}
-              </div>
+              <span className="limit-cell-speed">
+                <span className="limit-speed-value">{rule.speed}</span>
+                <span className="limit-speed-unit">Mbps</span>
+              </span>
+              <span className="limit-cell-bytes">{speedLabel(rule.speed)}</span>
+              <span className="limit-cell-status">{ruleStatus(rule)}</span>
+              <span className="limit-cell-actions">{ruleActions(rule)}</span>
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-4">
+        <div className="access-grid">
           {filteredRules.map((rule) => (
-            <Card key={rule.id} className="h-full gap-4 p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <IconTile
-                    size="sm"
-                    tone={rule.status === 1 ? "primary" : "default"}
-                  >
-                    <Gauge size={15} />
-                  </IconTile>
-                  <span
-                    className="truncate text-sm font-semibold text-foreground"
-                    title={rule.name}
-                  >
-                    {rule.name}
-                  </span>
-                </div>
-                {ruleStatus(rule)}
-              </div>
-              <div>
-                <p className="metric-value text-[26px] font-semibold leading-tight text-foreground">
-                  {rule.speed}
-                  <span className="ml-1 text-sm font-medium text-default-500">
-                    Mbps
-                  </span>
-                </p>
-                <p className="mt-0.5 text-xs text-default-500">
-                  {speedLabel(rule.speed)}
-                </p>
-              </div>
-              <div className="mt-auto flex items-center justify-end gap-0.5 border-t border-divider pt-2">
+            <Card
+              key={rule.id}
+              className="limit-card"
+              data-disabled={rule.status !== 1 || undefined}
+            >
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <span
+                  className="truncate text-[13.5px] font-semibold text-foreground"
+                  title={rule.name}
+                >
+                  {rule.name}
+                </span>
                 {ruleActions(rule)}
               </div>
+              <div className="flex items-end justify-between gap-3">
+                <p className="leading-none">
+                  <span className="limit-card-speed">{rule.speed}</span>
+                  <span className="limit-speed-unit">Mbps</span>
+                </p>
+                {ruleStatus(rule)}
+              </div>
+              <p className="text-xs tabular-nums text-default-500">
+                {speedLabel(rule.speed)}
+              </p>
             </Card>
           ))}
         </div>
       )}
 
       {/* 新增/编辑模态框 */}
-      <Modal opened={modalOpen} size="2xl" onClose={() => setModalOpen(false)}>
+      <Modal opened={modalOpen} size="sm" onClose={() => setModalOpen(false)}>
         <ModalContent>
-          <ModalHeader className="flex flex-col gap-1">
-            <h2 className="text-xl font-bold">
-              {isEdit ? "编辑限速规则" : "新增限速规则"}
-            </h2>
-            <p className="text-small text-default-500">
-              {isEdit ? "修改现有限速规则的配置信息" : "创建新的限速规则"}
-            </p>
+          <ModalHeader>
+            <h2>{isEdit ? "编辑限速规则" : "新增限速规则"}</h2>
+            <p>{isEdit ? "修改现有限速规则的配置信息" : "创建新的限速规则"}</p>
           </ModalHeader>
           <ModalBody>
-            <div className="space-y-4">
-              <TextInput
-                error={errors.name}
-                label="规则名称"
-                placeholder="请输入限速规则名称"
-                value={form.name}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, name: e.target.value }))
-                }
-              />
+            <TextInput
+              error={errors.name}
+              label="规则名称"
+              placeholder="请输入限速规则名称"
+              value={form.name}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, name: e.target.value }))
+              }
+            />
 
-              <TextInput
-                error={errors.speed}
-                label="速度限制"
-                placeholder="请输入速度限制"
-                rightSection={
-                  <div className="pointer-events-none flex items-center">
-                    <span className="text-default-400 text-small">Mbps</span>
-                  </div>
-                }
-                type="number"
-                value={form.speed.toString()}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    speed: parseInt(e.target.value) || 0,
-                  }))
-                }
-              />
-            </div>
+            <TextInput
+              description={form.speed > 0 ? speedLabel(form.speed) : undefined}
+              error={errors.speed}
+              label="速度限制"
+              placeholder="请输入速度限制"
+              rightSection={
+                <span className="pointer-events-none text-xs text-default-400">
+                  Mbps
+                </span>
+              }
+              rightSectionWidth={52}
+              type="number"
+              value={form.speed.toString()}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  speed: parseInt(e.target.value) || 0,
+                }))
+              }
+            />
           </ModalBody>
           <ModalFooter>
             <Button
@@ -455,42 +432,23 @@ export default function LimitPage() {
         </ModalContent>
       </Modal>
 
-      {/* 删除确认模态框 */}
-      <Modal
+      <ConfirmDialog
+        confirmLabel="确认删除"
+        loading={deleteLoading}
+        message={
+          <>
+            确定要删除限速规则{" "}
+            <span className="font-semibold text-foreground">
+              “{ruleToDelete?.name}”
+            </span>{" "}
+            吗？此操作无法撤销，删除后该规则将永久消失。
+          </>
+        }
         opened={deleteModalOpen}
-        size="2xl"
+        title="确认删除"
         onClose={() => setDeleteModalOpen(false)}
-      >
-        <ModalContent>
-          <ModalHeader className="flex flex-col gap-1">
-            <h2 className="text-lg font-bold text-danger">确认删除</h2>
-          </ModalHeader>
-          <ModalBody>
-            <p className="text-default-600">
-              确定要删除限速规则{" "}
-              <span className="font-semibold text-foreground">
-                &quot;{ruleToDelete?.name}&quot;
-              </span>{" "}
-              吗？
-            </p>
-            <p className="text-small text-default-500 mt-2">
-              此操作无法撤销，删除后该规则将永久消失。
-            </p>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              color="gray"
-              variant="subtle"
-              onClick={() => setDeleteModalOpen(false)}
-            >
-              取消
-            </Button>
-            <Button color="red" loading={deleteLoading} onClick={confirmDelete}>
-              确认删除
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+        onConfirm={() => void confirmDelete()}
+      />
     </AnimatedPage>
   );
 }

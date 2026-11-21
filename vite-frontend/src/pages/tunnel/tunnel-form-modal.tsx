@@ -3,7 +3,6 @@ import type * as React from "react";
 import {
   ActionIcon,
   Button,
-  Divider,
   MultiSelect,
   Select,
   Textarea,
@@ -79,55 +78,59 @@ export function TunnelFormModal({
   handleSubmit,
 }: TunnelFormModalProps) {
   return (
-    <Modal opened={modalOpen} size="2xl" onClose={() => setModalOpen(false)}>
+    <Modal opened={modalOpen} size="xl" onClose={() => setModalOpen(false)}>
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold">
-            {isEdit ? "编辑隧道" : "新增隧道"}
-          </h2>
-          <p className="text-small text-default-500">
+          <h2>{isEdit ? "编辑隧道" : "新增隧道"}</h2>
+          <p>
             {isEdit
               ? "修改节点配置会中断现有连接，隧道类型不可修改"
               : "创建新的隧道配置"}
           </p>
         </ModalHeader>
         <ModalBody>
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <TextInput
-                error={errors.name}
-                label="隧道名称"
-                placeholder="请输入隧道名称"
-                value={form.name}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, name: e.target.value }))
-                }
-              />
-
-              <Select
-                data={[
-                  { value: "1", label: "端口转发" },
-                  { value: "2", label: "隧道转发" },
-                ]}
-                disabled={isEdit}
-                error={errors.type}
-                label="隧道类型"
-                placeholder="请选择隧道类型"
-                value={form.type.toString()}
-                onChange={(value) => {
-                  const selectedKey = value as string;
-
-                  if (selectedKey) {
-                    handleTypeChange(parseInt(selectedKey));
+          <div className="tunnel-form">
+            <section className="form-section">
+              <div className="form-section-head">
+                <h3>基本信息</h3>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <TextInput
+                  error={errors.name}
+                  label="隧道名称"
+                  placeholder="请输入隧道名称"
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, name: e.target.value }))
                   }
-                }}
-              />
-            </div>
+                />
 
-            <Divider />
-            <h3 className="text-sm font-semibold text-foreground">入口配置</h3>
+                <Select
+                  data={[
+                    { value: "1", label: "端口转发" },
+                    { value: "2", label: "隧道转发" },
+                  ]}
+                  disabled={isEdit}
+                  error={errors.type}
+                  label="隧道类型"
+                  placeholder="请选择隧道类型"
+                  value={form.type.toString()}
+                  onChange={(value) => {
+                    const selectedKey = value as string;
 
-            <div className="space-y-2">
+                    if (selectedKey) {
+                      handleTypeChange(parseInt(selectedKey));
+                    }
+                  }}
+                />
+              </div>
+            </section>
+
+            <section className="form-section">
+              <div className="form-section-head">
+                <h3>入口配置</h3>
+                <p>流量从这些节点进入隧道，可多选。</p>
+              </div>
               <MultiSelect
                 searchable
                 data={nodeOptions([
@@ -161,18 +164,20 @@ export function TunnelFormModal({
                   }));
                 }}
               />
-            </div>
+            </section>
 
             {/* 隧道转发时显示转发链配置 */}
             {form.type === 2 && (
-              <>
-                <Divider />
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    转发链配置
-                  </h3>
+              <section className="form-section">
+                <div className="form-section-head flex items-start justify-between gap-3">
+                  <div>
+                    <h3>转发链配置</h3>
+                    <p>
+                      中转跳按顺序连接入口与出口，每一跳可放多个节点做负载。
+                    </p>
+                  </div>
                   <Button
-                    leftSection={<Plus className="w-4 h-4" />}
+                    leftSection={<Plus size={14} />}
                     size="xs"
                     variant="light"
                     onClick={() => {
@@ -198,7 +203,7 @@ export function TunnelFormModal({
                 </div>
 
                 {getChainGroups().length > 0 && (
-                  <div className="space-y-3">
+                  <div className="tunnel-hops">
                     {getChainGroups().map((groupNodes, groupIndex) => {
                       const protocol =
                         groupNodes.length > 0
@@ -220,26 +225,27 @@ export function TunnelFormModal({
                           : "";
 
                       return (
-                        <div
-                          key={groupIndex}
-                          className="border border-default-200 rounded-lg p-3"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-default-600">
+                        <div key={groupIndex} className="tunnel-hop">
+                          <div className="tunnel-hop-head">
+                            <span className="tunnel-hop-index">
+                              {groupIndex + 1}
+                            </span>
+                            <span className="tunnel-hop-title">
                               第{groupIndex + 1}跳
                             </span>
                             <ActionIcon
                               aria-label={`删除第${groupIndex + 1}跳`}
+                              className="ml-auto"
                               color="red"
-                              size={30}
+                              size="sm"
                               variant="subtle"
                               onClick={() => removeChainNode(groupIndex)}
                             >
-                              <X className="w-4 h-4" />
+                              <X size={14} />
                             </ActionIcon>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                             {/* 节点选择 - 移动端100%，桌面端50% */}
                             <div className="col-span-1 md:col-span-2">
                               <MultiSelect
@@ -391,22 +397,20 @@ export function TunnelFormModal({
                 )}
 
                 {getChainGroups().length === 0 && (
-                  <div className="text-center py-8 rounded-lg border border-dashed border-divider text-default-500">
-                    <p className="text-sm text-default-500">
-                      还没有添加转发链，点击上方&quot;添加一跳&quot;按钮开始添加
-                    </p>
-                  </div>
+                  <p className="tunnel-form-empty">
+                    还没有添加转发链，点击上方&quot;添加一跳&quot;按钮开始添加
+                  </p>
                 )}
-              </>
+              </section>
             )}
 
             {/* 隧道转发时显示出口配置 */}
             {form.type === 2 && (
-              <>
-                <Divider />
-                <h3 className="text-sm font-semibold text-foreground">
-                  出口配置
-                </h3>
+              <section className="form-section">
+                <div className="form-section-head">
+                  <h3>出口配置</h3>
+                  <p>流量最终从出口节点离开，多出口时按负载策略分配。</p>
+                </div>
 
                 {(() => {
                   const selectedOutNodeIds = (form.outNodeId || [])
@@ -418,7 +422,7 @@ export function TunnelFormModal({
 
                   return (
                     <>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                         {/* 节点选择 - 移动端100%，桌面端50% */}
                         <div className="col-span-1 md:col-span-2">
                           <MultiSelect
@@ -675,129 +679,131 @@ export function TunnelFormModal({
                     </>
                   );
                 })()}
-              </>
+              </section>
             )}
 
-            <AdvancedSection title="高级设置">
-              <div className="space-y-4 pb-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Select
-                    data={[
-                      { value: "1", label: "单向计算（仅上传）" },
-                      { value: "2", label: "双向计算（上传+下载）" },
-                    ]}
-                    error={errors.flow}
-                    label="流量计算"
-                    placeholder="请选择流量计算方式"
-                    value={form.flow.toString()}
-                    onChange={(value) => {
-                      const selectedKey = value as string;
+            <div className="tunnel-form-advanced">
+              <AdvancedSection title="高级设置">
+                <div className="space-y-4 pb-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Select
+                      data={[
+                        { value: "1", label: "单向计算（仅上传）" },
+                        { value: "2", label: "双向计算（上传+下载）" },
+                      ]}
+                      error={errors.flow}
+                      label="流量计算"
+                      placeholder="请选择流量计算方式"
+                      value={form.flow.toString()}
+                      onChange={(value) => {
+                        const selectedKey = value as string;
 
-                      if (selectedKey) {
+                        if (selectedKey) {
+                          setForm((prev) => ({
+                            ...prev,
+                            flow: parseInt(selectedKey),
+                          }));
+                        }
+                      }}
+                    />
+
+                    <TextInput
+                      error={errors.trafficRatio}
+                      label="流量倍率"
+                      max={100}
+                      min={0.01}
+                      placeholder="例如：0.5 或 1 或 2"
+                      step="any"
+                      type="number"
+                      value={form.trafficRatio.toString()}
+                      onChange={(e) =>
                         setForm((prev) => ({
                           ...prev,
-                          flow: parseInt(selectedKey),
-                        }));
+                          trafficRatio: parseFloat(e.target.value) || 0,
+                        }))
                       }
-                    }}
-                  />
+                    />
+                  </div>
 
-                  <TextInput
-                    error={errors.trafficRatio}
-                    label="流量倍率"
-                    max={100}
-                    min={0.01}
-                    placeholder="例如：0.5 或 1 或 2"
-                    step="any"
-                    type="number"
-                    value={form.trafficRatio.toString()}
+                  <Textarea
+                    description="入口IP由系统自动从入口节点采集，无需手动填写。支持多个IP，每行一个地址，留空则使用入口节点IP"
+                    error={errors.inIp}
+                    label="入口IP"
+                    maxRows={5}
+                    placeholder="一行一个IP地址或域名，例如:&#10;192.168.1.100&#10;example.com"
+                    value={form.inIp}
                     onChange={(e) =>
                       setForm((prev) => ({
                         ...prev,
-                        trafficRatio: parseFloat(e.target.value) || 0,
+                        inIp: e.target.value,
                       }))
                     }
                   />
+
+                  {form.type === 2 && (
+                    <Select
+                      data={[
+                        { value: "v4", label: "优先IPv4" },
+                        { value: "v6", label: "优先IPv6" },
+                      ]}
+                      description="当节点同时拥有IPv4和IPv6地址时，选择隧道连接使用的地址类型"
+                      label="隧道连接地址偏好"
+                      placeholder="自动选择"
+                      value={form.ipPreference || ""}
+                      onChange={(value) => {
+                        const selectedKey = value as string;
+
+                        setForm((prev) => ({
+                          ...prev,
+                          ipPreference: selectedKey || "",
+                        }));
+                      }}
+                    />
+                  )}
+
+                  <div>
+                    <div className="text-[13px] font-medium">质量检测目标</div>
+                    <p className="mt-0.5 text-xs text-default-500">
+                      用于实时隧道质量检测、诊断目标和 best
+                      最优出口评分，留空使用 www.bing.com:443
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-[1fr_140px] gap-3">
+                    <TextInput
+                      error={errors.probeTargetHost}
+                      label="Host"
+                      placeholder="www.bing.com"
+                      value={form.probeTargetHost || ""}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          probeTargetHost: e.target.value,
+                        }))
+                      }
+                    />
+                    <TextInput
+                      error={errors.probeTargetPort}
+                      label="Port"
+                      max={65535}
+                      min={1}
+                      placeholder="443"
+                      type="number"
+                      value={
+                        form.probeTargetPort ? String(form.probeTargetPort) : ""
+                      }
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          probeTargetPort: e.target.value
+                            ? Number(e.target.value)
+                            : 0,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
-
-                <Textarea
-                  description="入口IP由系统自动从入口节点采集，无需手动填写。支持多个IP，每行一个地址，留空则使用入口节点IP"
-                  error={errors.inIp}
-                  label="入口IP"
-                  maxRows={5}
-                  placeholder="一行一个IP地址或域名，例如:&#10;192.168.1.100&#10;example.com"
-                  value={form.inIp}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      inIp: e.target.value,
-                    }))
-                  }
-                />
-
-                {form.type === 2 && (
-                  <Select
-                    data={[
-                      { value: "v4", label: "优先IPv4" },
-                      { value: "v6", label: "优先IPv6" },
-                    ]}
-                    description="当节点同时拥有IPv4和IPv6地址时，选择隧道连接使用的地址类型"
-                    label="隧道连接地址偏好"
-                    placeholder="自动选择"
-                    value={form.ipPreference || ""}
-                    onChange={(value) => {
-                      const selectedKey = value as string;
-
-                      setForm((prev) => ({
-                        ...prev,
-                        ipPreference: selectedKey || "",
-                      }));
-                    }}
-                  />
-                )}
-
-                <div>
-                  <div className="text-sm font-medium">质量检测目标</div>
-                  <p className="text-xs text-default-500 mt-0.5">
-                    用于实时隧道质量检测、诊断目标和 best 最优出口评分，留空使用
-                    www.bing.com:443
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_140px] gap-3">
-                  <TextInput
-                    error={errors.probeTargetHost}
-                    label="Host"
-                    placeholder="www.bing.com"
-                    value={form.probeTargetHost || ""}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        probeTargetHost: e.target.value,
-                      }))
-                    }
-                  />
-                  <TextInput
-                    error={errors.probeTargetPort}
-                    label="Port"
-                    max={65535}
-                    min={1}
-                    placeholder="443"
-                    type="number"
-                    value={
-                      form.probeTargetPort ? String(form.probeTargetPort) : ""
-                    }
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        probeTargetPort: e.target.value
-                          ? Number(e.target.value)
-                          : 0,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </AdvancedSection>
+              </AdvancedSection>
+            </div>
           </div>
         </ModalBody>
         <ModalFooter>

@@ -1,44 +1,64 @@
-# Mantine 外观系统
+# Mantine 外观系统 · Console
 
 `context.tsx` 是唯一主题入口。MantineProvider 生成 CSS 变量，Tailwind 的 `@theme inline` 映射继续支持业务页面的语义类。
 
 - 模式：light / dark / system，保存在 `flvx:theme`。
 - 强调色：blue / indigo / teal / violet / grape，保存在 `flvx:accent`。
-- 跟随系统时监听系统模式变化，也同步其他浏览器标签页的偏好变化。
 - `data-mantine-color-scheme` 同时控制 Mantine 和 Tailwind dark 工具类。
-- 切换深浅色时，支持 View Transitions 的浏览器会从点击位置圆形展开新配色；`setMode(mode, { x, y })` 传入点击坐标，不传则从顶部中央展开。系统开启“减少动态效果”时直接切换。
+- 切换深浅色时，支持 View Transitions 的浏览器会从点击位置圆形展开新配色。
 
-## 版式：托盘与卡片
+## 设计语言：控制台（Console）
 
-视觉语言参考 [WAOR/Monitor-SAO](https://github.com/WAOR/Monitor-SAO)（MIT）的元素设计，只借鉴样式，没有引入其代码。
+目标是“精密、克制、信息密度高”的运维控制台，参考 Linear / Vercel 一类产品的气质。
 
-- 三层底色：画布 `--background` → 托盘 `--tray` → 卡片 `--content1`，卡片内的凹陷区用 `--content2`。描边用半透明的 `--border` / `--border-strong`，在任意一层上都成立。
-- 每个页面由 App Shell 包进一个 `.app-tray`（22px 圆角），顶部依次是胶囊标签 `.app-eyebrow`、大标题和说明；标题文案来自 `config/navigation.ts` 的 `heading`。仪表盘的标题是问候语，用户名使用 `.aurora-text` 渐变。
-- 指标卡用 `.stat-tile`（`StatCard` / `QuotaCard`）：小号标签、粗体等宽数字、弱化的单位与脚注。
-- Badge 的 light 变体带同色描边，作标签用；带 `.badge-dot` 前缀的自动变成全圆角状态胶囊。
-- `Progress` 全局渲染为分段方块条；`IconTile` 带同色描边，深色模式下加微光。
-- 西文与数字使用自托管的 Geist / Geist Mono 可变字体（`@fontsource-variable/*`，在 `main.tsx` 引入），中文回退到系统字体。
-- 中性色与强调色：`globals.css` 的 `--default-*` 和状态色阶，与 `context.tsx` 里覆盖的 Mantine `gray` / `dark` / `blue` / `violet` / `teal` / `orange` / `red` / `cyan` 色板保持一致，改动时两处同步。
+### 版式
 
-## 材质与动效
+- **平铺，不嵌套。** 侧栏贴边（`--sidebar` 底色 + 右侧发丝线），右侧是 52px 的粘性顶栏（面包屑、搜索、主题、账号），下面是平铺画布 `--background`。页面内容直接放在画布上，**不要再出现“托盘里套卡片、卡片里再套卡片”**。
+- 页面标题由 App Shell 统一渲染：22px 标题 + 13px 说明，不再有胶囊标签和渐变文字。
+- 卡片 `Card`（`.app-card`）：白底（深色 `#111114`）、1px `--border`、10px 圆角、无阴影。分组用 **小节标题 `.section-label`**（13px 粗体 + 12px 弱化计数）+ 内容，而不是外面再包一张卡片。
+- 内容最大宽度 1400px，桌面内边距 28px 32px。
 
-令牌集中在 `styles/globals.css`，页面直接引用，不要再写内联模糊、阴影或自定义缓动。
+### 字号与密度
 
-- 层级：`--elevation-1`（卡片静止）、`--elevation-2`（悬停/浮起）、`--elevation-3`（弹窗、菜单、浮动操作栏）。
-- 玻璃：`--glass` / `--glass-border` 用于顶栏、浮动操作栏、通知和图表提示框。
-- 缓动：`--ease-out`（默认）、`--ease-spring`（开关、指示条等轻弹）；时长 `--duration-fast/base/slow`。
-- 路由切换由 App Shell 统一淡入；`AnimatedPage` 的直接子元素依次上浮出现，页面无需自行添加进场动画。
-- 动画均使用 `backwards` 填充，结束后不保留 transform，避免影响 sticky/fixed 子元素和拖拽排序。
+- 正文 14px，控件与表格 13px，辅助信息 12px，小节标题 13px/600，页面标题 22px/600。
+- 控件高度 32px（`size="sm"`），工具栏一行排开：左侧搜索（约 16rem）+ 筛选，右侧视图切换、次要操作、主按钮。
+- 列表行高约 44–48px；表头 12px、`--default-500`、`--content2` 底色。
+- 数字一律等宽（body 已开启 `tabular-nums`）；地址、端口、ID 用 `.mono-value`（等宽 12.5px），**不要再用灰色底块包住每个地址**，复制按钮在悬停时出现即可。
 
-新增控件优先使用 Mantine 的主题/默认属性与 Styles API。不要恢复旧的独立 CSS 注入器或整页替换注册器。
+### 颜色
+
+- 中性色为主，强调色只用于主按钮、链接、焦点环、选中态。
+- 状态用 `.status-dot`（`data-tone="success|warning|danger|primary"`，缺省为灰）：小圆点 + 文字。实心/浅色胶囊 Badge 只在确实需要“标签”时使用（例如倍率 `1.5x`、角色）。
+- 进度条是平滑细条（Mantine `Progress`，默认 6px），不再使用分段方块。
+- 不要使用 Tailwind 原始色板（`text-gray-500`、`bg-blue-100`），使用语义令牌：`bg-content1/2/3`、`border-border`、`text-default-500`、`bg-*-soft`、`text-*-ink`、`border-*-line`。
+
+### 令牌（`styles/globals.css`）
+
+| 令牌 | 用途 |
+|---|---|
+| `--background` | 画布 |
+| `--sidebar` | 侧栏 |
+| `--content1` | 卡片、弹窗、表格主体 |
+| `--content2` | 表头、凹陷区、悬停行 |
+| `--content3` | 更深一层的填充（深色模式分段控件指示器等） |
+| `--border` / `--border-strong` | 发丝线 / 悬停与强调描边 |
+| `--elevation-2/3` | 只给浮层（菜单、弹窗、浮动操作栏）使用 |
+
+### 样式文件
+
+`styles/application.css` 只负责按区域引入：
+
+- `shell.css`：App Shell（侧栏、顶栏、画布、快速搜索）
+- `components.css`：共享组件与 Mantine 打磨（卡片、表格、弹窗、工具栏、批量栏、徽标、进度条…）
+- `diagnosis.css`：诊断弹窗
+- `pages/*.css`：每个页面自己的类，只由对应页面使用
+- `responsive.css`：跨区域的响应式与触屏适配
+
+新增控件优先使用 Mantine 的主题默认属性与 Styles API；页面私有样式写进对应的 `pages/*.css`。
 
 ## 语义色调
 
-色调：`default`、`primary`（跟随强调色）、`secondary`（violet）、`success`（teal）、`warning`（orange）、`danger`（red）、`info`（cyan）。映射关系集中在 `components/ui/shared.tsx` 的 `uiColor`。
+色调：`default`、`primary`（跟随强调色）、`secondary`（violet）、`success`（teal）、`warning`（orange）、`danger`（red）、`info`（cyan）。映射关系集中在 `components/ui/shared.ts` 的 `uiColor`。
 
-- 组件优先：状态/标签用 `Chip color="…"`（可加 `dot`），图标底块用 `IconTile tone="…"`，按钮用 `Button color="…" variant="flat"`。
-- 自定义元素用 Tailwind 色调令牌：`bg-*-soft`、`hover:bg-*-soft-hover`、`text-*-ink`、`border-*-line`，实色用 `bg-*` / `text-*`。
-- 令牌由 `globals.css` 的 `--*-ink` 推导并自动随深浅色切换，不需要再写 `dark:` 变体。`default-*` 中性色阶本身也会翻转，同样不需要 `dark:text-default-*`。
-- 不要使用 Tailwind 原始色板（`text-gray-500`、`bg-blue-100` 等）或固定色阶语义类（`bg-success-50`、`text-warning-700` 等）。
-- 图标统一使用 `lucide-react`；内联 SVG 只保留品牌标识（`components/icons.tsx` 的 Logo、`distro-icon.tsx`）。
-- `context.tsx` 的 `cssVariablesResolver` 让 Mantine light 变体文字使用与 `--*-ink` 相同的色阶，保证浅色背景上的可读性。
+- 图标底块用 `IconTile tone="…"`，但在高密度列表里优先直接用图标（`text-default-500`），不要每行都放图标底块。
+- 图标统一使用 `lucide-react`。

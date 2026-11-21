@@ -1500,25 +1500,18 @@ export default function NodePage() {
       />
 
       {!loading && nodeList.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
+        <div className="node-summary">
           <span>
-            共{" "}
-            <span className="font-semibold text-foreground">
-              {displayNodes.length}
-            </span>{" "}
-            个节点
+            共 <strong>{displayNodes.length}</strong> 个节点
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+          <span className="status-dot" data-tone="success">
             在线 {onlineCount}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-default-400" />
+          <span className="status-dot">
             离线 {displayNodes.length - onlineCount}
           </span>
           {dueCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-warning-ink">
-              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+            <span className="status-dot text-warning-ink" data-tone="warning">
               {dueCount} 个需要续费
             </span>
           )}
@@ -1656,7 +1649,7 @@ export default function NodePage() {
             items={sortableNodeIds}
             strategy={rectSortingStrategy}
           >
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+            <div className="node-grid">
               {displayNodes.map((node) => (
                 <SortableItem key={node.id} id={node.id}>
                   {(listeners) => (
@@ -1697,12 +1690,12 @@ export default function NodePage() {
       {/* 回退确认模态框 */}
       <Modal
         opened={rollbackModalOpen}
-        size="2xl"
+        size="sm"
         onClose={() => setRollbackModalOpen(false)}
       >
         <ModalContent>
           <ModalHeader className="flex flex-col gap-1">
-            <h2 className="text-xl font-bold">确认回退</h2>
+            <h2>确认回退</h2>
           </ModalHeader>
           <ModalBody>
             <p>

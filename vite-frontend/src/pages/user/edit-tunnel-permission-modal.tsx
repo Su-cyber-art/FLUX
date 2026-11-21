@@ -56,9 +56,9 @@ export function EditTunnelPermissionModal({
       onClose={onEditTunnelModalClose}
     >
       <ModalContent>
-        <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold">编辑隧道权限</h2>
-          <p className="text-small text-default-500">
+        <ModalHeader>
+          <h2>编辑隧道权限</h2>
+          <p>
             {currentUser?.user} · {editTunnelForm?.tunnelName}
           </p>
         </ModalHeader>

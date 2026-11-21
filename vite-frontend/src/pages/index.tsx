@@ -6,24 +6,10 @@ import {
   Group,
   PasswordInput,
   Stack,
-  Text,
   TextInput,
-  Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import {
-  Activity,
-  ArrowLeftRight,
-  ArrowRight,
-  KeyRound,
-  LockKeyhole,
-  Network,
-  Server,
-  Target,
-  UserRound,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, KeyRound, LockKeyhole, UserRound } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
 
 import {
@@ -44,45 +30,12 @@ import {
   ModalContent,
   ModalHeader,
 } from "@/components/ui/modal";
-import { IconTile } from "@/components/ui/icon-tile";
-import { type SemanticColor } from "@/components/ui/shared";
-import { useWebViewMode } from "@/hooks/useWebViewMode";
-import { useSiteConfig } from "@/hooks/use-site-config";
 import { useThemeContext } from "@/themes/context";
-import { VersionFooter } from "@/components/version-footer";
 import DefaultLayout from "@/layouts/default";
-
-const AUTH_FEATURES: {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  tone: SemanticColor;
-}[] = [
-  {
-    icon: ArrowLeftRight,
-    title: "转发与流量策略",
-    description: "端口转发、限速与流量配额集中管理",
-    tone: "primary",
-  },
-  {
-    icon: Activity,
-    title: "节点与链路监控",
-    description: "实时查看节点负载、隧道质量与服务可用性",
-    tone: "success",
-  },
-  {
-    icon: Users,
-    title: "用户与分组权限",
-    description: "按用户组与隧道组精细分配访问权限",
-    tone: "secondary",
-  },
-];
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const config = useSiteConfig();
-  const isWebView = useWebViewMode();
   const { effectiveMode } = useThemeContext();
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
@@ -214,132 +167,68 @@ export default function LoginPage() {
 
   return (
     <DefaultLayout>
-      <div className="auth-grid">
-        <section className="auth-intro">
-          <span className="app-eyebrow">
-            <Network size={13} strokeWidth={2.2} />
-            节点 · 隧道 · 转发
-          </span>
-          <Title lh={1.25} order={1}>
-            掌握<span className="aurora-text">每一条连接</span>
-          </Title>
-          <Text c="dimmed" lh={1.7} mt="xs" size="sm">
-            将转发规则、节点状态和访问权限集中到一个清晰的工作空间。
-          </Text>
-          <div aria-hidden className="auth-network">
-            <div className="auth-network-node">
-              <IconTile size="sm" tone="default">
-                <Server size={16} />
-              </IconTile>
-              入口节点
-            </div>
-            <div className="auth-network-line" />
-            <div data-active className="auth-network-node">
-              <IconTile size="sm" tone="primary">
-                <Network size={16} />
-              </IconTile>
-              转发隧道
-            </div>
-            <div className="auth-network-line" />
-            <div className="auth-network-node">
-              <IconTile size="sm" tone="default">
-                <Target size={16} />
-              </IconTile>
-              目标服务
-            </div>
-          </div>
-          <div className="mt-auto flex flex-col gap-3">
-            {AUTH_FEATURES.map((feature) => (
-              <div key={feature.title} className="auth-feature">
-                <IconTile size="sm" tone={feature.tone}>
-                  <feature.icon size={15} />
-                </IconTile>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-foreground">
-                    {feature.title}
-                  </p>
-                  <p className="mt-0.5 text-xs text-default-500">
-                    {feature.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-        <section className="auth-form-panel">
-          <div className="auth-form">
-            <div>
-              <Title order={2} size={22}>
-                登录控制台
-              </Title>
-              <Text c="dimmed" mb={28} mt={6} size="sm">
-                欢迎回来，请使用你的面板账号登录。
-              </Text>
-              <form noValidate onSubmit={form.onSubmit(submit)}>
-                <Stack gap="md">
-                  <TextInput
-                    required
-                    autoComplete="username"
-                    disabled={busy}
-                    label="用户名"
-                    leftSection={<UserRound size={16} />}
-                    placeholder="输入用户名"
-                    {...form.getInputProps("username")}
-                  />
-                  <PasswordInput
-                    required
-                    autoComplete="current-password"
-                    disabled={busy}
-                    label="密码"
-                    leftSection={<LockKeyhole size={16} />}
-                    placeholder="输入密码"
-                    visibilityToggleButtonProps={{
-                      "aria-label": "显示或隐藏密码",
-                    }}
-                    {...form.getInputProps("password")}
-                  />
-                  <Button
-                    fullWidth
-                    disabled={passkeyLoading}
-                    loading={loading}
-                    mt="xs"
-                    rightSection={<ArrowRight size={16} />}
-                    type="submit"
-                  >
-                    登录
-                  </Button>
-                </Stack>
-              </form>
-              {passkeyEnabled && (
-                <>
-                  <Divider
-                    c="dimmed"
-                    label="或"
-                    labelPosition="center"
-                    my="lg"
-                  />
-                  <Button
-                    fullWidth
-                    disabled={loading}
-                    leftSection={<KeyRound size={16} />}
-                    loading={passkeyLoading}
-                    variant="default"
-                    onClick={() => void authenticatePasskey()}
-                  >
-                    使用通行证密钥登录
-                  </Button>
-                </>
-              )}
-            </div>
-            <VersionFooter
-              containerClassName="mt-8 flex items-center gap-3"
-              poweredClassName="text-xs text-default-400"
-              version={isWebView ? config.app_version : config.version}
-              versionClassName="text-xs text-default-400"
+      <section aria-labelledby="login-title" className="auth-card">
+        <header className="auth-card-head">
+          <h1 id="login-title">登录控制台</h1>
+          <p>欢迎回来，请使用你的面板账号登录。</p>
+        </header>
+        <form noValidate onSubmit={form.onSubmit(submit)}>
+          <Stack gap="sm">
+            <TextInput
+              required
+              autoComplete="username"
+              disabled={busy}
+              label="用户名"
+              leftSection={<UserRound size={15} />}
+              placeholder="输入用户名"
+              {...form.getInputProps("username")}
             />
-          </div>
-        </section>
-      </div>
+            <PasswordInput
+              required
+              autoComplete="current-password"
+              disabled={busy}
+              label="密码"
+              leftSection={<LockKeyhole size={15} />}
+              placeholder="输入密码"
+              visibilityToggleButtonProps={{
+                "aria-label": "显示或隐藏密码",
+              }}
+              {...form.getInputProps("password")}
+            />
+            <Button
+              fullWidth
+              disabled={passkeyLoading}
+              loading={loading}
+              mt={6}
+              rightSection={<ArrowRight size={15} />}
+              type="submit"
+            >
+              登录
+            </Button>
+          </Stack>
+        </form>
+        {passkeyEnabled && (
+          <>
+            <Divider
+              c="dimmed"
+              classNames={{ label: "text-xs" }}
+              label="或"
+              labelPosition="center"
+              my="md"
+            />
+            <Button
+              fullWidth
+              disabled={loading}
+              leftSection={<KeyRound size={15} />}
+              loading={passkeyLoading}
+              variant="default"
+              onClick={() => void authenticatePasskey()}
+            >
+              使用通行证密钥登录
+            </Button>
+          </>
+        )}
+      </section>
       <Modal
         opened={captchaOpen}
         size="sm"

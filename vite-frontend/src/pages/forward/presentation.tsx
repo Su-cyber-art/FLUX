@@ -1,12 +1,10 @@
 import type { BatchOperationFailure, ForwardApiItem } from "@/api/types";
 
 import {
-  ArrowRight,
   ChevronDown,
   Copy,
   Ellipsis,
   GripVertical,
-  Network,
   RotateCcw,
   SquarePen,
   Stethoscope,
@@ -24,8 +22,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { Card } from "@/components/ui/card";
-import { type SemanticColor, uiColor } from "@/components/ui/shared";
-import { cn } from "@/lib/utils";
+import { type SemanticColor } from "@/components/ui/shared";
 import { addressPreview } from "@/pages/forward/address";
 
 export interface Forward {
@@ -156,8 +153,7 @@ export const FORWARD_GROUP_COLLAPSED_LOCAL_STORAGE_PREFIX =
 
 export const FORWARD_TUNNEL_GROUP_SORTABLE_PREFIX = "forward-tunnel-group";
 
-export const FORWARD_CARD_GRID_CLASS =
-  "grid grid-cols-[repeat(auto-fill,minmax(272px,1fr))] gap-4";
+export const FORWARD_CARD_GRID_CLASS = "forward-card-grid";
 
 export const normalizeForwardUserName = (userName?: string): string => {
   const normalized = (userName || UNKNOWN_FORWARD_USER_NAME).trim();
@@ -604,7 +600,14 @@ const useSortableStyle = (id: number | string) => {
   return { ...sortable, style };
 };
 
-/** First address in mono with "+N"; a click copies it or lists all addresses. */
+/** Status dot tone; the neutral tone falls back to the default gray dot. */
+const statusDotTone = (tone: SemanticColor) =>
+  tone === "default" ? undefined : tone;
+
+/**
+ * First address in mono with "+N"; a click copies it or lists all addresses.
+ * No chip: the copy affordance appears on hover.
+ */
 export const AddressPill = ({
   addressString,
   port,
@@ -624,49 +627,20 @@ export const AddressPill = ({
 
   return (
     <button
-      className="group inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md bg-default-soft px-2 py-1 font-mono text-xs text-default-700 transition-colors hover:bg-default-soft-hover"
+      className="forward-addr"
       title={more > 0 ? `查看全部${title}` : `复制${title}：${first}`}
       type="button"
       onClick={() => onAddresses(addressString, port, title)}
     >
-      <span className="truncate">{first}</span>
+      <span className="mono-value truncate">{first}</span>
       {more > 0 ? (
-        <span className="shrink-0 rounded bg-primary-soft px-1 font-sans text-[10px] font-semibold text-primary-ink">
-          +{more}
-        </span>
+        <span className="forward-addr-more">+{more}</span>
       ) : (
-        <Copy
-          className="shrink-0 opacity-50 transition-opacity group-hover:opacity-100"
-          size={12}
-        />
+        <Copy aria-hidden className="forward-addr-copy" size={12} />
       )}
     </button>
   );
 };
-
-const RouteAddresses = ({
-  forward,
-  onAddresses,
-}: {
-  forward: Forward;
-  onAddresses: ForwardItemHandlers["onAddresses"];
-}) => (
-  <>
-    <AddressPill
-      addressString={forward.inIp}
-      port={forward.inPort}
-      title="入口地址"
-      onAddresses={onAddresses}
-    />
-    <ArrowRight className="shrink-0 text-default-400" size={14} />
-    <AddressPill
-      addressString={forward.remoteAddr}
-      port={null}
-      title="目标地址"
-      onAddresses={onAddresses}
-    />
-  </>
-);
 
 const FlowSummary = ({
   forward,
@@ -681,11 +655,11 @@ const FlowSummary = ({
     !hasForwardFlow(forward) && (forward.federationShareFlow || 0) > 0;
 
   return (
-    <div className={cn("min-w-0", align === "end" && "text-right")}>
-      <p className="truncate text-sm font-medium tabular-nums text-foreground">
+    <div className="forward-flow" data-align={align}>
+      <p className="forward-flow-total">
         {formatFlow(getForwardDisplayFlow(forward))}
       </p>
-      <p className="truncate text-[11px] tabular-nums text-default-500">
+      <p className="forward-flow-detail">
         {shared
           ? "面板共享流量"
           : `↑ ${formatFlow(forward.inFlow || 0)} · ↓ ${formatFlow(forward.outFlow || 0)}`}
@@ -710,7 +684,7 @@ const ServiceSwitch = ({
         checked={forward.serviceRunning}
         color="teal"
         disabled={forward.status !== 1 && forward.status !== 0}
-        size="sm"
+        size="xs"
         onChange={() => onToggleService(forward)}
       />
     </span>
@@ -728,27 +702,37 @@ const ForwardActions = ({
     <Tooltip label="编辑">
       <ActionIcon
         aria-label="编辑规则"
+        className="forward-action"
         color="gray"
+        size="md"
         variant="subtle"
         onClick={() => handlers.onEdit(forward)}
       >
-        <SquarePen size={16} />
+        <SquarePen size={15} />
       </ActionIcon>
     </Tooltip>
     <Tooltip label="诊断">
       <ActionIcon
         aria-label="诊断规则"
+        className="forward-action"
         color="gray"
+        size="md"
         variant="subtle"
         onClick={() => handlers.onDiagnose(forward)}
       >
-        <Stethoscope size={16} />
+        <Stethoscope size={15} />
       </ActionIcon>
     </Tooltip>
     <Menu withinPortal position="bottom-end" shadow="md" width={160}>
       <Menu.Target>
-        <ActionIcon aria-label="更多操作" color="gray" variant="subtle">
-          <Ellipsis size={16} />
+        <ActionIcon
+          aria-label="更多操作"
+          className="forward-action"
+          color="gray"
+          size="md"
+          variant="subtle"
+        >
+          <Ellipsis size={15} />
         </ActionIcon>
       </Menu.Target>
       <Menu.Dropdown>
@@ -780,7 +764,7 @@ const DragHandle = (props: React.HTMLAttributes<HTMLButtonElement>) => (
     type="button"
     {...props}
   >
-    <GripVertical size={15} />
+    <GripVertical size={14} />
   </button>
 );
 
@@ -800,11 +784,13 @@ export const ForwardListHeader = ({
         aria-label="全选"
         checked={isAllSelected}
         indeterminate={isIndeterminate}
+        size="xs"
         onChange={(event) => onToggleAll(event.currentTarget.checked)}
       />
     </div>
     <div className="forward-row-name">规则</div>
-    <div className="forward-row-route">入口 → 目标</div>
+    <div className="forward-row-in">入口</div>
+    <div className="forward-row-out">目标</div>
     <div className="forward-row-flow">流量</div>
     <div className="forward-row-status">状态</div>
     <div className="forward-row-actions">操作</div>
@@ -840,6 +826,7 @@ export const SortableForwardRow = ({
         <Checkbox
           aria-label={`选择 ${forward.name}`}
           checked={selected}
+          size="xs"
           onChange={({ currentTarget: { checked: checked } }) =>
             handlers.onSelect(forward.id, checked)
           }
@@ -848,50 +835,61 @@ export const SortableForwardRow = ({
       </div>
       <div className="forward-row-name">
         <button
-          className="block max-w-full truncate text-left text-sm font-medium text-foreground transition-colors hover:text-primary"
+          className="forward-title"
           title="复制规则名"
           type="button"
           onClick={() => handlers.onCopyName(forward.name)}
         >
           {forward.name}
         </button>
-        <div className="mt-1 flex min-w-0 items-center gap-1.5">
-          <Badge
-            color={uiColor(strategy.color as SemanticColor)}
-            size="xs"
-            variant="light"
-          >
-            {strategy.text}
-          </Badge>
-          {forward.status === -1 && (
-            <Badge
-              color={uiColor(status.tone)}
-              leftSection={<span className="badge-dot" />}
-              size="xs"
-              variant="light"
-            >
-              {status.text}
-            </Badge>
-          )}
+        <p className="forward-meta">
+          <span>{strategy.text}</span>
           {showTunnel && (
-            <span className="truncate text-xs text-default-500">
-              {forward.tunnelName}
-              {ratio !== 1 ? ` · ${formatTunnelTrafficRatio(ratio)}` : ""}
-            </span>
+            <>
+              <span aria-hidden className="forward-meta-sep">
+                ·
+              </span>
+              <span className="truncate">
+                {forward.tunnelName}
+                {ratio !== 1 ? ` ${formatTunnelTrafficRatio(ratio)}` : ""}
+              </span>
+            </>
           )}
-        </div>
+        </p>
       </div>
-      <div className="forward-row-route">
-        <RouteAddresses forward={forward} onAddresses={handlers.onAddresses} />
+      <div className="forward-row-in">
+        <span className="forward-row-label">入口</span>
+        <AddressPill
+          addressString={forward.inIp}
+          port={forward.inPort}
+          title="入口地址"
+          onAddresses={handlers.onAddresses}
+        />
+      </div>
+      <div className="forward-row-out">
+        <span className="forward-row-label">目标</span>
+        <AddressPill
+          addressString={forward.remoteAddr}
+          port={null}
+          title="目标地址"
+          onAddresses={handlers.onAddresses}
+        />
       </div>
       <div className="forward-row-flow">
-        <FlowSummary formatFlow={handlers.formatFlow} forward={forward} />
+        <FlowSummary
+          align="end"
+          formatFlow={handlers.formatFlow}
+          forward={forward}
+        />
       </div>
       <div className="forward-row-status">
         <ServiceSwitch
           forward={forward}
           onToggleService={handlers.onToggleService}
         />
+        <span className="forward-state" data-tone={statusDotTone(status.tone)}>
+          {status.text}
+        </span>
       </div>
       <div className="forward-row-actions">
         <ForwardActions forward={forward} handlers={handlers} />
@@ -915,59 +913,49 @@ export const ForwardCard = ({
   const status = forwardStatus(forward);
 
   return (
-    <Card
-      className={cn(
-        "h-full gap-4 p-4",
-        selected && "border-primary-line bg-primary-soft",
-      )}
-    >
-      <div className="flex items-start gap-2.5">
+    <Card className="forward-card" data-selected={selected || undefined}>
+      <div className="forward-card-head">
         <Checkbox
           aria-label={`选择 ${forward.name}`}
           checked={selected}
-          className="mt-0.5"
+          className="forward-card-check"
+          size="xs"
           onChange={({ currentTarget: { checked: checked } }) =>
             handlers.onSelect(forward.id, checked)
           }
         />
         <div className="min-w-0 flex-1">
           <button
-            className="block max-w-full truncate text-left text-sm font-semibold text-foreground transition-colors hover:text-primary"
+            className="forward-title"
             title={`复制规则名：${forward.name}`}
             type="button"
             onClick={() => handlers.onCopyName(forward.name)}
           >
             {forward.name}
           </button>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <Badge
-              color={uiColor(status.tone)}
-              leftSection={<span className="badge-dot" />}
-              size="xs"
-              variant="light"
-            >
+          <p className="forward-meta">
+            <span className="status-dot" data-tone={statusDotTone(status.tone)}>
               {status.text}
-            </Badge>
-            <Badge
-              color={uiColor(strategy.color as SemanticColor)}
-              size="xs"
-              variant="light"
-            >
-              {strategy.text}
-            </Badge>
-          </div>
+            </span>
+            <span aria-hidden className="forward-meta-sep">
+              ·
+            </span>
+            <span>{strategy.text}</span>
+          </p>
         </div>
-        <ServiceSwitch
-          forward={forward}
-          onToggleService={handlers.onToggleService}
-        />
-        {dragListeners && <DragHandle {...dragListeners} />}
+        <div className="forward-card-controls">
+          <ServiceSwitch
+            forward={forward}
+            onToggleService={handlers.onToggleService}
+          />
+          {dragListeners && <DragHandle {...dragListeners} />}
+        </div>
       </div>
 
-      <dl className="space-y-2 text-xs">
-        <div className="flex min-w-0 items-center gap-2">
-          <dt className="w-8 shrink-0 text-default-500">入口</dt>
-          <dd className="min-w-0">
+      <dl className="forward-card-route">
+        <div>
+          <dt>入口</dt>
+          <dd>
             <AddressPill
               addressString={forward.inIp}
               port={forward.inPort}
@@ -976,9 +964,9 @@ export const ForwardCard = ({
             />
           </dd>
         </div>
-        <div className="flex min-w-0 items-center gap-2">
-          <dt className="w-8 shrink-0 text-default-500">目标</dt>
-          <dd className="min-w-0">
+        <div>
+          <dt>目标</dt>
+          <dd>
             <AddressPill
               addressString={forward.remoteAddr}
               port={null}
@@ -989,9 +977,9 @@ export const ForwardCard = ({
         </div>
       </dl>
 
-      <div className="mt-auto flex items-end justify-between gap-3 border-t border-divider pt-3">
+      <div className="forward-card-foot">
         <FlowSummary formatFlow={handlers.formatFlow} forward={forward} />
-        <div className="flex shrink-0 items-center">
+        <div className="forward-card-actions">
           <ForwardActions forward={forward} handlers={handlers} />
         </div>
       </div>
@@ -1020,51 +1008,36 @@ export const SortableTunnelGroupContainer = ({
     <section
       ref={setNodeRef}
       className="forward-group"
+      data-collapsed={collapsed || undefined}
       data-dragging={isDragging || undefined}
       style={style}
     >
-      <div
-        className="forward-group-head"
-        data-collapsed={collapsed || undefined}
-      >
+      <div className="forward-group-head">
         <button
           aria-expanded={!collapsed}
-          className="flex min-w-0 items-center gap-2 text-left"
+          className="forward-group-toggle"
           type="button"
           onClick={onToggleCollapsed}
         >
-          <ChevronDown
-            className={cn(
-              "shrink-0 text-default-500 transition-transform",
-              collapsed && "-rotate-90",
-            )}
-            size={16}
-          />
-          <Network className="shrink-0 text-primary" size={15} />
-          <span className="truncate text-sm font-semibold text-foreground">
-            {tunnel.tunnelName}
-          </span>
+          <ChevronDown className="forward-group-chevron" size={14} />
+          <span className="forward-group-name">{tunnel.tunnelName}</span>
           {ratio !== 1 && (
             <Badge color="teal" size="xs" title="流量倍率" variant="light">
               {formatTunnelTrafficRatio(ratio)}
             </Badge>
           )}
+          <span className="forward-group-count">{tunnel.items.length} 条</span>
         </button>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className="text-xs text-default-500">
-            {tunnel.items.length} 条
-          </span>
-          <button
-            aria-label="拖拽分组排序"
-            className="forward-drag-handle"
-            title="拖拽分组排序"
-            type="button"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical size={15} />
-          </button>
-        </div>
+        <button
+          aria-label="拖拽分组排序"
+          className="forward-drag-handle"
+          title="拖拽分组排序"
+          type="button"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical size={14} />
+        </button>
       </div>
       {!collapsed && children}
     </section>
@@ -1088,6 +1061,7 @@ export const SortableForwardCard = ({
     <div
       ref={setNodeRef}
       className="h-full"
+      data-dragging={isDragging || undefined}
       style={{ ...style, opacity: isDragging ? 0.6 : 1 }}
       {...attributes}
     >

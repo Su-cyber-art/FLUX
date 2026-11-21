@@ -941,31 +941,27 @@ export default function UserPage() {
       />
 
       {!loading && users.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-default-500">
           <span>
             共{" "}
-            <span className="font-semibold text-foreground">
+            <span className="font-semibold tabular-nums text-foreground">
               {users.length}
             </span>{" "}
             个用户
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+          <span className="status-dot" data-tone="success">
             正常 {activeUserCount}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-default-400" />
+          <span className="status-dot">
             禁用 {users.length - activeUserCount}
           </span>
           {overQuotaCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-danger-ink">
-              <span className="h-1.5 w-1.5 rounded-full bg-danger" />
+            <span className="status-dot" data-tone="danger">
               配额超额 {overQuotaCount}
             </span>
           )}
           {expiringCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-warning-ink">
-              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+            <span className="status-dot" data-tone="warning">
               即将过期或已过期 {expiringCount}
             </span>
           )}
@@ -1007,7 +1003,7 @@ export default function UserPage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
+        <div className="user-grid">
           {users.map((user) => (
             <UserCard key={user.id} handlers={userHandlers} user={user} />
           ))}
@@ -1186,15 +1182,15 @@ function FlowBreakdown({
   total: number;
 }) {
   return (
-    <dl className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-default-soft p-3 text-xs">
+    <dl className="mt-3 grid grid-cols-3 divide-x divide-divider rounded-lg border border-divider py-2.5 text-xs">
       {[
         ["上行", inFlow],
         ["下行", outFlow],
         ["合计", total],
       ].map(([label, value]) => (
-        <div key={label as string}>
+        <div key={label as string} className="px-3">
           <dt className="text-default-500">{label}</dt>
-          <dd className="mt-0.5 font-mono font-medium text-foreground">
+          <dd className="mt-0.5 font-medium tabular-nums text-foreground">
             {formatFlow(value as number)}
           </dd>
         </div>

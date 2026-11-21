@@ -1,9 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   ActionIcon,
   Tooltip,
   Button,
-  Badge,
   TextInput,
   Select,
   MultiSelect,
@@ -22,10 +27,9 @@ import { useDisclosure } from "@mantine/hooks";
 
 import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
-import { PageEmptyState, PageLoadingState } from "@/components/page-state";
+import { PageLoadingState } from "@/components/page-state";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { SectionHeader } from "@/components/section-header";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card, CardBody } from "@/components/ui/card";
 import {
   Modal,
   ModalBody,
@@ -107,6 +111,43 @@ interface GroupPanelItem {
 
 const MEMBER_PREVIEW_LIMIT = 4;
 
+const formatDay = (timestamp?: number): string => {
+  if (!timestamp) {
+    return "-";
+  }
+
+  return new Date(timestamp).toLocaleDateString("zh-CN");
+};
+
+/** Section heading row: icon + title + count on the left, actions on the right. */
+function AccessSectionHead({
+  icon: Icon,
+  title,
+  count,
+  description,
+  actions,
+}: {
+  icon: LucideIcon;
+  title: string;
+  count: number;
+  description: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="access-section-head">
+      <div className="min-w-0">
+        <h2 className="section-label">
+          <Icon className="text-default-500" size={14} />
+          {title}
+          <small className="tabular-nums">{count}</small>
+        </h2>
+        <p className="access-section-desc">{description}</p>
+      </div>
+      {actions}
+    </div>
+  );
+}
+
 /** One group family (tunnel or user groups): header, rows and empty state. */
 function GroupPanel({
   icon,
@@ -134,131 +175,117 @@ function GroupPanel({
   onDelete: (item: GroupPanelItem) => void;
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <SectionHeader
-          actions={
-            <Button
-              leftSection={<Plus size={14} />}
-              size="xs"
-              variant="light"
-              onClick={onCreate}
-            >
-              新建
-            </Button>
-          }
-          count={items.length}
-          description={description}
-          icon={icon}
-          title={title}
-        />
-      </CardHeader>
-      <CardBody className="pt-0">
-        {items.length === 0 ? (
-          <PageEmptyState className="min-h-32" message={emptyText} />
-        ) : (
-          <ul className="divide-y divide-divider overflow-hidden rounded-lg border border-divider">
-            {items.map((item) => {
-              const hidden = item.members.length - MEMBER_PREVIEW_LIMIT;
+    <section className="min-w-0">
+      <AccessSectionHead
+        actions={
+          <Button
+            className="shrink-0"
+            leftSection={<Plus size={14} />}
+            size="xs"
+            variant="default"
+            onClick={onCreate}
+          >
+            新建
+          </Button>
+        }
+        count={items.length}
+        description={description}
+        icon={icon}
+        title={title}
+      />
+      {items.length === 0 ? (
+        <div className="access-empty">{emptyText}</div>
+      ) : (
+        <ul className="access-list">
+          {items.map((item) => {
+            const hidden = item.members.length - MEMBER_PREVIEW_LIMIT;
 
-              return (
-                <li
-                  key={item.id}
-                  className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-default-soft"
-                >
-                  <div className="min-w-0 flex-1 basis-60">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-sm font-medium text-foreground">
-                        {item.name}
-                      </span>
-                      {item.status !== 1 && (
-                        <Badge
-                          color="orange"
-                          leftSection={<span className="badge-dot" />}
-                          size="xs"
-                          variant="light"
-                        >
-                          停用
-                        </Badge>
-                      )}
-                      <span className="shrink-0 text-xs text-default-500">
-                        {item.members.length} {memberUnit}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {item.members.length === 0 ? (
-                        <span className="text-xs text-default-400">
-                          尚未分配
-                        </span>
-                      ) : (
-                        <>
-                          {item.members
-                            .slice(0, MEMBER_PREVIEW_LIMIT)
-                            .map((member) => (
-                              <Badge
-                                key={member}
-                                color="gray"
-                                size="xs"
-                                variant="light"
-                              >
-                                {member}
-                              </Badge>
-                            ))}
-                          {hidden > 0 && (
-                            <Badge
-                              size="xs"
-                              title={item.members
-                                .slice(MEMBER_PREVIEW_LIMIT)
-                                .join("、")}
-                              variant="light"
-                            >
-                              +{hidden}
-                            </Badge>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <p className="mt-1.5 text-[11px] text-default-400">
-                      创建于 {formatDate(item.createdTime)}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      color="gray"
-                      size="xs"
-                      variant="subtle"
-                      onClick={() => onAssign(item.id)}
+            return (
+              <li key={item.id} className="access-list-row">
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span
+                      className="truncate text-[13px] font-medium text-foreground"
+                      title={item.name}
                     >
-                      {assignLabel}
-                    </Button>
-                    <Tooltip label="编辑">
-                      <ActionIcon
-                        aria-label={`编辑 ${item.name}`}
-                        color="gray"
-                        variant="subtle"
-                        onClick={() => onEdit(item.id)}
-                      >
-                        <SquarePen size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label="删除">
-                      <ActionIcon
-                        aria-label={`删除 ${item.name}`}
-                        color="red"
-                        variant="subtle"
-                        onClick={() => onDelete(item)}
-                      >
-                        <Trash2 size={16} />
-                      </ActionIcon>
-                    </Tooltip>
+                      {item.name}
+                    </span>
+                    {item.status !== 1 && (
+                      <span className="status-dot shrink-0" data-tone="warning">
+                        停用
+                      </span>
+                    )}
                   </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CardBody>
-    </Card>
+                  <p
+                    className="mt-0.5 truncate text-xs text-default-500"
+                    title={
+                      item.members.length > 0
+                        ? item.members.join("、")
+                        : undefined
+                    }
+                  >
+                    <span className="tabular-nums text-default-700">
+                      {item.members.length}
+                    </span>{" "}
+                    {memberUnit}
+                    {item.members.length === 0 ? (
+                      <span className="text-default-400"> · 尚未分配</span>
+                    ) : (
+                      <>
+                        {" · "}
+                        {item.members.slice(0, MEMBER_PREVIEW_LIMIT).join("、")}
+                        {hidden > 0 && (
+                          <span className="text-default-400">
+                            {" "}
+                            等 +{hidden}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <span
+                  className="access-row-date"
+                  title={`创建于 ${formatDate(item.createdTime)}`}
+                >
+                  {formatDay(item.createdTime)}
+                </span>
+                <div className="access-actions">
+                  <Button
+                    color="gray"
+                    size="compact-sm"
+                    variant="subtle"
+                    onClick={() => onAssign(item.id)}
+                  >
+                    {assignLabel}
+                  </Button>
+                  <Tooltip label="编辑">
+                    <ActionIcon
+                      aria-label={`编辑 ${item.name}`}
+                      color="gray"
+                      variant="subtle"
+                      onClick={() => onEdit(item.id)}
+                    >
+                      <SquarePen size={15} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="删除">
+                    <ActionIcon
+                      aria-label={`删除 ${item.name}`}
+                      color="red"
+                      variant="subtle"
+                      onClick={() => onDelete(item)}
+                    >
+                      <Trash2 size={15} />
+                    </ActionIcon>
+                  </Tooltip>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -659,42 +686,12 @@ export default function GroupPage() {
   };
 
   return (
-    <AnimatedPage className="space-y-5">
+    <AnimatedPage className="space-y-8">
       {loading ? (
         <PageLoadingState message="正在加载..." />
       ) : (
         <>
-          <div className="grid gap-5 xl:grid-cols-2">
-            <GroupPanel
-              assignLabel="分配隧道"
-              description="把隧道归类，授权时整组生效"
-              emptyText="暂无隧道分组"
-              icon={Network}
-              items={tunnelGroups.map((group) => ({
-                ...group,
-                members: group.tunnelNames,
-              }))}
-              memberUnit="条隧道"
-              title="隧道分组"
-              onAssign={(id) => {
-                const group = tunnelGroups.find((item) => item.id === id);
-
-                if (group) openAssignTunnels(group);
-              }}
-              onCreate={openCreateTunnelGroup}
-              onDelete={(item) =>
-                setPendingDelete({
-                  kind: "tunnelGroup",
-                  id: item.id,
-                  name: item.name,
-                })
-              }
-              onEdit={(id) => {
-                const group = tunnelGroups.find((item) => item.id === id);
-
-                if (group) openEditTunnelGroup(group);
-              }}
-            />
+          <div className="grid gap-x-8 gap-y-7 lg:grid-cols-2">
             <GroupPanel
               assignLabel="分配用户"
               description="把用户归类，统一授予隧道分组"
@@ -725,27 +722,56 @@ export default function GroupPage() {
                 if (group) openEditUserGroup(group);
               }}
             />
+            <GroupPanel
+              assignLabel="分配隧道"
+              description="把隧道归类，授权时整组生效"
+              emptyText="暂无隧道分组"
+              icon={Network}
+              items={tunnelGroups.map((group) => ({
+                ...group,
+                members: group.tunnelNames,
+              }))}
+              memberUnit="条隧道"
+              title="隧道分组"
+              onAssign={(id) => {
+                const group = tunnelGroups.find((item) => item.id === id);
+
+                if (group) openAssignTunnels(group);
+              }}
+              onCreate={openCreateTunnelGroup}
+              onDelete={(item) =>
+                setPendingDelete({
+                  kind: "tunnelGroup",
+                  id: item.id,
+                  name: item.name,
+                })
+              }
+              onEdit={(id) => {
+                const group = tunnelGroups.find((item) => item.id === id);
+
+                if (group) openEditTunnelGroup(group);
+              }}
+            />
           </div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <SectionHeader
-                count={permissions.length}
-                description="授权后，用户分组内的用户可以使用隧道分组中的全部隧道"
-                icon={ShieldCheck}
-                title="权限分配"
-              />
-            </CardHeader>
-            <CardBody className="space-y-4 pt-0">
-              <div className="grid gap-3 rounded-lg bg-default-soft p-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] md:items-end">
+          <section className="min-w-0">
+            <AccessSectionHead
+              count={permissions.length}
+              description="授权后，用户分组内的用户可以使用隧道分组中的全部隧道"
+              icon={ShieldCheck}
+              title="权限分配"
+            />
+            <div className="access-list">
+              <div className="group-grant-bar">
                 <Select
                   clearable
                   searchable
+                  aria-label="用户分组"
                   data={Array.from(userGroups).map((item) => ({
                     value: String(item.id),
                     label: item.name,
                   }))}
-                  label="用户分组"
+                  leftSection={<Users size={14} />}
                   placeholder="选择用户分组"
                   value={
                     selectedUserGroupId ? String(selectedUserGroupId) : null
@@ -754,17 +780,19 @@ export default function GroupPage() {
                     setSelectedUserGroupId(key ? Number(key) : null);
                   }}
                 />
-                <span className="hidden pb-2 text-xs text-default-500 md:block">
-                  可使用
+                <span className="group-grant-arrow">
+                  <ArrowRight size={14} />
+                  <span>可使用</span>
                 </span>
                 <Select
                   clearable
                   searchable
+                  aria-label="隧道分组"
                   data={Array.from(tunnelGroups).map((item) => ({
                     value: String(item.id),
                     label: item.name,
                   }))}
-                  label="隧道分组"
+                  leftSection={<Network size={14} />}
                   placeholder="选择隧道分组"
                   value={
                     selectedTunnelGroupId ? String(selectedTunnelGroupId) : null
@@ -784,35 +812,46 @@ export default function GroupPage() {
               </div>
 
               {permissions.length === 0 ? (
-                <PageEmptyState
-                  className="min-h-32"
-                  message="暂无权限分配记录"
-                />
+                <p className="px-4 py-8 text-center text-[13px] text-default-500">
+                  暂无权限分配记录
+                </p>
               ) : (
-                <ul className="divide-y divide-divider overflow-hidden rounded-lg border border-divider">
+                <ul>
                   {permissions.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 transition-colors hover:bg-default-soft"
-                    >
-                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm">
-                        <Badge color="violet" size="sm" variant="light">
-                          {item.userGroupName || `#${item.userGroupId}`}
-                        </Badge>
+                    <li key={item.id} className="access-list-row">
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px]">
+                        <span className="inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground">
+                          <Users
+                            className="shrink-0 text-default-400"
+                            size={14}
+                          />
+                          <span className="truncate">
+                            {item.userGroupName || `#${item.userGroupId}`}
+                          </span>
+                        </span>
                         <ArrowRight
                           className="shrink-0 text-default-400"
                           size={14}
                         />
-                        <Badge size="sm" variant="light">
-                          {item.tunnelGroupName || `#${item.tunnelGroupId}`}
-                        </Badge>
-                        <span className="text-[11px] text-default-400">
-                          {formatDate(item.createdTime)}
+                        <span className="inline-flex min-w-0 items-center gap-1.5 font-medium text-foreground">
+                          <Network
+                            className="shrink-0 text-default-400"
+                            size={14}
+                          />
+                          <span className="truncate">
+                            {item.tunnelGroupName || `#${item.tunnelGroupId}`}
+                          </span>
                         </span>
                       </div>
+                      <span
+                        className="access-row-date"
+                        title={`授权于 ${formatDate(item.createdTime)}`}
+                      >
+                        {formatDay(item.createdTime)}
+                      </span>
                       <Button
                         color="red"
-                        size="xs"
+                        size="compact-sm"
                         variant="subtle"
                         onClick={() =>
                           setPendingDelete({
@@ -828,8 +867,8 @@ export default function GroupPage() {
                   ))}
                 </ul>
               )}
-            </CardBody>
-          </Card>
+            </div>
+          </section>
 
           <ConfirmDialog
             confirmLabel={
@@ -855,9 +894,9 @@ export default function GroupPage() {
           >
             <ModalContent>
               <ModalHeader>
-                {editingTunnelGroup ? "编辑隧道分组" : "新建隧道分组"}
+                <h2>{editingTunnelGroup ? "编辑隧道分组" : "新建隧道分组"}</h2>
               </ModalHeader>
-              <ModalBody className="space-y-3">
+              <ModalBody>
                 <TextInput
                   label="分组名称"
                   value={groupName}
@@ -895,9 +934,9 @@ export default function GroupPage() {
           <Modal opened={userGroupModalOpen} onClose={onUserGroupModalClose}>
             <ModalContent>
               <ModalHeader>
-                {editingUserGroup ? "编辑用户分组" : "新建用户分组"}
+                <h2>{editingUserGroup ? "编辑用户分组" : "新建用户分组"}</h2>
               </ModalHeader>
-              <ModalBody className="space-y-3">
+              <ModalBody>
                 <TextInput
                   label="分组名称"
                   value={groupName}
@@ -937,7 +976,10 @@ export default function GroupPage() {
             onClose={onTunnelAssignModalClose}
           >
             <ModalContent>
-              <ModalHeader>分配隧道 - {assignTunnelGroup?.name}</ModalHeader>
+              <ModalHeader>
+                <h2>分配隧道</h2>
+                <p>{assignTunnelGroup?.name}</p>
+              </ModalHeader>
               <ModalBody className="min-w-0">
                 <MultiSelect
                   searchable
@@ -980,7 +1022,10 @@ export default function GroupPage() {
 
           <Modal opened={userAssignModalOpen} onClose={onUserAssignModalClose}>
             <ModalContent>
-              <ModalHeader>分配用户 - {assignUserGroup?.name}</ModalHeader>
+              <ModalHeader>
+                <h2>分配用户</h2>
+                <p>{assignUserGroup?.name}</p>
+              </ModalHeader>
               <ModalBody className="min-w-0">
                 <MultiSelect
                   searchable

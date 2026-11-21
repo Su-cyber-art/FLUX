@@ -102,7 +102,7 @@ export function MonitorEditModal({
               setMonitorForm((f) => ({ ...f, target: e.target.value }))
             }
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextInput
               description={`最小 ${resolvedServiceMonitorLimits.minIntervalSec}s（扫描周期 ${resolvedServiceMonitorLimits.checkerScanIntervalSec}s）`}
               error={
@@ -177,22 +177,16 @@ export function MonitorEditModal({
               }))
             }
           />
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={monitorForm.enabled}
-              onChange={({ currentTarget: { checked: v } }) =>
-                setMonitorForm((f) => ({ ...f, enabled: v }))
-              }
-            />
-            <span className="text-sm">启用</span>
-          </div>
+          <Switch
+            checked={monitorForm.enabled}
+            label="启用"
+            onChange={({ currentTarget: { checked: v } }) =>
+              setMonitorForm((f) => ({ ...f, enabled: v }))
+            }
+          />
         </ModalBody>
         <ModalFooter>
-          <Button
-            color="gray"
-            variant="light"
-            onClick={() => setEditModalOpen(false)}
-          >
+          <Button variant="default" onClick={() => setEditModalOpen(false)}>
             取消
           </Button>
           <Button loading={submitLoading} onClick={handleSubmitMonitor}>

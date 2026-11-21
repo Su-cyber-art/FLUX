@@ -22,24 +22,48 @@ export function useChartPalette(): Record<ChartSeriesColor, string> {
   };
 }
 
-/** Recharts <Tooltip> styling that matches the app's glass surfaces. */
+/** Recharts <Tooltip> styling: a solid card surface with a hairline. */
 export const chartTooltipProps: {
   contentStyle: CSSProperties;
   labelStyle: CSSProperties;
   itemStyle: CSSProperties;
+  cursor: { stroke: string; strokeWidth: number };
 } = {
   contentStyle: {
-    background: "var(--glass)",
-    border: "1px solid var(--glass-border)",
-    borderRadius: 10,
+    background: "var(--content1)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
     boxShadow: "var(--elevation-2)",
-    backdropFilter: "saturate(180%) blur(14px)",
-    WebkitBackdropFilter: "saturate(180%) blur(14px)",
-    padding: "8px 12px",
+    padding: "6px 10px",
+    fontSize: 12,
   },
-  labelStyle: { color: "var(--default-500)", fontSize: 12, marginBottom: 4 },
-  itemStyle: { fontSize: 12, padding: 0 },
+  labelStyle: { color: "var(--default-500)", fontSize: 11.5, marginBottom: 2 },
+  itemStyle: { fontSize: 12, padding: 0, fontVariantNumeric: "tabular-nums" },
+  cursor: { stroke: "var(--border-strong)", strokeWidth: 1 },
 };
 
 /** Axis tick props; color comes from the surrounding `.chart-axis` text color. */
 export const chartTick = { fill: "currentColor", fontSize: 11 } as const;
+
+/** Quiet axes: no axis line or tick marks, small muted labels. */
+export const chartAxisProps = {
+  axisLine: false,
+  tickLine: false,
+  tick: chartTick,
+  tickMargin: 8,
+} as const;
+
+/** Horizontal-only hairline grid (stroke color comes from components.css). */
+export const chartGridProps = {
+  strokeDasharray: "2 4",
+  vertical: false,
+} as const;
+
+/** Thin series line without dots; a small active dot on hover. */
+export const chartLineProps = {
+  dot: false,
+  strokeWidth: 1.5,
+  type: "monotone",
+  activeDot: { r: 3, strokeWidth: 0 },
+  isAnimationActive: false,
+} as const;

@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ArrowRightLeft,
+  CircleAlert,
+  Cpu,
   Gauge,
   LayoutGrid,
   List,
@@ -13,10 +15,10 @@ import {
   Server,
 } from "lucide-react";
 
-import { StatCard } from "@/components/stat-card";
+import { KpiCell, KpiStrip } from "@/components/stat-card";
 import toast from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { getMonitorNodes } from "@/api";
 import { MonitorView } from "@/pages/node/monitor-view";
 import { TunnelMonitorView } from "@/pages/node/tunnel-monitor-view";
@@ -31,14 +33,25 @@ type MonitorNode = {
 
 type MonitorTab = "nodes" | "tunnels";
 
-const formatBytesPerSecond = (bytesPerSecond: number): string => {
-  if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) return "0 B/s";
+/** Bandwidth split into number and unit so the unit can be set in muted text. */
+const splitBytesPerSecond = (
+  bytesPerSecond: number,
+): { value: string; unit: string } => {
+  if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) {
+    return { value: "0", unit: "B/s" };
+  }
 
   const k = 1024;
   const sizes = ["B/s", "KB/s", "MB/s", "GB/s", "TB/s"];
-  const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
+  const i = Math.min(
+    Math.floor(Math.log(bytesPerSecond) / Math.log(k)),
+    sizes.length - 1,
+  );
 
-  return `${parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  return {
+    value: String(parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(2))),
+    unit: sizes[Math.max(i, 0)],
+  };
 };
 
 export default function MonitorPage() {
@@ -218,6 +231,7 @@ export default function MonitorPage() {
     let totalNetIn = 0;
     let totalNetOut = 0;
     let onlineCount = 0;
+    let reportingCount = 0;
 
     nodeMap.forEach((node) => {
       if (node.connectionStatus === "online") {
@@ -225,6 +239,7 @@ export default function MonitorPage() {
         const metric = realtimeNodeMetrics[node.id];
 
         if (metric) {
+          reportingCount++;
           totalCpu += metric.cpuUsage;
           totalConns += metric.tcpConns + metric.udpConns;
           totalNetIn += metric.netInSpeed;
@@ -237,63 +252,68 @@ export default function MonitorPage() {
 
     return {
       onlineCount,
+      reportingCount,
       avgCpu,
       totalConns,
       totalBandwidth: totalNetIn + totalNetOut,
     };
   }, [nodeMap, realtimeNodeMetrics]);
 
+  const offlineCount = nodeMap.size - aggregateMetrics.onlineCount;
+  const bandwidth = splitBytesPerSecond(aggregateMetrics.totalBandwidth);
+  const reportingCaption =
+    aggregateMetrics.onlineCount === 0
+      ? "没有在线节点"
+      : aggregateMetrics.reportingCount === 0
+        ? "在线节点尚未上报指标"
+        : `${aggregateMetrics.reportingCount} 个节点上报中`;
+
   return (
     <AnimatedPage>
-      <div className="monitor-summary">
-        <StatCard
-          bottomContent={
-            <p className="text-xs text-default-500">
-              {nodeMap.size - aggregateMetrics.onlineCount > 0
-                ? `${nodeMap.size - aggregateMetrics.onlineCount} 个节点离线`
-                : "全部节点在线"}
-            </p>
+      <KpiStrip className="mb-5" columns={4} label="监控概览">
+        <KpiCell
+          caption={
+            nodeMap.size === 0 ? (
+              <span>还没有节点</span>
+            ) : offlineCount > 0 ? (
+              <span className="status-dot" data-tone="warning">
+                {offlineCount} 个节点离线
+              </span>
+            ) : (
+              <span className="status-dot" data-tone="success">
+                全部节点在线
+              </span>
+            )
           }
-          icon={<Activity size={18} />}
-          title="在线节点"
-          tone={
-            nodeMap.size > 0 && aggregateMetrics.onlineCount < nodeMap.size
-              ? "warning"
-              : "success"
-          }
-          value={`${aggregateMetrics.onlineCount} / ${nodeMap.size}`}
+          icon={<Activity />}
+          label="在线节点"
+          unit={`/ ${nodeMap.size}`}
+          value={aggregateMetrics.onlineCount}
         />
-        <StatCard
-          bottomContent={
-            <p className="text-xs text-default-500">在线节点平均负载</p>
-          }
-          icon={<Server size={18} />}
-          title="平均 CPU 负载"
-          tone="primary"
-          value={`${aggregateMetrics.avgCpu.toFixed(1)}%`}
+        <KpiCell
+          caption={<span>{reportingCaption}</span>}
+          icon={<Cpu />}
+          label="平均 CPU 负载"
+          unit="%"
+          value={aggregateMetrics.avgCpu.toFixed(1)}
         />
-        <StatCard
-          bottomContent={
-            <p className="text-xs text-default-500">TCP 与 UDP 连接合计</p>
-          }
-          icon={<ArrowRightLeft size={18} />}
-          title="活跃连接"
-          tone="info"
+        <KpiCell
+          caption={<span>TCP 与 UDP 连接合计</span>}
+          icon={<ArrowRightLeft />}
+          label="活跃连接"
           value={aggregateMetrics.totalConns}
         />
-        <StatCard
-          bottomContent={
-            <p className="text-xs text-default-500">在线节点收发速率合计</p>
-          }
-          icon={<Gauge size={18} />}
-          title="实时带宽"
-          tone="secondary"
-          value={formatBytesPerSecond(aggregateMetrics.totalBandwidth)}
+        <KpiCell
+          caption={<span>在线节点收发速率合计</span>}
+          icon={<Gauge />}
+          label="实时带宽"
+          unit={bandwidth.unit}
+          value={bandwidth.value}
         />
-      </div>
+      </KpiStrip>
 
-      <div className="mb-6 space-y-3">
-        <div className="flex items-center justify-between gap-3">
+      <div className="mb-4 space-y-3">
+        <div className="mon-toolbar">
           <SegmentedControl
             aria-label="监控类型"
             data={[
@@ -301,7 +321,7 @@ export default function MonitorPage() {
                 value: "nodes",
                 label: (
                   <Group gap={6} wrap="nowrap">
-                    <Server size={15} />
+                    <Server size={14} />
                     节点监控
                   </Group>
                 ),
@@ -310,7 +330,7 @@ export default function MonitorPage() {
                 value: "tunnels",
                 label: (
                   <Group gap={6} wrap="nowrap">
-                    <ArrowRightLeft size={15} />
+                    <ArrowRightLeft size={14} />
                     隧道监控
                   </Group>
                 ),
@@ -328,7 +348,7 @@ export default function MonitorPage() {
                   value: "grid",
                   label: (
                     <Group gap={6} wrap="nowrap">
-                      <LayoutGrid size={15} />
+                      <LayoutGrid size={14} />
                       <span className="hidden sm:inline">卡片</span>
                     </Group>
                   ),
@@ -337,7 +357,7 @@ export default function MonitorPage() {
                   value: "list",
                   label: (
                     <Group gap={6} wrap="nowrap">
-                      <List size={15} />
+                      <List size={14} />
                       <span className="hidden sm:inline">列表</span>
                     </Group>
                   ),
@@ -350,8 +370,9 @@ export default function MonitorPage() {
             {activeTab === "nodes" && (
               <Button
                 aria-label="刷新节点"
-                leftSection={<RefreshCw size={15} />}
+                leftSection={<RefreshCw size={14} />}
                 loading={nodesLoading}
+                size="sm"
                 variant="default"
                 onClick={() => loadNodes()}
               >
@@ -362,13 +383,9 @@ export default function MonitorPage() {
         </div>
 
         {nodesError && activeTab === "nodes" ? (
-          <Card>
-            <CardHeader>
-              <h3 className="text-sm font-semibold">节点列表</h3>
-            </CardHeader>
-            <CardBody>
-              <div className="text-sm text-default-600">{nodesError}</div>
-            </CardBody>
+          <Card className="flex-row items-center gap-2.5 px-4 py-3 text-[13px] text-default-600">
+            <CircleAlert className="shrink-0 text-warning-ink" size={15} />
+            {nodesError}
           </Card>
         ) : null}
       </div>

@@ -3,9 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ChevronRight,
   KeyRound,
-  LayoutGrid,
   LogOut,
-  Palette,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
@@ -14,8 +12,7 @@ import { useDisclosure } from "@mantine/hooks";
 
 import { toast } from "@/lib/notifications";
 import { AnimatedPage } from "@/components/animated-page";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { IconTile } from "@/components/ui/icon-tile";
+import { Card } from "@/components/ui/card";
 import {
   Modal,
   ModalContent,
@@ -23,7 +20,6 @@ import {
   ModalBody,
   ModalFooter,
 } from "@/components/ui/modal";
-import { SectionHeader } from "@/components/section-header";
 import { ThemeSettings } from "@/components/theme-settings";
 import { navigation } from "@/config/navigation";
 import { isWebViewFunc } from "@/utils/panel";
@@ -34,6 +30,7 @@ import { safeLogout } from "@/utils/logout";
 import { getAdminFlag, getSessionName } from "@/utils/session";
 import { PasskeyManager } from "@/components/passkey-manager";
 import { uiColor } from "@/components/ui/shared";
+import { SettingsRow, SettingsSection } from "@/pages/config/settings-section";
 
 interface PasswordForm {
   newUsername: string;
@@ -145,99 +142,70 @@ export default function ProfilePage() {
       setPasswordForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   return (
-    <AnimatedPage className="flex w-full max-w-[960px] flex-col gap-5">
-      <Card>
-        <CardBody className="flex flex-wrap items-center gap-4">
-          <div aria-hidden className="profile-avatar">
-            {initials || <UserRound size={22} />}
+    <AnimatedPage className="profile-page">
+      <Card className="profile-account">
+        <div aria-hidden className="profile-avatar">
+          {initials || <UserRound size={20} />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="truncate text-[15px] font-semibold text-foreground">
+              {username}
+            </h2>
+            <Badge
+              color={uiColor(isAdmin ? "primary" : "default")}
+              leftSection={isAdmin ? <ShieldCheck size={11} /> : undefined}
+              size="sm"
+              variant="light"
+            >
+              {isAdmin ? "管理员" : "普通用户"}
+            </Badge>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h2 className="truncate text-lg font-semibold text-foreground">
-                {username}
-              </h2>
-              <Badge
-                color={uiColor(isAdmin ? "primary" : "default")}
-                leftSection={isAdmin ? <ShieldCheck size={12} /> : undefined}
-                size="sm"
-                variant="light"
-              >
-                {isAdmin ? "管理员" : "普通用户"}
-              </Badge>
-            </div>
-            <p className="mt-1 text-xs text-default-500">
-              {isAdmin
-                ? "拥有面板的全部管理权限"
-                : "可以管理自己的转发规则，并使用已授权的隧道"}
-            </p>
-          </div>
+          <p className="mt-0.5 text-xs text-default-500">
+            {isAdmin
+              ? "拥有面板的全部管理权限"
+              : "可以管理自己的转发规则，并使用已授权的隧道"}
+          </p>
+        </div>
+        <Button
+          className="profile-logout"
+          color="gray"
+          leftSection={<LogOut size={14} />}
+          size="sm"
+          variant="default"
+          onClick={handleLogout}
+        >
+          退出登录
+        </Button>
+      </Card>
+
+      <SettingsSection description="登录凭据与免密登录方式" title="账号安全">
+        <SettingsRow
+          description="同时修改登录用户名和密码，保存后需要使用新凭据重新登录。"
+          label="用户名与密码"
+        >
           <Button
-            className="w-full sm:w-auto"
-            color="red"
-            leftSection={<LogOut size={15} />}
-            variant="light"
-            onClick={handleLogout}
+            leftSection={<KeyRound size={14} />}
+            size="sm"
+            variant="default"
+            onClick={passwordModal.open}
           >
-            退出登录
+            修改凭据
           </Button>
-        </CardBody>
-      </Card>
+        </SettingsRow>
+        <PasskeyManager />
+      </SettingsSection>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <SectionHeader
-            description="登录凭据与免密登录方式"
-            icon={ShieldCheck}
-            title="账号安全"
-          />
-        </CardHeader>
-        <CardBody className="pt-0">
-          <div className="settings-row">
-            <div>
-              <p className="settings-row-label">用户名与密码</p>
-              <p className="settings-row-desc">
-                同时修改登录用户名和密码，保存后需要使用新凭据重新登录。
-              </p>
-            </div>
-            <div>
-              <Button
-                color="gray"
-                leftSection={<KeyRound size={14} />}
-                size="xs"
-                variant="light"
-                onClick={passwordModal.open}
-              >
-                修改凭据
-              </Button>
-            </div>
-          </div>
-          <PasskeyManager />
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <SectionHeader
-            description="仅对当前浏览器生效，不影响其他用户"
-            icon={Palette}
-            title="外观偏好"
-          />
-        </CardHeader>
-        <CardBody className="pt-0">
-          <ThemeSettings />
-        </CardBody>
-      </Card>
+      <SettingsSection
+        description="仅对当前浏览器生效，不影响其他用户"
+        title="外观偏好"
+      >
+        <ThemeSettings />
+      </SettingsSection>
 
       {isAdmin && (
-        <Card>
-          <CardHeader className="pb-3">
-            <SectionHeader
-              description="常用的管理页面"
-              icon={LayoutGrid}
-              title="管理入口"
-            />
-          </CardHeader>
-          <CardBody className="grid grid-cols-1 gap-2 pt-0 sm:grid-cols-2">
+        <SettingsSection description="常用的管理页面" title="管理入口">
+          <div className="profile-shortcuts">
             {shortcuts.map((item) => (
               <button
                 key={item.path}
@@ -245,26 +213,24 @@ export default function ProfilePage() {
                 type="button"
                 onClick={() => navigate(item.path)}
               >
-                <IconTile size="sm" tone="primary">
-                  <item.icon size={15} />
-                </IconTile>
+                <item.icon className="shrink-0 text-default-500" size={16} />
                 <span className="min-w-0 flex-1 text-left">
-                  <span className="block truncate text-sm font-medium text-foreground">
+                  <span className="block truncate text-[13px] font-medium text-foreground">
                     {item.title}
                   </span>
                   <span className="block truncate text-xs text-default-500">
                     {item.description}
                   </span>
                 </span>
-                <ChevronRight className="shrink-0 text-default-400" size={16} />
+                <ChevronRight className="shrink-0 text-default-400" size={15} />
               </button>
             ))}
-          </CardBody>
-        </Card>
+          </div>
+        </SettingsSection>
       )}
 
       <VersionFooter
-        containerClassName="flex items-center justify-center gap-3 pb-2"
+        containerClassName="flex items-center justify-center gap-3 pt-2 pb-2"
         poweredClassName="text-xs text-default-400"
         version={isWebViewFunc() ? siteConfig.app_version : siteConfig.version}
         versionClassName="text-xs text-default-400"

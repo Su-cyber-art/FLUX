@@ -1,0 +1,82 @@
+@layer components {
+  /* Profile: one ~760px column; account row, then settings cards
+     (.settings-card / .settings-row live in pages/config.css). */
+  .profile-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    max-width: 760px;
+  }
+  .profile-account {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 14px;
+    padding: 16px 20px;
+  }
+  .profile-account:hover {
+    border-color: var(--border);
+  }
+  .profile-avatar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid var(--primary-line);
+    background: var(--primary-soft);
+    color: var(--primary-ink);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .profile-shortcuts {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profile-shortcut {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 11px 20px;
+    border-top: 1px solid var(--border);
+    background: transparent;
+    transition: background-color var(--duration-fast) ease;
+  }
+  .profile-shortcut:first-child {
+    border-top: 0;
+  }
+  .profile-shortcut:hover {
+    background: var(--content2);
+  }
+  .profile-shortcut:focus-visible {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: -2px;
+  }
+  @media (min-width: 48em) {
+    .profile-shortcuts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .profile-shortcut:nth-child(2) {
+      border-top: 0;
+    }
+    .profile-shortcut:nth-child(even) {
+      border-left: 1px solid var(--border);
+    }
+  }
+  @media (max-width: 47.99em) {
+    .profile-account {
+      padding: 14px 16px;
+    }
+    .profile-logout {
+      width: 100%;
+    }
+    .profile-shortcut {
+      padding: 11px 16px;
+    }
+  }
+}

@@ -16,14 +16,10 @@ import {
   Tooltip,
 } from "@mantine/core";
 import {
-  Activity,
-  Brush,
   Image as ImageIcon,
   Moon,
-  Palette,
   RotateCcw,
   Save,
-  ShieldCheck,
   Sun,
   Upload,
   type LucideIcon,
@@ -44,11 +40,9 @@ import {
   updateConfigs,
   type AnnouncementData,
 } from "@/api";
-import { SectionHeader } from "@/components/section-header";
 import { describedSelectProps } from "@/components/select-options";
 import { SystemUpgradeProgress } from "@/components/system-upgrade-progress";
 import { ThemeSettings } from "@/components/theme-settings";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import {
   Modal,
   ModalBody,
@@ -84,6 +78,7 @@ import {
   isBrandPreviewKey,
   toBrandAssetKind,
 } from "@/pages/config/config-items";
+import { SettingsRow, SettingsSection } from "@/pages/config/settings-section";
 import { SystemUpgradeConfirmModal } from "@/pages/config/system-upgrade-confirm-modal";
 import { UpdateSettingsCard } from "@/pages/config/update-settings-card";
 import { isAdmin } from "@/utils/auth";
@@ -113,6 +108,7 @@ export default function ConfigPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [activeSection, setActiveSection] = useState(CONFIG_SECTIONS[0].id);
   const navLockRef = useRef(false);
+  const navRef = useRef<HTMLElement>(null);
   const [originalConfigs, setOriginalConfigs] =
     useState<Record<string, string>>(initialConfigs);
 
@@ -746,10 +742,10 @@ export default function ConfigPage() {
             <Icon className="text-default-400" size={20} />
           )}
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-2.5 p-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 p-2.5">
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <Icon className="text-default-500" size={14} />
+            <p className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
+              <Icon className="text-default-500" size={13} />
               {label}
             </p>
             <p
@@ -771,10 +767,10 @@ export default function ConfigPage() {
           <div className="mt-auto flex flex-wrap items-center gap-1.5">
             <Button
               disabled={busy && bgImageUploading !== key}
-              leftSection={<Upload size={14} />}
+              leftSection={<Upload size={13} />}
               loading={bgImageUploading === key}
               size="xs"
-              variant="light"
+              variant="default"
               onClick={() => bgImageFileInputRefs.current[key]?.click()}
             >
               {isImage ? "替换" : "上传"}
@@ -821,96 +817,35 @@ export default function ConfigPage() {
     );
   };
 
-  const renderBrandPreview = (key: BrandPreviewKey) => {
+  const renderBrandHint = (key: BrandPreviewKey) => {
     const previewUrl = (configs[key] || "").trim();
-    const appNamePreview = (configs.app_name || "").trim() || "应用名称";
     const failed = previewLoadFailed[key] === true;
-    const showImage = previewUrl.length > 0 && !failed;
 
-    return (
-      <div className="mt-3 rounded-lg border border-divider bg-default-soft p-3">
-        <p className="text-xs text-default-500">实时预览</p>
-        <div className="mt-2 rounded-md border border-divider bg-content1 px-3 py-2">
-          {key === "app_logo" ? (
-            <div className="flex h-10 items-center gap-2">
-              {showImage ? (
-                <img
-                  alt="logo preview"
-                  className="h-7 w-7 rounded-sm border border-divider object-cover"
-                  src={previewUrl}
-                  onError={() =>
-                    setPreviewLoadFailed((prev) => ({ ...prev, [key]: true }))
-                  }
-                  onLoad={() =>
-                    setPreviewLoadFailed((prev) => ({ ...prev, [key]: false }))
-                  }
-                />
-              ) : (
-                <div className="flex h-7 w-7 items-center justify-center rounded-sm bg-default-200 text-[10px] font-semibold text-default-600">
-                  LOGO
-                </div>
-              )}
-              <span className="truncate text-sm font-semibold text-foreground">
-                {appNamePreview}
-              </span>
-            </div>
-          ) : (
-            <div className="flex h-7 max-w-[260px] items-center gap-2 rounded border border-divider bg-default-100 px-2">
-              {showImage ? (
-                <img
-                  alt="favicon preview"
-                  className="h-4 w-4 rounded-sm object-contain"
-                  src={previewUrl}
-                  onError={() =>
-                    setPreviewLoadFailed((prev) => ({ ...prev, [key]: true }))
-                  }
-                  onLoad={() =>
-                    setPreviewLoadFailed((prev) => ({ ...prev, [key]: false }))
-                  }
-                />
-              ) : (
-                <div className="h-4 w-4 rounded-sm bg-default-300" />
-              )}
-              <span className="truncate text-xs text-default-700">
-                {appNamePreview}
-              </span>
-            </div>
-          )}
-        </div>
+    if (previewUrl.length > 0 && failed) {
+      return <span className="text-danger">图片加载失败，请重新上传</span>;
+    }
+    if (previewUrl.length > 0 && !isPngDataURL(previewUrl)) {
+      return (
+        <span className="text-warning-ink">
+          当前是旧版 URL 配置，建议重新上传图片以启用无闪烁加载
+        </span>
+      );
+    }
 
-        {previewUrl.length === 0 ? (
-          <p className="mt-2 text-xs text-default-500">
-            上传图片后会实时显示预览
-          </p>
-        ) : null}
-
-        {previewUrl.length > 0 && failed ? (
-          <p className="mt-2 text-xs text-danger">图片加载失败，请重新上传</p>
-        ) : null}
-
-        {previewUrl.length > 0 && !isPngDataURL(previewUrl) ? (
-          <p className="mt-2 text-xs text-warning-ink">
-            当前是旧版 URL 配置，建议重新上传图片以启用无闪烁加载
-          </p>
-        ) : null}
-      </div>
-    );
+    return key === "app_logo"
+      ? "建议使用方形图片，自动转换为 96×96 PNG"
+      : "建议使用方形图片，自动转换为 64×64 PNG";
   };
 
-  const renderBrandAssetUploader = (
-    key: BrandPreviewKey,
-    isChanged: boolean,
-  ) => {
+  const renderBrandAssetUploader = (key: BrandPreviewKey) => {
     const value = (configs[key] || "").trim();
     const uploading = brandUploading[key] === true;
     const isLogo = key === "app_logo";
+    const failed = previewLoadFailed[key] === true;
+    const showImage = value.length > 0 && !failed;
 
     return (
-      <div
-        className={`rounded-lg border p-3 ${
-          isChanged ? "border-warning-line" : "border-divider"
-        }`}
-      >
+      <div className="brand-asset">
         <input
           ref={getBrandInputRef(key)}
           accept={BRAND_FILE_ACCEPT}
@@ -921,56 +856,57 @@ export default function ConfigPage() {
             void handleBrandFileChange(key, event);
           }}
         />
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            loading={uploading}
-            size="xs"
-            variant="light"
-            onClick={() => triggerBrandFilePicker(key)}
-          >
-            {value.length > 0
-              ? isLogo
-                ? "替换 Logo"
-                : "替换 Favicon"
-              : isLogo
-                ? "上传 Logo"
-                : "上传 Favicon"}
-          </Button>
-          <Button
-            color="gray"
-            disabled={value.length === 0 || uploading}
-            size="xs"
-            variant="subtle"
-            onClick={() => clearBrandAsset(key)}
-          >
-            清除
-          </Button>
-          <span className="text-xs text-default-500">
-            仅支持图片文件，自动转换为 PNG
-          </span>
+        <div
+          aria-label={isLogo ? "Logo 预览" : "Favicon 预览"}
+          className="brand-asset-preview"
+          data-kind={isLogo ? "logo" : "favicon"}
+          role="img"
+        >
+          {showImage ? (
+            <img
+              alt=""
+              src={value}
+              onError={() =>
+                setPreviewLoadFailed((prev) => ({ ...prev, [key]: true }))
+              }
+              onLoad={() =>
+                setPreviewLoadFailed((prev) => ({ ...prev, [key]: false }))
+              }
+            />
+          ) : isLogo ? (
+            "LOGO"
+          ) : (
+            <span className="h-3.5 w-3.5 rounded-sm bg-default-300" />
+          )}
         </div>
-
-        <p className="mt-2 text-xs text-default-500">
-          {isLogo
-            ? "建议上传方形图片，系统会统一转换为 96x96 PNG"
-            : "建议上传方形图片，系统会统一转换为 64x64 PNG"}
-        </p>
-
-        {renderBrandPreview(key)}
+        <Button
+          leftSection={<Upload size={13} />}
+          loading={uploading}
+          size="xs"
+          variant="default"
+          onClick={() => triggerBrandFilePicker(key)}
+        >
+          {value.length > 0 ? "替换" : "上传"}
+        </Button>
+        <Button
+          color="gray"
+          disabled={value.length === 0 || uploading}
+          size="xs"
+          variant="subtle"
+          onClick={() => clearBrandAsset(key)}
+        >
+          清除
+        </Button>
       </div>
     );
   };
 
   // 渲染不同类型的配置项
   const renderConfigItem = (item: ConfigItem) => {
-    const isChanged =
-      hasChanges && configs[item.key] !== originalConfigs[item.key];
-
     switch (item.type) {
       case "bg_image":
         return (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="wallpaper-grid">
             {renderBgImageUploader("app_bg_image", "默认背景", ImageIcon)}
             {renderBgImageUploader("app_bg_image_light", "浅色模式", Sun)}
             {renderBgImageUploader("app_bg_image_dark", "深色模式", Moon)}
@@ -979,7 +915,7 @@ export default function ConfigPage() {
 
       case "input": {
         if (isBrandPreviewKey(item.key)) {
-          return renderBrandAssetUploader(item.key, isChanged);
+          return renderBrandAssetUploader(item.key);
         }
 
         const isTunnelQualityInterval =
@@ -994,12 +930,7 @@ export default function ConfigPage() {
 
         return (
           <TextInput
-            classNames={{
-              input: "text-sm",
-              wrapper: isChanged
-                ? "border-warning-line data-[hover=true]:border-warning"
-                : "",
-            }}
+            aria-label={item.label}
             error={intervalError || undefined}
             max={
               isTunnelQualityInterval
@@ -1012,8 +943,12 @@ export default function ConfigPage() {
                 : undefined
             }
             placeholder={item.placeholder}
-            rightSection={isTunnelQualityInterval ? "秒" : undefined}
-            size="md"
+            rightSection={
+              isTunnelQualityInterval ? (
+                <span className="text-xs text-default-500">秒</span>
+              ) : undefined
+            }
+            size="sm"
             step={isTunnelQualityInterval ? 1 : undefined}
             type={isTunnelQualityInterval ? "number" : "text"}
             value={intervalValue}
@@ -1025,14 +960,8 @@ export default function ConfigPage() {
       case "switch":
         return (
           <Switch
+            aria-label={item.label}
             checked={configs[item.key] === "true"}
-            label={
-              <>
-                <span className="text-sm text-default-700">
-                  {configs[item.key] === "true" ? "已启用" : "已禁用"}
-                </span>
-              </>
-            }
             size="sm"
             onChange={({ currentTarget: { checked: checked } }) =>
               handleConfigChange(item.key, checked ? "true" : "false")
@@ -1050,13 +979,9 @@ export default function ConfigPage() {
                 description: option.description,
               })) || [],
             )}
-            classNames={{
-              input: isChanged
-                ? "border-warning-line data-[hover=true]:border-warning"
-                : "",
-            }}
+            aria-label={item.label}
             placeholder="请选择验证码类型"
-            size="md"
+            size="sm"
             value={configs[item.key] ? configs[item.key] : null}
             onChange={(value) => {
               const selectedKey = value as string;
@@ -1166,12 +1091,17 @@ export default function ConfigPage() {
     return (
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-medium text-default-700">{label}</span>
-          <div className="flex items-center gap-2">
+          <span className="text-[13px] font-medium text-default-700">
+            {label}
+            <span className="ml-2 text-xs font-normal text-default-500">
+              {selectedTypes.length} / {BACKUP_TYPE_VALUES.length}
+            </span>
+          </span>
+          <div className="flex items-center gap-1">
             <Button
               color="gray"
               size="xs"
-              variant="light"
+              variant="subtle"
               onClick={() =>
                 setTypes(allSelected ? [] : [...BACKUP_TYPE_VALUES])
               }
@@ -1189,7 +1119,7 @@ export default function ConfigPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
           {BACKUP_TYPE_OPTIONS.map((option) => {
             const isSelected = selectedTypes.includes(option.value);
 
@@ -1197,24 +1127,18 @@ export default function ConfigPage() {
               <button
                 key={option.value}
                 aria-pressed={isSelected}
-                className={`w-full px-4 py-3 rounded-lg border transition-all duration-200 cursor-pointer text-left ${
-                  isSelected
-                    ? "bg-primary-soft border-primary-line shadow-sm"
-                    : "bg-content1 border-divider hover:border-primary-line hover:shadow-sm"
-                }`}
+                className="backup-type"
                 type="button"
                 onClick={() => toggleTypeSelection(option.value, setTypes)}
               >
-                <div className="flex items-center gap-3">
-                  <Checkbox checked={isSelected} size="md" />
-                  <span
-                    className={`font-medium ${
-                      isSelected ? "text-default-900" : "text-default-700"
-                    }`}
-                  >
-                    {option.label}
-                  </span>
-                </div>
+                <Checkbox
+                  aria-hidden
+                  readOnly
+                  checked={isSelected}
+                  size="xs"
+                  tabIndex={-1}
+                />
+                {option.label}
               </button>
             );
           })}
@@ -1274,6 +1198,26 @@ export default function ConfigPage() {
     };
   }, [loading]);
 
+  // On narrow screens the section nav scrolls sideways; keep the active
+  // item in view without touching the page's own scroll position.
+  useEffect(() => {
+    const nav = navRef.current;
+
+    if (!nav || nav.scrollWidth <= nav.clientWidth) return;
+    const item = nav.querySelector<HTMLElement>(
+      `[data-section="${activeSection}"]`,
+    );
+
+    if (!item) return;
+    nav.scrollTo({
+      left: Math.max(
+        0,
+        item.offsetLeft - (nav.clientWidth - item.offsetWidth) / 2,
+      ),
+      behavior: "smooth",
+    });
+  }, [activeSection, loading]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -1284,21 +1228,27 @@ export default function ConfigPage() {
 
   const renderItemRow = (item: ConfigItem, force = false) => {
     if (!force && !shouldShowItem(item)) return null;
+    const changed =
+      hasChanges && configs[item.key] !== originalConfigs[item.key];
+    const description = isBrandPreviewKey(item.key) ? (
+      <>
+        {item.description}
+        <span className="mt-0.5 block">{renderBrandHint(item.key)}</span>
+      </>
+    ) : (
+      item.description
+    );
 
     return (
-      <div
+      <SettingsRow
         key={item.key}
-        className="settings-row"
-        data-wide={item.type === "bg_image" || undefined}
+        changed={changed}
+        description={description}
+        label={item.label}
+        wide={item.type === "bg_image"}
       >
-        <div>
-          <p className="settings-row-label">{item.label}</p>
-          {item.description && (
-            <p className="settings-row-desc">{item.description}</p>
-          )}
-        </div>
-        <div className="min-w-0">{renderConfigItem(item)}</div>
-      </div>
+        {renderConfigItem(item)}
+      </SettingsRow>
     );
   };
   const itemsFor = (keys: string[]) =>
@@ -1320,69 +1270,56 @@ export default function ConfigPage() {
   };
 
   return (
-    <div className="config-layout">
-      <nav aria-label="设置分区" className="config-nav">
+    <div className="settings-layout">
+      <nav ref={navRef} aria-label="设置分区" className="settings-nav">
         {CONFIG_SECTIONS.map((section) => (
           <button
             key={section.id}
-            className="config-nav-item"
+            aria-current={activeSection === section.id ? "true" : undefined}
+            className="settings-nav-item"
             data-active={activeSection === section.id || undefined}
+            data-section={section.id}
             type="button"
             onClick={() => scrollToSection(section.id)}
           >
-            <section.icon size={15} />
+            <section.icon size={14} />
             {section.title}
           </button>
         ))}
       </nav>
 
-      <div className="min-w-0 space-y-5">
-        <Card className="config-section" id="config-access">
-          <CardHeader className="pb-3">
-            <SectionHeader
-              description="面板访问地址、登录验证与转发安全策略"
-              icon={ShieldCheck}
-              title="访问与安全"
-            />
-          </CardHeader>
-          <CardBody className="pt-0">
-            {itemsFor(CONFIG_SECTION_KEYS[0].keys).map((item) =>
-              renderItemRow(item),
-            )}
-            {ungroupedItems.map((item) => renderItemRow(item))}
-          </CardBody>
-        </Card>
+      <div className="settings-column">
+        <SettingsSection
+          description="面板访问地址、登录验证与转发安全策略"
+          id="config-access"
+          title="访问与安全"
+        >
+          {itemsFor(CONFIG_SECTION_KEYS[0].keys).map((item) =>
+            renderItemRow(item),
+          )}
+          {ungroupedItems.map((item) => renderItemRow(item))}
+        </SettingsSection>
 
-        <Card className="config-section" id="config-appearance">
-          <CardHeader className="pb-3">
-            <SectionHeader
-              description="界面主题、背景壁纸与页面展示方式"
-              icon={Palette}
-              title="外观"
-            />
-          </CardHeader>
-          <CardBody className="pt-0">
-            <ThemeSettings />
-            {itemsFor(CONFIG_SECTION_KEYS[1].keys).map((item) =>
-              renderItemRow(item),
-            )}
-          </CardBody>
-        </Card>
+        <SettingsSection
+          description="界面主题、背景壁纸与页面展示方式"
+          id="config-appearance"
+          title="外观"
+        >
+          <ThemeSettings />
+          {itemsFor(CONFIG_SECTION_KEYS[1].keys).map((item) =>
+            renderItemRow(item),
+          )}
+        </SettingsSection>
 
-        <Card className="config-section" id="config-monitor">
-          <CardHeader className="pb-3">
-            <SectionHeader
-              description="隧道质量探测与监控数据保留"
-              icon={Activity}
-              title="监控"
-            />
-          </CardHeader>
-          <CardBody className="pt-0">
-            {itemsFor(CONFIG_SECTION_KEYS[2].keys).map((item) =>
-              renderItemRow(item),
-            )}
-          </CardBody>
-        </Card>
+        <SettingsSection
+          description="隧道质量探测与监控数据保留"
+          id="config-monitor"
+          title="监控"
+        >
+          {itemsFor(CONFIG_SECTION_KEYS[2].keys).map((item) =>
+            renderItemRow(item),
+          )}
+        </SettingsSection>
 
         <UpdateSettingsCard
           canTriggerSystemUpgrade={canTriggerSystemUpgrade}
@@ -1406,18 +1343,13 @@ export default function ConfigPage() {
           upgrade={upgrade}
         />
 
-        <Card className="config-section" id="config-brand">
-          <CardHeader className="pb-3">
-            <SectionHeader
-              description="自定义应用名称、Logo、网站图标与页脚版权信息"
-              icon={Brush}
-              title="站点品牌"
-            />
-          </CardHeader>
-          <CardBody className="pt-0">
-            {itemsFor(BRAND_KEYS).map((item) => renderItemRow(item, true))}
-          </CardBody>
-        </Card>
+        <SettingsSection
+          description="自定义应用名称、Logo、网站图标与页脚版权信息"
+          id="config-brand"
+          title="站点品牌"
+        >
+          {itemsFor(BRAND_KEYS).map((item) => renderItemRow(item, true))}
+        </SettingsSection>
 
         <AnnouncementCard
           announcement={announcement}
@@ -1441,17 +1373,22 @@ export default function ConfigPage() {
 
         {hasChanges && (
           <div className="config-save-bar" role="status">
-            <span className="flex items-center gap-2 text-sm font-medium text-warning-ink">
-              <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-warning" />
+            <span className="status-dot" data-tone="warning">
               有未保存的配置修改
             </span>
             <div className="ml-auto flex gap-2">
-              <Button color="gray" variant="subtle" onClick={discardChanges}>
+              <Button
+                color="gray"
+                size="sm"
+                variant="subtle"
+                onClick={discardChanges}
+              >
                 放弃修改
               </Button>
               <Button
-                leftSection={<Save size={15} />}
+                leftSection={<Save size={14} />}
                 loading={saving}
+                size="sm"
                 onClick={handleSave}
               >
                 保存配置

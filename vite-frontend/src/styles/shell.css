@@ -1,0 +1,346 @@
+@layer components {
+  /* ── Console shell ──────────────────────────────────────────────
+     Flush sidebar on the left, a slim sticky header with breadcrumb and
+     global actions, and a flat canvas. No nested trays: cards sit
+     directly on the canvas and are separated by hairlines. */
+  .app-shell {
+    isolation: isolate;
+    background: var(--background);
+  }
+
+  /* Header */
+  .app-header {
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--background) 82%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    backdrop-filter: saturate(180%) blur(12px);
+    z-index: 120;
+  }
+  /* The sidebar runs full height, so the header starts beside it. */
+  .app-shell:not([data-mobile]) .app-header {
+    inset-inline-start: var(--app-shell-navbar-offset, 0px);
+    transition: inset-inline-start 220ms var(--ease-out);
+  }
+  .app-shell[data-mobile] .app-header {
+    padding-top: var(--safe-area-top);
+  }
+  .app-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 100%;
+    padding: 0 20px 0 24px;
+  }
+  .app-shell[data-mobile] .app-header-inner {
+    padding: 0 max(10px, env(safe-area-inset-right)) 0
+      max(12px, env(safe-area-inset-left));
+  }
+  .app-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--default-500);
+  }
+  .app-breadcrumb svg {
+    flex-shrink: 0;
+    color: var(--default-400);
+  }
+  .app-breadcrumb-current {
+    color: var(--foreground);
+    font-weight: 550;
+    white-space: nowrap;
+  }
+  .app-quick-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 220px;
+    height: 30px;
+    padding: 0 6px 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--content1);
+    color: var(--default-500);
+    font-size: 13px;
+    transition:
+      border-color var(--duration-fast) ease,
+      color var(--duration-fast) ease;
+  }
+  .app-quick-search:hover {
+    border-color: var(--border-strong);
+    color: var(--default-700);
+  }
+  .app-quick-search span {
+    flex: 1;
+    text-align: left;
+  }
+  .app-quick-search .mantine-Kbd-root {
+    border-bottom-width: 1px;
+    background: var(--content2);
+  }
+  .app-user-menu {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin-left: 2px;
+    border-radius: 999px;
+    transition: box-shadow var(--duration-fast) ease;
+  }
+  .app-user-menu:hover {
+    box-shadow: 0 0 0 3px var(--default-soft);
+  }
+
+  /* Sidebar */
+  .app-navbar {
+    display: flex;
+    flex-direction: column;
+    padding: 0 10px 14px;
+    border-right: 1px solid var(--border);
+    background: var(--sidebar);
+  }
+  .app-shell:not([data-mobile]) .app-navbar {
+    top: 0;
+    height: 100dvh;
+    z-index: 130;
+  }
+  .app-shell[data-mobile] .app-navbar {
+    z-index: 140;
+    box-shadow: var(--elevation-3);
+  }
+  .app-nav-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 135;
+    border: 0;
+    background: rgb(0 0 0 / 0.32);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    animation: fade-in var(--duration-base) ease backwards;
+  }
+  .app-brand-row {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    height: var(--header-height);
+    padding: 0 6px;
+  }
+  .app-shell[data-compact] .app-brand-row {
+    justify-content: center;
+    padding: 0;
+  }
+  .app-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+  .app-brand-mark {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    color: #fff;
+    background: var(--mantine-primary-color-filled);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+  }
+  .app-brand-name {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .app-nav-scroll {
+    margin: 6px -10px 0;
+    padding: 0 10px;
+  }
+  .app-nav-scroll .mantine-ScrollArea-viewport {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+  }
+  .app-nav-group + .app-nav-group {
+    margin-top: 14px;
+  }
+  .app-nav-heading {
+    padding: 0 8px 4px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--default-500);
+  }
+  .app-nav-item {
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    color: var(--default-700);
+    font-size: 13.5px;
+    transition:
+      background-color var(--duration-fast) ease,
+      color var(--duration-fast) ease;
+  }
+  .app-nav-item .mantine-NavLink-label {
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+  .app-nav-item .mantine-NavLink-section {
+    margin-inline-end: 10px;
+    color: var(--default-500);
+  }
+  .app-nav-item:where(:not([data-active], [data-disabled])):hover {
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    color: var(--foreground);
+  }
+  .app-nav-item:where(:not([data-active], [data-disabled])):hover
+    .mantine-NavLink-section {
+    color: var(--default-700);
+  }
+  .app-nav-item[data-active] {
+    background: var(--content1);
+    color: var(--foreground);
+    box-shadow:
+      0 0 0 1px var(--border),
+      0 1px 2px rgb(15 17 21 / 0.04);
+  }
+  .app-nav-item[data-active]:hover {
+    background: var(--content1);
+  }
+  [data-mantine-color-scheme="dark"] .app-nav-item[data-active] {
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+    box-shadow: none;
+  }
+  .app-nav-item[data-active] .mantine-NavLink-section {
+    color: var(--mantine-primary-color-filled);
+  }
+  .app-shell[data-compact] .app-nav-item {
+    justify-content: center;
+    width: 40px;
+    height: 36px;
+    margin: 0 auto;
+    padding: 0;
+  }
+  .app-shell[data-compact] .app-nav-item .mantine-NavLink-section {
+    margin: 0;
+  }
+  .app-sidebar-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 4px 0;
+    border-top: 1px solid var(--border);
+  }
+  .app-shell[data-compact] .app-sidebar-footer {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .app-version {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 8px;
+    min-width: 0;
+  }
+  .app-version-number {
+    font-size: 11.5px;
+    color: var(--default-500);
+    font-family: var(--mantine-font-family-monospace);
+  }
+  .app-version-powered {
+    font-size: 11.5px;
+    color: var(--default-400);
+  }
+
+  /* Canvas */
+  .app-main {
+    min-height: 100dvh;
+  }
+  .app-content {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 28px 32px 56px;
+  }
+  .app-page-heading {
+    margin-bottom: 20px;
+    animation: fade-in var(--duration-base) ease backwards;
+  }
+  .app-page-heading h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.018em;
+  }
+  .app-page-description {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--default-500);
+  }
+  .app-route {
+    min-width: 0;
+    animation: fade-in var(--duration-base) ease backwards;
+  }
+
+  /* Quick search dialog */
+  .app-quick-results {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 360px;
+    margin-top: 10px;
+    overflow-y: auto;
+  }
+  .app-quick-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    transition: background-color var(--duration-fast) ease;
+  }
+  .app-quick-item[data-selected] {
+    background: var(--content2);
+  }
+  .app-quick-enter {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--default-400);
+    opacity: 0;
+  }
+  .app-quick-item[data-selected] .app-quick-enter {
+    opacity: 1;
+  }
+
+  /* Custom wallpapers keep the flat canvas readable. */
+  .has-custom-bg .app-shell,
+  .has-custom-bg .app-main {
+    background: transparent;
+  }
+  .has-custom-bg .app-navbar {
+    background: color-mix(in srgb, var(--sidebar) 86%, transparent);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
+
+  @media (max-width: 62em) {
+    .app-content {
+      padding: 24px 20px 48px;
+    }
+  }
+  @media (max-width: 47.99em) {
+    .app-content {
+      padding: 16px max(12px, env(safe-area-inset-left))
+        calc(32px + var(--safe-area-bottom))
+        max(12px, env(safe-area-inset-right));
+    }
+    .app-page-heading {
+      margin-bottom: 14px;
+    }
+    .app-page-heading h1 {
+      font-size: 19px;
+    }
+  }
+}

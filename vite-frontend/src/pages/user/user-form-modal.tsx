@@ -2,7 +2,6 @@ import type * as React from "react";
 
 import {
   Alert,
-  Badge,
   Button,
   Group,
   MultiSelect,
@@ -66,13 +65,11 @@ export function UserFormModal({
   userSubmitWarning,
 }: UserFormModalProps) {
   return (
-    <Modal opened={isUserModalOpen} size="xl" onClose={onUserModalClose}>
+    <Modal opened={isUserModalOpen} size="lg" onClose={onUserModalClose}>
       <ModalContent>
-        <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold">
-            {isEdit ? "编辑用户" : "新增用户"}
-          </h2>
-          <p className="text-small text-default-500">
+        <ModalHeader>
+          <h2>{isEdit ? "编辑用户" : "新增用户"}</h2>
+          <p>
             {isEdit
               ? "修改账号、配额与有效期，密码留空则保持不变"
               : "创建面板账号并设置配额与有效期"}
@@ -180,45 +177,45 @@ export function UserFormModal({
               ((editingUser.dailyQuotaGB ?? 0) > 0 ||
                 (editingUser.monthlyQuotaGB ?? 0) > 0 ||
                 (editingUser.disabledByQuota ?? 0) > 0) && (
-                <div className="space-y-3 rounded-[10px] border border-divider bg-default-soft p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground">
+                <div className="space-y-3 rounded-[10px] border border-divider p-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-[13px] font-semibold text-foreground">
                         当前配额状态
                       </h3>
-                      <p className="text-xs text-default-500">
+                      <p className="mt-0.5 text-xs text-default-500">
                         配额超额后会自动暂停该用户的转发，重置后可恢复
                       </p>
                     </div>
                     {editingUser.disabledByQuota ? (
-                      <Badge color="red" size="sm" variant="light">
+                      <span className="status-dot shrink-0" data-tone="danger">
                         配额已触发禁用
-                      </Badge>
+                      </span>
                     ) : (
-                      <Badge color="teal" size="sm" variant="light">
+                      <span className="status-dot shrink-0" data-tone="success">
                         配额正常
-                      </Badge>
+                      </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div className="rounded-lg bg-content1 p-3">
-                      <div className="text-xs text-default-500">每日用量</div>
-                      <div className="mt-1 text-sm font-semibold text-foreground">
+                  <dl className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <dt className="text-default-500">每日用量</dt>
+                      <dd className="mt-0.5 text-[13px] font-medium tabular-nums text-foreground">
                         {formatFlow(Number(editingUser.dailyUsedBytes ?? 0))} /{" "}
                         {formatQuotaLimit(editingUser.dailyQuotaGB)}
-                      </div>
+                      </dd>
                     </div>
-                    <div className="rounded-lg bg-content1 p-3">
-                      <div className="text-xs text-default-500">每月用量</div>
-                      <div className="mt-1 text-sm font-semibold text-foreground">
+                    <div>
+                      <dt className="text-default-500">每月用量</dt>
+                      <dd className="mt-0.5 text-[13px] font-medium tabular-nums text-foreground">
                         {formatFlow(Number(editingUser.monthlyUsedBytes ?? 0))}{" "}
                         / {formatQuotaLimit(editingUser.monthlyQuotaGB)}
-                      </div>
+                      </dd>
                     </div>
-                  </div>
+                  </dl>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 border-t border-divider pt-3">
                     <Button
                       color="orange"
                       loading={quotaResetLoading}

@@ -236,14 +236,23 @@ export default function ForwardPage() {
   //   const isMobile = useMobileBreakpoint();
   // searchKeyword removed
 
-  // 显示模式状态 - 从localStorage读取，默认为平铺显示
+  // 显示模式状态 - 从localStorage读取；未保存时桌面默认列表，窄屏默认卡片
   const [viewMode, setViewMode] = useState<"grouped" | "direct">(() => {
+    const fallback: "grouped" | "direct" =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(min-width: 64em)").matches
+        ? "grouped"
+        : "direct";
+
     try {
       const savedMode = localStorage.getItem("forward-view-mode");
 
-      return (savedMode as "grouped" | "direct") || "direct";
+      return savedMode === "grouped" || savedMode === "direct"
+        ? savedMode
+        : fallback;
     } catch {
-      return "direct";
+      return fallback;
     }
   });
 
@@ -2186,7 +2195,7 @@ export default function ForwardPage() {
       />
 
       {forwards.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
+        <div className="forward-summary">
           <span>
             共{" "}
             <span className="font-semibold text-foreground">
@@ -2196,15 +2205,18 @@ export default function ForwardPage() {
             {sortedForwards.length !== forwards.length &&
               `（已筛选，全部 ${forwards.length} 条）`}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+          <span className="status-dot" data-tone="success">
             运行中 {runningCount}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-default-400" />
+          <span className="status-dot">
             未运行 {sortedForwards.length - runningCount}
           </span>
-          <span>累计流量 {formatFlow(totalFlow)}</span>
+          <span>
+            累计流量{" "}
+            <span className="font-medium text-foreground">
+              {formatFlow(totalFlow)}
+            </span>
+          </span>
         </div>
       )}
 
@@ -2323,23 +2335,21 @@ export default function ForwardPage() {
             }
           >
             {viewMode === "grouped" ? (
-              <div className="forward-group">
-                <div className="forward-list">
-                  <ForwardListHeader
-                    isAllSelected={isAllSelected}
-                    isIndeterminate={isIndeterminate}
-                    onToggleAll={handleSelectAllToggle}
+              <div className="forward-table forward-list">
+                <ForwardListHeader
+                  isAllSelected={isAllSelected}
+                  isIndeterminate={isIndeterminate}
+                  onToggleAll={handleSelectAllToggle}
+                />
+                {sortedForwards.map((forward) => (
+                  <SortableForwardRow
+                    key={forward.id}
+                    showTunnel
+                    forward={forward}
+                    handlers={forwardHandlers}
+                    selected={selectedIds.has(forward.id)}
                   />
-                  {sortedForwards.map((forward) => (
-                    <SortableForwardRow
-                      key={forward.id}
-                      showTunnel
-                      forward={forward}
-                      handlers={forwardHandlers}
-                      selected={selectedIds.has(forward.id)}
-                    />
-                  ))}
-                </div>
+                ))}
               </div>
             ) : (
               <div className={FORWARD_CARD_GRID_CLASS}>
@@ -2357,7 +2367,7 @@ export default function ForwardPage() {
           </SortableContext>
         </DndContext>
       ) : (
-        <div className="space-y-6">
+        <div className="forward-board">
           {groupedForwards.map((group) => {
             const isSelfGroup =
               isAdmin && tokenUserId !== null && group.userId === tokenUserId;
@@ -2369,26 +2379,24 @@ export default function ForwardPage() {
             return (
               <section
                 key={`forward-group-${group.userId}-${group.userName}`}
-                className="space-y-3"
+                className="forward-owner"
               >
-                <div className="flex items-center justify-between gap-3 px-1">
-                  <div className="flex min-w-0 items-center gap-2.5">
+                <div className="forward-owner-head">
+                  <div className="flex min-w-0 items-center gap-2">
                     <Avatar
                       color="initials"
                       name={group.userName}
                       radius="xl"
-                      size={28}
+                      size={22}
                     />
-                    <span className="truncate text-sm font-semibold text-foreground">
-                      {group.userName}
-                    </span>
+                    <span className="forward-owner-name">{group.userName}</span>
                     {isSelfGroup && (
-                      <Badge size="sm" variant="light">
+                      <Badge size="xs" variant="light">
                         管理员本人
                       </Badge>
                     )}
                   </div>
-                  <span className="shrink-0 text-xs text-default-500">
+                  <span className="forward-owner-count">
                     {groupForwardCount} 条规则
                   </span>
                 </div>
@@ -2407,7 +2415,7 @@ export default function ForwardPage() {
                     )}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="space-y-3">
+                    <div className="forward-owner-groups">
                       {group.tunnels.map((tunnel) => {
                         const tunnelSortableForwardIds = tunnel.items
                           .map((item) => item.id)
@@ -2467,7 +2475,7 @@ export default function ForwardPage() {
                                 }
                               >
                                 {viewMode === "grouped" ? (
-                                  <div className="forward-list">
+                                  <div className="forward-table forward-list">
                                     <ForwardListHeader
                                       isAllSelected={
                                         tunnelSortableForwardIds.length > 0 &&
@@ -2491,9 +2499,7 @@ export default function ForwardPage() {
                                     ))}
                                   </div>
                                 ) : (
-                                  <div
-                                    className={`${FORWARD_CARD_GRID_CLASS} p-3`}
-                                  >
+                                  <div className={FORWARD_CARD_GRID_CLASS}>
                                     {tunnel.items.map((forward) =>
                                       forward && forward.id ? (
                                         <SortableForwardCard

@@ -1,0 +1,273 @@
+@layer components {
+  /* Shared by the group, limit and panel-sharing pages. */
+  .access-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: 12px;
+  }
+  .access-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* Section heading row + one flat list surface (no card around cards). */
+  .access-section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .access-section-head .section-label {
+    margin: 0;
+  }
+  .access-section-desc {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .access-list {
+    min-width: 0;
+    overflow: hidden;
+    background: var(--content1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--elevation-1);
+  }
+  .access-list-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 8px 8px 8px 14px;
+    transition: background-color var(--duration-fast) ease;
+  }
+  .access-list-row + .access-list-row {
+    border-top: 1px solid var(--border);
+  }
+  .access-list-row:hover {
+    background: var(--content2);
+  }
+  .access-row-date {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--default-400);
+    font-variant-numeric: tabular-nums;
+  }
+  .access-empty {
+    display: grid;
+    place-items: center;
+    min-height: 96px;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--default-500);
+    border: 1px dashed var(--border-strong);
+    border-radius: 10px;
+  }
+  @media (max-width: 48em) {
+    .access-row-date {
+      display: none;
+    }
+    .access-list-row {
+      align-items: flex-start;
+    }
+  }
+
+  /* Group page: grant bar sits as the list's header row. */
+  .group-grant-bar {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--content2);
+    border-bottom: 1px solid var(--border);
+  }
+  .group-grant-arrow {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--default-500);
+    white-space: nowrap;
+  }
+  @media (min-width: 48em) {
+    .group-grant-bar {
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+      align-items: center;
+    }
+    .group-grant-arrow {
+      display: inline-flex;
+    }
+  }
+
+  /* Limit page. */
+  .limit-card {
+    gap: 10px;
+    padding: 12px 16px 14px;
+  }
+  .limit-card[data-disabled] .limit-card-speed {
+    color: var(--default-500);
+  }
+  .limit-card-speed {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+    font-variant-numeric: tabular-nums;
+  }
+  .limit-speed-unit {
+    margin-left: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--default-500);
+  }
+  .limit-speed-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--foreground);
+    font-variant-numeric: tabular-nums;
+  }
+  .access-table {
+    container: access-table / inline-size;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--content1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--elevation-1);
+    font-size: 13px;
+  }
+  .access-table-head {
+    display: none;
+  }
+  .access-table-row {
+    transition: background-color var(--duration-fast) ease;
+  }
+  .access-table-row + .access-table-row {
+    border-top: 1px solid var(--border);
+  }
+  .access-table-row:hover {
+    background: var(--content2);
+  }
+  .limit-table .access-table-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name actions"
+      "speed status"
+      "bytes status";
+    align-items: center;
+    gap: 2px 12px;
+    padding: 10px 8px 10px 14px;
+  }
+  .limit-cell-name {
+    grid-area: name;
+    min-width: 0;
+  }
+  .limit-cell-speed {
+    grid-area: speed;
+  }
+  .limit-cell-bytes {
+    grid-area: bytes;
+    font-size: 12px;
+    color: var(--default-500);
+    font-variant-numeric: tabular-nums;
+  }
+  .limit-cell-status {
+    grid-area: status;
+    justify-self: end;
+  }
+  .limit-cell-actions {
+    grid-area: actions;
+    justify-self: end;
+  }
+  @container access-table (min-width: 600px) {
+    .limit-table .access-table-head,
+    .limit-table .access-table-row {
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) 150px 130px 100px 80px;
+      grid-template-areas: "name speed bytes status actions";
+      align-items: center;
+      column-gap: 16px;
+    }
+    .limit-table .access-table-row {
+      min-height: 48px;
+      padding: 6px 8px 6px 16px;
+    }
+    .limit-table .access-table-head {
+      height: 36px;
+      padding: 0 8px 0 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--default-500);
+      background: var(--content2);
+      border-bottom: 1px solid var(--border);
+    }
+    .limit-cell-status {
+      justify-self: start;
+    }
+  }
+
+  /* Panel sharing. */
+  .share-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  }
+  .share-card {
+    gap: 12px;
+    padding: 14px 16px 12px;
+  }
+  .share-card .access-actions,
+  .limit-card .access-actions {
+    margin: -4px -8px -4px 0;
+  }
+  .share-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+    font-size: 12px;
+  }
+  .share-meta dt {
+    color: var(--default-500);
+  }
+  .share-meta dd {
+    min-width: 0;
+    margin-top: 1px;
+    color: var(--default-800);
+  }
+  .share-meta-wide {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  .share-token {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .share-token .mono-value {
+    font-size: 12px;
+    color: var(--default-600);
+  }
+  .share-bindings {
+    max-height: 168px;
+    margin-top: auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .share-bindings li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 6px 0;
+  }
+  .share-bindings li + li {
+    border-top: 1px solid var(--border);
+  }
+}

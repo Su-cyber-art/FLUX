@@ -1,0 +1,401 @@
+@layer components {
+  /* --- Summary line above the list --- */
+  .tunnel-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    margin: -4px 0 14px;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .tunnel-summary strong {
+    font-weight: 600;
+    color: var(--foreground);
+  }
+  .tunnel-summary .status-dot {
+    font-size: 12px;
+  }
+
+  /* --- Shared bits --- */
+  .tunnel-name {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tunnel-meta {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    margin: 2px 0 0;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--default-500);
+    white-space: nowrap;
+  }
+  .tunnel-meta > span + span::before {
+    content: "·";
+    margin: 0 6px;
+    color: var(--default-400);
+  }
+  .tunnel-meta .mono-value {
+    font-size: 11.5px;
+    color: var(--default-600);
+  }
+  .tunnel-best-exit {
+    max-width: 100%;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .tunnel-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+  }
+  .tunnel-actions .mantine-ActionIcon-root {
+    color: var(--default-500);
+  }
+  .tunnel-actions .mantine-ActionIcon-root:hover {
+    color: var(--foreground);
+  }
+  .tunnel-drag-handle {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 24px;
+    margin: -2px -6px 0 0;
+    border-radius: 6px;
+    color: var(--default-400);
+    cursor: grab;
+    touch-action: none;
+    opacity: 0.7;
+    transition:
+      background-color var(--duration-fast) ease,
+      color var(--duration-fast) ease,
+      opacity var(--duration-fast) ease;
+  }
+  .tunnel-card:hover .tunnel-drag-handle,
+  .tunnel-drag-handle:focus-visible {
+    opacity: 1;
+  }
+  .tunnel-drag-handle:hover {
+    color: var(--default-600);
+    background: var(--default-soft);
+  }
+  .tunnel-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  /* Node label inside a route: status dot + name (+N). */
+  .tunnel-node {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 12.5px;
+    color: var(--default-800);
+  }
+  .tunnel-node::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--default-400);
+  }
+  .tunnel-node[data-online]::before {
+    background: var(--success);
+  }
+  .tunnel-node-empty {
+    color: var(--default-400);
+  }
+  .tunnel-node-empty::before {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--default-400);
+  }
+  .tunnel-node-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tunnel-node-more {
+    flex: none;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary-ink);
+  }
+  .tunnel-stage-role {
+    flex: none;
+    font-size: 11px;
+    color: var(--default-500);
+    white-space: nowrap;
+  }
+
+  /* --- Card route: role caption above node, chevron between stages --- */
+  .tunnel-path {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-width: 0;
+    margin: 0;
+    padding: 9px 0 0;
+    list-style: none;
+    border-top: 1px dashed var(--border);
+  }
+  .tunnel-stage {
+    position: relative;
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .tunnel-stage + .tunnel-stage {
+    padding-left: 22px;
+  }
+  .tunnel-stage + .tunnel-stage::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    width: 6px;
+    height: 6px;
+    border-top: 1.5px solid var(--default-400);
+    border-right: 1.5px solid var(--default-400);
+    transform: rotate(45deg);
+  }
+  .tunnel-stage:only-child {
+    flex: 0 1 auto;
+  }
+
+  /* --- Card view --- */
+  .tunnel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: 12px;
+  }
+  .tunnel-card {
+    gap: 10px;
+    height: 100%;
+    padding: 14px 14px 0;
+  }
+  .tunnel-card[data-disabled] .tunnel-path,
+  .tunnel-card[data-disabled] .tunnel-name {
+    opacity: 0.6;
+  }
+  .tunnel-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+  }
+  .tunnel-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin: auto -8px 0;
+    padding: 6px 4px 6px 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* --- List route: one line with muted role prefixes --- */
+  .tunnel-path-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 0;
+    min-width: 0;
+  }
+  .tunnel-inline-stage {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .tunnel-inline-arrow {
+    flex: none;
+    margin: 0 4px;
+    color: var(--default-400);
+  }
+
+  /* --- List view: data table that stacks when narrow --- */
+  .tunnel-list {
+    container: tunnel-list / inline-size;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--content1);
+    box-shadow: var(--elevation-1);
+  }
+  .tunnel-list-head {
+    display: none;
+  }
+  .tunnel-row {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "lead name status"
+      "lead route actions";
+    align-items: center;
+    gap: 6px 10px;
+    padding: 10px 8px 10px 14px;
+    font-size: 13px;
+    background: var(--content1);
+    transition: background-color var(--duration-fast) ease;
+  }
+  .tunnel-row + .tunnel-row {
+    border-top: 1px solid var(--border);
+  }
+  .tunnel-row:hover {
+    background: var(--content2);
+  }
+  .tunnel-row[data-selected] {
+    background: var(--primary-soft);
+  }
+  .tunnel-cell-lead {
+    grid-area: lead;
+    align-self: start;
+    padding-top: 2px;
+  }
+  .tunnel-cell-name {
+    grid-area: name;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .tunnel-row .tunnel-name {
+    font-size: 13px;
+    font-weight: 550;
+  }
+  .tunnel-cell-route {
+    grid-area: route;
+    min-width: 0;
+  }
+  .tunnel-cell-ratio {
+    display: none;
+  }
+  .tunnel-cell-status {
+    grid-area: status;
+    justify-self: end;
+  }
+  .tunnel-cell-actions {
+    grid-area: actions;
+  }
+  @container tunnel-list (min-width: 760px) {
+    .tunnel-list-head,
+    .tunnel-row {
+      grid-template-columns:
+        22px minmax(170px, 1fr) minmax(0, 2fr) 64px 64px 108px;
+      grid-template-areas: "lead name route ratio status actions";
+      column-gap: 16px;
+    }
+    .tunnel-row {
+      min-height: 48px;
+      padding-block: 6px;
+    }
+    .tunnel-list-head {
+      display: grid;
+      align-items: center;
+      height: 36px;
+      padding: 0 8px 0 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--default-500);
+      background: var(--content2);
+      border-bottom: 1px solid var(--border);
+    }
+    .tunnel-list-head > div {
+      white-space: nowrap;
+    }
+    .tunnel-cell-lead {
+      align-self: center;
+      padding-top: 0;
+    }
+    .tunnel-cell-ratio {
+      grid-area: ratio;
+      display: block;
+    }
+    .tunnel-cell-status {
+      justify-self: start;
+    }
+    .tunnel-row .tunnel-meta-ratio {
+      display: none;
+    }
+    .tunnel-list-head .tunnel-cell-actions {
+      text-align: right;
+      padding-right: 6px;
+    }
+  }
+
+  /* --- Tunnel form modal --- */
+  .tunnel-hops {
+    display: grid;
+    gap: 10px;
+  }
+  .tunnel-hop {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 14px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--content2);
+  }
+  .tunnel-hop-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: -2px 0 -4px;
+  }
+  .tunnel-hop-index {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--primary-soft);
+    color: var(--primary-ink);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tunnel-hop-title {
+    font-size: 13px;
+    font-weight: 550;
+    color: var(--foreground);
+  }
+  .tunnel-form-empty {
+    margin: 0;
+    padding: 18px 12px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: var(--default-500);
+    text-align: center;
+  }
+  .tunnel-form-advanced {
+    margin-top: 16px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+  }
+  .tunnel-form-advanced .mantine-Accordion-control {
+    padding-inline: 0;
+  }
+  .tunnel-form-advanced .mantine-Accordion-content {
+    padding-inline: 0;
+  }
+}

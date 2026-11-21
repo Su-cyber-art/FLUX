@@ -6,7 +6,7 @@ import type {
   ServiceMonitorResultApiItem,
 } from "@/api/types";
 
-import { ActionIcon, Badge, Tooltip as MantineTooltip } from "@mantine/core";
+import { ActionIcon, Tooltip as MantineTooltip } from "@mantine/core";
 import { Activity, ArrowLeft, Server } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -24,8 +24,7 @@ import {
 import { useChartPalette } from "@/components/chart-theme";
 import { confirmAction } from "@/components/confirm-host";
 import { EmptyStateCard } from "@/components/page-state";
-import { IconTile } from "@/components/ui/icon-tile";
-import { uiColor } from "@/components/ui/shared";
+import { DistroIcon, parseDistroFromVersion } from "@/components/distro-icon";
 import toast from "@/lib/notifications";
 import {
   MonitorEditModal,
@@ -47,7 +46,23 @@ import {
 import { RealtimeMetricGrid } from "@/pages/node/realtime-metric-grid";
 import { ServiceMonitorPanel } from "@/pages/node/service-monitor-panel";
 
-/* ─── Memoized Node Metrics Chart sub-component ─────────────────── */
+function RealtimeStatus({
+  wsConnected,
+  wsConnecting,
+}: {
+  wsConnected: boolean;
+  wsConnecting: boolean;
+}) {
+  return (
+    <span
+      className="status-dot"
+      data-tone={wsConnected ? "success" : wsConnecting ? "warning" : undefined}
+    >
+      {wsConnected ? "实时已连接" : wsConnecting ? "实时连接中" : "实时未连接"}
+    </span>
+  );
+}
+
 const DEFAULT_SERVICE_MONITOR_LIMITS: ServiceMonitorLimitsApiData = {
   checkerScanIntervalSec: 1,
   minIntervalSec: 1,
@@ -705,7 +720,7 @@ export function MonitorView({
       : serviceMonitors;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {accessDenied && (
         <EmptyStateCard
           description={
@@ -723,34 +738,39 @@ export function MonitorView({
       {/* ====== GRID/LIST VIEW ====== */}
       {!accessDenied && !detailNodeId && (
         <>
-          <div className="flex flex-wrap items-center gap-3 mb-1">
-            <div className="flex items-center gap-2 text-xs text-default-500">
-              <div
-                className={`w-2 h-2 rounded-full ${wsConnected ? "bg-success" : wsConnecting ? "bg-warning" : "bg-default-300"}`}
-              />
-              <span>
-                {wsConnected
-                  ? "实时已连接"
-                  : wsConnecting
-                    ? "实时连接中"
-                    : "实时未连接"}
-              </span>
-            </div>
-            <Badge size="sm" variant="light">
-              节点在线 {onlineNodes.length}/{nodes.length}
-            </Badge>
-            <Badge color="teal" size="sm" variant="light">
-              监控 成功 {monitorSummary.ok} / 失败 {monitorSummary.fail}
-            </Badge>
+          <div className="mon-statusline">
+            <RealtimeStatus
+              wsConnected={wsConnected}
+              wsConnecting={wsConnecting}
+            />
+            <span aria-hidden className="mon-sep" />
+            <span>
+              节点在线{" "}
+              <b>
+                {onlineNodes.length}/{nodes.length}
+              </b>
+            </span>
+            <span>
+              服务监控 成功 <b>{monitorSummary.ok}</b> · 失败{" "}
+              <b className={monitorSummary.fail > 0 ? "text-danger-ink" : ""}>
+                {monitorSummary.fail}
+              </b>
+            </span>
             {monitorSummary.stale > 0 && (
-              <Badge color="orange" size="sm" variant="light">
-                陈旧 {monitorSummary.stale}
-              </Badge>
+              <span className="text-warning-ink">
+                陈旧 <b className="text-warning-ink">{monitorSummary.stale}</b>
+              </span>
             )}
           </div>
 
           {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="mon-matrix">
+              {nodes.length === 0 && (
+                <p className="chart-empty col-span-full rounded-[10px] border border-dashed border-divider">
+                  <Server size={15} />
+                  暂无节点
+                </p>
+              )}
               {nodes.map((node) => {
                 const metric = realtimeNodeMetrics[node.id] || null;
 
@@ -782,63 +802,52 @@ export function MonitorView({
       {!accessDenied && detailNodeId && (
         <>
           {/* Header */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="mon-detail-head">
             <MantineTooltip label="返回总览">
               <ActionIcon
                 aria-label="返回总览"
                 color="gray"
-                size="lg"
+                size="md"
                 variant="default"
                 onClick={() => setDetailNodeId(null)}
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft size={15} />
               </ActionIcon>
             </MantineTooltip>
             <div className="flex min-w-0 items-center gap-2.5">
-              <IconTile
-                size="sm"
-                tone={
-                  detailNode?.connectionStatus === "online"
-                    ? "success"
-                    : "default"
-                }
-              >
-                <Server size={15} />
-              </IconTile>
-              <h2 className="truncate text-base font-semibold text-foreground">
+              {detailNode && (
+                <DistroIcon
+                  className="h-4 w-4 shrink-0 text-default-500"
+                  distro={parseDistroFromVersion(detailNode.version)}
+                />
+              )}
+              <h2 className="mon-detail-title">
                 {detailNode?.name || `节点 #${detailNodeId}`}
               </h2>
-              <Badge
-                color={uiColor(
+              <span
+                className="status-dot"
+                data-tone={
                   detailNode?.connectionStatus === "online"
                     ? "success"
-                    : "danger",
-                )}
-                leftSection={<span className="badge-dot" />}
-                size="xs"
-                variant="light"
+                    : "danger"
+                }
               >
                 {detailNode?.connectionStatus === "online" ? "在线" : "离线"}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-default-500 ml-auto">
-              <div
-                className={`w-2 h-2 rounded-full ${wsConnected ? "bg-success" : wsConnecting ? "bg-warning" : "bg-default-300"}`}
-              />
-              <span>
-                {wsConnected
-                  ? "实时已连接"
-                  : wsConnecting
-                    ? "实时连接中"
-                    : "实时未连接"}
               </span>
+            </div>
+            <div className="mon-statusline ml-auto">
+              <RealtimeStatus
+                wsConnected={wsConnected}
+                wsConnecting={wsConnecting}
+              />
             </div>
           </div>
 
           {/* Realtime KPI cards */}
-          {detailRealtimeMetric && (
-            <RealtimeMetricGrid metric={detailRealtimeMetric} />
-          )}
+          <RealtimeMetricGrid
+            metric={detailRealtimeMetric}
+            online={detailNode?.connectionStatus === "online"}
+          />
 
           {/* Node metrics chart */}
           <NodeMetricsChartCard

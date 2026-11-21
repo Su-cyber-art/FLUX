@@ -225,9 +225,9 @@ export function NodeFormModal({
               <AdvancedSection title="高级配置">
                 <div className="space-y-4 pb-2">
                   {form.forwardMode === "nftables" ? (
-                    <div className="space-y-4 rounded-xl border border-warning-line bg-warning-soft p-4">
+                    <div className="space-y-4 rounded-[10px] border border-border bg-content2 p-4">
                       <div>
-                        <div className="text-sm font-medium text-warning-ink">
+                        <div className="text-[13px] font-medium text-foreground">
                           SSH 配置
                         </div>
                         <div className="text-xs text-default-500">
@@ -441,10 +441,10 @@ export function NodeFormModal({
                   </div>
                   {/* 屏蔽协议 */}
                   <div>
-                    <div className="text-sm font-medium text-default-700 mb-2">
+                    <div className="text-[13px] font-medium text-foreground">
                       屏蔽协议
                     </div>
-                    <div className="text-xs text-default-500 mb-2">
+                    <div className="mb-2 mt-0.5 text-xs text-default-500">
                       开启开关以屏蔽对应协议
                     </div>
                     {protocolControlsDisabled && (
@@ -452,96 +452,41 @@ export function NodeFormModal({
                         {protocolControlsReason}
                       </Alert>
                     )}
-                    <div
-                      className={`grid grid-cols-1 sm:grid-cols-3 gap-3 bg-content1 bg-content1 p-3 rounded-md border border-divider ${protocolControlsDisabled ? "opacity-70" : ""}`}
+                    <ul
+                      className="node-protocol-list"
+                      data-disabled={protocolControlsDisabled || undefined}
                     >
-                      {/* HTTP tile */}
-                      <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-line transition-colors">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CreditCard className="w-4 h-4 text-default-500" />
-                          <div className="text-sm font-medium text-default-700">
-                            HTTP
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-default-500">
-                            禁用/启用
-                          </div>
+                      {(
+                        [
+                          { key: "http", label: "HTTP", icon: CreditCard },
+                          { key: "tls", label: "TLS", icon: Lock },
+                          { key: "socks", label: "SOCKS", icon: Download },
+                        ] as const
+                      ).map(({ key, label, icon: Icon }) => (
+                        <li key={key}>
+                          <Icon className="text-default-500" size={15} />
+                          <span className="font-medium text-foreground">
+                            {label}
+                          </span>
+                          <span className="text-xs text-default-400">
+                            {form[key] === 1 ? "已开启" : "已关闭"}
+                          </span>
                           <Switch
-                            checked={form.http === 1}
+                            aria-label={`屏蔽 ${label}`}
+                            checked={form[key] === 1}
+                            className="ml-auto"
                             disabled={protocolControlsDisabled}
                             size="sm"
                             onChange={({ currentTarget: { checked: v } }) =>
                               setForm((prev) => ({
                                 ...prev,
-                                http: v ? 1 : 0,
+                                [key]: v ? 1 : 0,
                               }))
                             }
                           />
-                        </div>
-                        <div className="mt-1 text-xs text-default-400">
-                          {form.http === 1 ? "已开启" : "已关闭"}
-                        </div>
-                      </div>
-
-                      {/* TLS tile */}
-                      <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-line transition-colors">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Lock className="w-4 h-4 text-default-500" />
-                          <div className="text-sm font-medium text-default-700">
-                            TLS
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-default-500">
-                            禁用/启用
-                          </div>
-                          <Switch
-                            checked={form.tls === 1}
-                            disabled={protocolControlsDisabled}
-                            size="sm"
-                            onChange={({ currentTarget: { checked: v } }) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                tls: v ? 1 : 0,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="mt-1 text-xs text-default-400">
-                          {form.tls === 1 ? "已开启" : "已关闭"}
-                        </div>
-                      </div>
-
-                      {/* SOCKS tile */}
-                      <div className="px-3 py-3 rounded-lg bg-content1 border border-divider hover:border-primary-line transition-colors">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Download className="w-4 h-4 text-default-500" />
-                          <div className="text-sm font-medium text-default-700">
-                            SOCKS
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-default-500">
-                            禁用/启用
-                          </div>
-                          <Switch
-                            checked={form.socks === 1}
-                            disabled={protocolControlsDisabled}
-                            size="sm"
-                            onChange={({ currentTarget: { checked: v } }) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                socks: v ? 1 : 0,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="mt-1 text-xs text-default-400">
-                          {form.socks === 1 ? "已开启" : "已关闭"}
-                        </div>
-                      </div>
-                    </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
                   <Alert color="red">

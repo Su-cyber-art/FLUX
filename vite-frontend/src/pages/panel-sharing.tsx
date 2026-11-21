@@ -18,6 +18,7 @@ import {
   Share2,
   SquarePen,
   Trash2,
+  TriangleAlert,
 } from "lucide-react";
 
 import { toast } from "@/lib/notifications";
@@ -26,7 +27,6 @@ import { AnimatedPage } from "@/components/animated-page";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyStateCard, PageLoadingState } from "@/components/page-state";
 import { UsageMeter } from "@/components/usage-meter";
-import { IconTile } from "@/components/ui/icon-tile";
 import { Card } from "@/components/ui/card";
 import { TrafficLimitField } from "@/components/traffic-limit-field";
 import {
@@ -515,7 +515,7 @@ export default function PanelSharingPage() {
         }
       />
 
-      <p className="-mt-2 mb-5 px-1 text-xs text-default-500">
+      <p className="-mt-1 mb-4 text-xs text-default-500">
         {selectedTab === "my-shares"
           ? "把本地节点开放给其他面板使用，按分享统一管理 Token、端口范围、流量上限与到期时间。"
           : "导入其他面板分享的节点后，可以在这里查看远端端口占用、绑定的隧道与同步状态。"}
@@ -539,7 +539,7 @@ export default function PanelSharingPage() {
             title="还没有分享"
           />
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
+          <div className="access-grid share-grid">
             {shares.map((share) => {
               const expiry = shareExpiry(share);
               const totalPorts = portTotal(
@@ -548,29 +548,73 @@ export default function PanelSharingPage() {
               );
               const usedPorts = share.usedPorts?.length ?? 0;
               const flowLimited = share.maxBandwidth > 0;
+              const portDetails = share.usedPortDetails ?? [];
+              const portDetailText = portDetails
+                .map((item) => `${item.port} ${item.role || "reserved"}`)
+                .join(" · ");
 
               return (
-                <Card key={share.id} className="h-full gap-4 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <IconTile size="sm" tone="primary">
-                        <Share2 size={15} />
-                      </IconTile>
-                      <span
-                        className="truncate text-sm font-semibold text-foreground"
+                <Card key={share.id} className="share-card">
+                  <div className="flex min-w-0 items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p
+                        className="truncate text-[13.5px] font-semibold text-foreground"
                         title={share.name}
                       >
                         {share.name}
-                      </span>
+                      </p>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        {expiry.tone === "danger" ? (
+                          <Badge
+                            color={uiColor("danger")}
+                            size="sm"
+                            variant="light"
+                          >
+                            {expiry.text}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-default-500">
+                            {expiry.text}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <Badge
-                      className="shrink-0"
-                      color={uiColor(expiry.tone)}
-                      size="xs"
-                      variant="light"
-                    >
-                      {expiry.text}
-                    </Badge>
+                    <div className="access-actions">
+                      <Tooltip label="编辑">
+                        <ActionIcon
+                          aria-label={`编辑分享 ${share.name}`}
+                          color="gray"
+                          variant="subtle"
+                          onClick={() => openEditShare(share)}
+                        >
+                          <SquarePen size={15} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="重置流量">
+                        <ActionIcon
+                          aria-label={`重置分享 ${share.name} 的流量`}
+                          color="gray"
+                          variant="subtle"
+                          onClick={() =>
+                            setPendingAction({ kind: "reset", share })
+                          }
+                        >
+                          <RotateCcw size={15} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="删除分享">
+                        <ActionIcon
+                          aria-label={`删除分享 ${share.name}`}
+                          color="red"
+                          variant="subtle"
+                          onClick={() =>
+                            setPendingAction({ kind: "delete", share })
+                          }
+                        >
+                          <Trash2 size={15} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -603,63 +647,54 @@ export default function PanelSharingPage() {
                     />
                   </div>
 
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg bg-default-soft px-3 py-2.5 text-xs">
+                  <dl className="share-meta">
                     <div>
-                      <dt className="text-default-500">端口范围</dt>
-                      <dd className="font-mono text-foreground">
-                        {share.portRangeStart} - {share.portRangeEnd}
+                      <dt>端口范围</dt>
+                      <dd className="mono-value">
+                        {share.portRangeStart}–{share.portRangeEnd}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-default-500">运行中绑定</dt>
-                      <dd className="text-foreground">
+                      <dt>运行中绑定</dt>
+                      <dd className="tabular-nums">
                         {share.activeRuntimeNum ?? 0}
                       </dd>
                     </div>
                     {share.allowedDomains && (
-                      <div className="col-span-2 min-w-0">
-                        <dt className="text-default-500">允许域名</dt>
-                        <dd
-                          className="truncate text-foreground"
-                          title={share.allowedDomains}
-                        >
+                      <div className="share-meta-wide">
+                        <dt>允许域名</dt>
+                        <dd className="truncate" title={share.allowedDomains}>
                           {share.allowedDomains}
                         </dd>
                       </div>
                     )}
                     {share.allowedIps && (
-                      <div className="col-span-2 min-w-0">
-                        <dt className="text-default-500">允许 API IP</dt>
+                      <div className="share-meta-wide">
+                        <dt>允许 API IP</dt>
                         <dd
-                          className="truncate font-mono text-foreground"
+                          className="mono-value truncate"
                           title={share.allowedIps}
                         >
                           {share.allowedIps}
                         </dd>
                       </div>
                     )}
-                  </dl>
-
-                  {share.usedPortDetails &&
-                    share.usedPortDetails.length > 0 && (
-                      <div className="flex max-h-16 flex-wrap gap-1 overflow-y-auto">
-                        {share.usedPortDetails.map((item) => (
-                          <Badge
-                            key={item.runtimeId}
-                            className="font-mono"
-                            color="gray"
-                            size="xs"
-                            variant="light"
-                          >
-                            {item.port} · {item.role || "reserved"}
-                          </Badge>
-                        ))}
+                    {portDetails.length > 0 && (
+                      <div className="share-meta-wide">
+                        <dt>已占用</dt>
+                        <dd
+                          className="mono-value truncate"
+                          title={portDetailText}
+                        >
+                          {portDetailText}
+                        </dd>
                       </div>
                     )}
+                  </dl>
 
-                  <div className="flex min-w-0 items-center gap-2 rounded-lg border border-divider px-2.5 py-1.5">
-                    <KeyRound className="shrink-0 text-default-400" size={14} />
-                    <code className="min-w-0 flex-1 truncate font-mono text-xs text-default-700">
+                  <div className="share-token">
+                    <KeyRound className="shrink-0 text-default-400" size={13} />
+                    <code className="mono-value min-w-0 flex-1 truncate">
                       {share.token}
                     </code>
                     <Tooltip label="复制 Token">
@@ -670,41 +705,7 @@ export default function PanelSharingPage() {
                         variant="subtle"
                         onClick={() => copyToken(share.token)}
                       >
-                        <Copy size={14} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </div>
-
-                  <div className="mt-auto flex items-center gap-1.5 border-t border-divider pt-3">
-                    <Button
-                      color="gray"
-                      leftSection={<SquarePen size={14} />}
-                      size="xs"
-                      variant="subtle"
-                      onClick={() => openEditShare(share)}
-                    >
-                      编辑
-                    </Button>
-                    <Button
-                      color="gray"
-                      leftSection={<RotateCcw size={14} />}
-                      size="xs"
-                      variant="subtle"
-                      onClick={() => setPendingAction({ kind: "reset", share })}
-                    >
-                      重置流量
-                    </Button>
-                    <Tooltip label="删除分享">
-                      <ActionIcon
-                        aria-label={`删除分享 ${share.name}`}
-                        className="ml-auto"
-                        color="red"
-                        variant="subtle"
-                        onClick={() =>
-                          setPendingAction({ kind: "delete", share })
-                        }
-                      >
-                        <Trash2 size={16} />
+                        <Copy size={13} />
                       </ActionIcon>
                     </Tooltip>
                   </div>
@@ -730,7 +731,7 @@ export default function PanelSharingPage() {
           title="暂无远程接入"
         />
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
+        <div className="access-grid share-grid">
           {remoteUsageNodes.map((node) => {
             const totalPorts = portTotal(
               node.portRangeStart,
@@ -739,41 +740,41 @@ export default function PanelSharingPage() {
             const flowLimited = node.maxBandwidth > 0;
 
             return (
-              <Card key={node.nodeId} className="h-full gap-4 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <IconTile size="sm" tone="secondary">
-                      <Server size={15} />
-                    </IconTile>
-                    <div className="min-w-0">
+              <Card key={node.nodeId} className="share-card">
+                <div className="flex min-w-0 items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p
+                      className="truncate text-[13.5px] font-semibold text-foreground"
+                      title={node.nodeName}
+                    >
+                      {node.nodeName}
+                    </p>
+                    {node.remoteUrl && (
                       <p
-                        className="truncate text-sm font-semibold text-foreground"
-                        title={node.nodeName}
+                        className="mono-value truncate text-xs text-default-500"
+                        title={node.remoteUrl}
                       >
-                        {node.nodeName}
+                        {node.remoteUrl}
                       </p>
-                      {node.remoteUrl && (
-                        <p
-                          className="truncate font-mono text-xs text-default-500"
-                          title={node.remoteUrl}
-                        >
-                          {node.remoteUrl}
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
-                  <Badge
-                    className="shrink-0"
-                    color="gray"
-                    size="xs"
-                    variant="light"
+                  <span
+                    className="status-dot shrink-0"
+                    data-tone={
+                      node.syncError
+                        ? "warning"
+                        : node.activeBindingNum
+                          ? "success"
+                          : undefined
+                    }
                   >
                     绑定 {node.activeBindingNum || 0}
-                  </Badge>
+                  </span>
                 </div>
 
                 {node.syncError && (
-                  <p className="rounded-md bg-warning-soft px-2.5 py-1.5 text-xs text-warning-ink">
+                  <p className="flex items-start gap-1.5 text-xs text-warning-ink">
+                    <TriangleAlert className="mt-px shrink-0" size={13} />
                     {syncErrorText(node.syncError)}
                   </p>
                 )}
@@ -810,46 +811,43 @@ export default function PanelSharingPage() {
                   />
                 </div>
 
-                <dl className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg bg-default-soft px-3 py-2.5 text-xs">
+                <dl className="share-meta">
                   <div>
-                    <dt className="text-default-500">共享 ID</dt>
-                    <dd className="font-mono text-foreground">
+                    <dt>共享 ID</dt>
+                    <dd className="mono-value">
                       {node.shareId ? `#${node.shareId}` : "-"}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-default-500">端口范围</dt>
-                    <dd className="font-mono text-foreground">
+                    <dt>端口范围</dt>
+                    <dd className="mono-value">
                       {totalPorts > 0
-                        ? `${node.portRangeStart} - ${node.portRangeEnd}`
+                        ? `${node.portRangeStart}–${node.portRangeEnd}`
                         : "-"}
                     </dd>
                   </div>
                 </dl>
 
                 {node.bindings && node.bindings.length > 0 ? (
-                  <ul className="max-h-40 divide-y divide-divider overflow-y-auto rounded-lg border border-divider text-xs">
+                  <ul className="share-bindings">
                     {node.bindings.map((binding) => (
-                      <li
-                        key={binding.bindingId}
-                        className="flex items-center justify-between gap-2 px-2.5 py-1.5"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium text-foreground">
-                            {binding.tunnelName || `#${binding.tunnelId}`}
-                          </span>
-                          <span className="text-[11px] text-default-500">
-                            {formatChainType(binding.chainType, binding.hopInx)}
-                          </span>
+                      <li key={binding.bindingId}>
+                        <span className="min-w-0 truncate font-medium text-foreground">
+                          {binding.tunnelName || `#${binding.tunnelId}`}
                         </span>
-                        <span className="shrink-0 font-mono text-[11px] text-default-500">
+                        <span className="shrink-0 text-default-500">
+                          {formatChainType(binding.chainType, binding.hopInx)}
+                        </span>
+                        <span className="mono-value ml-auto shrink-0 text-default-500">
                           :{binding.allocatedPort}
                         </span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-default-400">暂无绑定的隧道</p>
+                  <p className="mt-auto text-xs text-default-400">
+                    暂无绑定的隧道
+                  </p>
                 )}
               </Card>
             );
@@ -874,7 +872,10 @@ export default function PanelSharingPage() {
       {/* Create Share Modal */}
       <Modal opened={createShareOpen} onClose={() => setCreateShareOpen(false)}>
         <ModalContent>
-          <ModalHeader>创建分享</ModalHeader>
+          <ModalHeader>
+            <h2>创建分享</h2>
+            <p>把本地节点开放给其他面板，生成导入用的 Token</p>
+          </ModalHeader>
           <ModalBody>
             <TextInput
               label="名称"
@@ -898,7 +899,7 @@ export default function PanelSharingPage() {
                 setShareForm({ ...shareForm, nodeId: nodeId ?? "" })
               }
             />
-            <div className="flex gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <TextInput
                 label="起始端口"
                 type="number"
@@ -967,7 +968,11 @@ export default function PanelSharingPage() {
             />
           </ModalBody>
           <ModalFooter>
-            <Button variant="default" onClick={() => setCreateShareOpen(false)}>
+            <Button
+              color="gray"
+              variant="subtle"
+              onClick={() => setCreateShareOpen(false)}
+            >
               取消
             </Button>
             <Button onClick={handleCreateShare}>创建</Button>
@@ -978,7 +983,9 @@ export default function PanelSharingPage() {
       {/* Edit Share Modal */}
       <Modal opened={editShareOpen} onClose={() => setEditShareOpen(false)}>
         <ModalContent>
-          <ModalHeader>编辑分享</ModalHeader>
+          <ModalHeader>
+            <h2>编辑分享</h2>
+          </ModalHeader>
           <ModalBody>
             <TextInput
               label="名称"
@@ -988,7 +995,7 @@ export default function PanelSharingPage() {
                 setEditForm({ ...editForm, name: e.target.value })
               }
             />
-            <div className="flex gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <TextInput
                 label="起始端口"
                 type="number"
@@ -1064,7 +1071,11 @@ export default function PanelSharingPage() {
             />
           </ModalBody>
           <ModalFooter>
-            <Button variant="default" onClick={() => setEditShareOpen(false)}>
+            <Button
+              color="gray"
+              variant="subtle"
+              onClick={() => setEditShareOpen(false)}
+            >
               取消
             </Button>
             <Button onClick={handleEditShare}>保存</Button>
@@ -1075,7 +1086,10 @@ export default function PanelSharingPage() {
       {/* Import Node Modal */}
       <Modal opened={importNodeOpen} onClose={() => setImportNodeOpen(false)}>
         <ModalContent>
-          <ModalHeader>导入远程节点</ModalHeader>
+          <ModalHeader>
+            <h2>导入远程节点</h2>
+            <p>填写对方面板地址与分享 Token</p>
+          </ModalHeader>
           <ModalBody>
             <TextInput
               label="远程面板地址"
@@ -1095,12 +1109,14 @@ export default function PanelSharingPage() {
             />
           </ModalBody>
           <ModalFooter>
-            <Button variant="default" onClick={() => setImportNodeOpen(false)}>
+            <Button
+              color="gray"
+              variant="subtle"
+              onClick={() => setImportNodeOpen(false)}
+            >
               取消
             </Button>
-            <Button color="violet" onClick={handleImportNode}>
-              导入
-            </Button>
+            <Button onClick={handleImportNode}>导入</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

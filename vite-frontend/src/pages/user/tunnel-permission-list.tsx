@@ -1,11 +1,10 @@
-import { ActionIcon, Tooltip, Badge, Loader } from "@mantine/core";
-import { RotateCcw, SquarePen, Trash2 } from "lucide-react";
+import { ActionIcon, Tooltip, Loader } from "@mantine/core";
+import { Gauge, RotateCcw, SquarePen, Trash2 } from "lucide-react";
 
 import { UsageMeter } from "@/components/usage-meter";
 import { calculateTunnelUsedFlow, formatFlow } from "@/pages/user/presentation";
 import { UserTunnel } from "@/types";
 import { flowLimitBytes, formatFlowLimit } from "@/utils/traffic";
-import { uiColor } from "@/components/ui/shared";
 
 interface TunnelPermissionListProps {
   items: UserTunnel[];
@@ -44,43 +43,34 @@ export function TunnelPermissionList({
 
   if (items.length === 0) {
     return (
-      <p className="rounded-[10px] border border-dashed border-divider px-4 py-6 text-center text-sm text-default-500">
+      <p className="rounded-[10px] border border-dashed border-divider px-4 py-5 text-center text-[13px] text-default-500">
         还没有分配隧道权限
       </p>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-[10px] border border-divider">
+    <div className="user-perm-list">
       {items.map((item) => (
-        <div
-          key={item.id}
-          className="grid gap-3 border-divider px-4 py-3 [&+&]:border-t sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-center"
-        >
+        <div key={item.id} className="user-perm-row">
           <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="truncate text-sm font-medium text-foreground">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="truncate text-[13px] font-medium text-foreground">
                 {item.tunnelName}
               </span>
               {item.status !== 1 && (
-                <Badge
-                  color="red"
-                  leftSection={<span className="badge-dot" />}
-                  size="xs"
-                  variant="light"
-                >
+                <span className="status-dot shrink-0" data-tone="danger">
                   禁用
-                </Badge>
+                </span>
               )}
-              <Badge
-                color={uiColor(item.speedLimitName ? "warning" : "default")}
-                size="xs"
-                variant="light"
+              <span
+                className={`inline-flex shrink-0 items-center gap-1 text-xs ${item.speedLimitName ? "text-warning-ink" : "text-default-500"}`}
               >
+                <Gauge size={12} />
                 {item.speedLimitName || "不限速"}
-              </Badge>
+              </span>
             </div>
-            <p className="mt-1 truncate text-xs text-default-500">
+            <p className="mt-0.5 truncate text-xs text-default-500">
               规则 {item.num} 条 ·{" "}
               {item.flowResetTime === 0
                 ? "不自动重置"
@@ -98,7 +88,7 @@ export function TunnelPermissionList({
             unlimited={isUnlimited(item)}
             used={formatFlow(calculateTunnelUsedFlow(item))}
           />
-          <div className="flex items-center justify-end gap-0.5">
+          <div className="flex items-center justify-end">
             <Tooltip label="编辑权限">
               <ActionIcon
                 aria-label={`编辑 ${item.tunnelName} 的权限`}
@@ -106,7 +96,7 @@ export function TunnelPermissionList({
                 variant="subtle"
                 onClick={() => onEdit(item)}
               >
-                <SquarePen size={16} />
+                <SquarePen size={15} />
               </ActionIcon>
             </Tooltip>
             <Tooltip label="重置流量">
@@ -116,7 +106,7 @@ export function TunnelPermissionList({
                 variant="subtle"
                 onClick={() => onResetFlow(item)}
               >
-                <RotateCcw size={16} />
+                <RotateCcw size={15} />
               </ActionIcon>
             </Tooltip>
             <Tooltip label="移除权限">
@@ -126,7 +116,7 @@ export function TunnelPermissionList({
                 variant="subtle"
                 onClick={() => onRemove(item)}
               >
-                <Trash2 size={16} />
+                <Trash2 size={15} />
               </ActionIcon>
             </Tooltip>
           </div>

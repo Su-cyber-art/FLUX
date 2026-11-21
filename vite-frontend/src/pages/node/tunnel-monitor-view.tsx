@@ -33,9 +33,7 @@ import {
   Wifi,
   WifiOff,
   ArrowRight,
-  ArrowDownUp,
   ChartLine,
-  Network,
 } from "lucide-react";
 import {
   ActionIcon,
@@ -60,11 +58,12 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { IconTile } from "@/components/ui/icon-tile";
 import { EmptyStateCard } from "@/components/page-state";
 import {
-  chartTick,
+  chartAxisProps,
+  chartGridProps,
+  chartLineProps,
   chartTooltipProps,
   useChartPalette,
 } from "@/components/chart-theme";
-import { SectionHeader } from "@/components/section-header";
 import {
   DEFAULT_TUNNEL_QUALITY_INTERVAL_SEC,
   parseTunnelQualityIntervalSeconds,
@@ -125,34 +124,33 @@ function LatencyDisplay({
   large?: boolean;
 }) {
   if (loading) {
-    return <RefreshCw className="w-3 h-3 animate-spin inline text-primary" />;
+    return <Loader className="inline-block" size={10} />;
   }
   if (value === undefined || value < 0) {
-    return <span className="text-default-400">-</span>;
+    return <span className="text-default-400">—</span>;
   }
   const ms = value.toFixed(0);
-  let colorClass = "text-success";
+  let colorClass = "text-foreground";
 
-  if (value > 200) colorClass = "text-danger";
-  else if (value > 100) colorClass = "text-warning";
-  else if (value > 50) colorClass = "text-primary";
+  if (value > 200) colorClass = "text-danger-ink";
+  else if (value > 100) colorClass = "text-warning-ink";
 
   return (
     <span
-      className={`font-semibold ${large ? "metric-value text-lg" : "font-mono text-xs"} ${colorClass}`}
+      className={`tabular-nums ${large ? "text-[22px] font-semibold tracking-tight" : "text-[12.5px] font-medium"} ${colorClass}`}
     >
-      {ms}ms
+      {ms}
+      <span
+        className={large ? "ml-1 text-[13px] font-normal text-default-500" : ""}
+      >
+        ms
+      </span>
     </span>
   );
 }
 
 function LiveDot() {
-  return (
-    <span className="relative flex h-2 w-2">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
-      <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
-    </span>
-  );
+  return <span aria-hidden className="status-dot" data-tone="success" />;
 }
 
 const UPTIME_KUMA_BARS_COUNT = 30;
@@ -178,36 +176,30 @@ function UptimeHistoryBar({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-[3px]">
+      <div className="mon-beats">
         {bars.map((q, idx) => {
           if (!q) {
-            return (
-              <div
-                key={idx}
-                className="w-1.5 h-4 rounded-full bg-default-soft-hover"
-                title="暂无数据"
-              />
-            );
+            return <div key={idx} className="mon-beat" title="暂无数据" />;
           }
           const isEntry = type === "entryToExit";
           const latency = isEntry ? q.entryToExitLatency : q.exitToBingLatency;
           const loss = isEntry ? q.entryToExitLoss : q.exitToBingLoss;
           const timeStr = new Date(q.timestamp).toLocaleTimeString("zh-CN");
 
-          let colorClass = "bg-success";
+          let tone = "success";
           let statusText = "优秀";
 
           if (q.errorMessage || (loss !== undefined && loss > 0)) {
-            colorClass = "bg-danger";
+            tone = "danger";
             statusText = q.errorMessage ? "错误" : `丢包 ${loss?.toFixed(1)}%`;
           } else if (latency < 0) {
-            colorClass = "bg-danger";
+            tone = "danger";
             statusText = "探测失败";
           } else if (latency > 200) {
-            colorClass = "bg-danger";
+            tone = "danger";
             statusText = "极差";
           } else if (latency > 100) {
-            colorClass = "bg-warning";
+            tone = "warning";
             statusText = "较差";
           }
 
@@ -217,7 +209,8 @@ function UptimeHistoryBar({
           return (
             <div
               key={q.timestamp || idx}
-              className={`w-1.5 h-4 rounded-full transition-colors cursor-help hover:opacity-80 ${colorClass}`}
+              className="mon-beat cursor-help"
+              data-tone={tone}
               title={tooltip}
             />
           );
@@ -248,11 +241,12 @@ function TimeRangeSelect({
     <Select
       required
       aria-label="时间范围"
-      className="w-28"
+      className="w-24"
       data={TIME_RANGE_OPTIONS.map((opt) => ({
         value: String(opt.key),
         label: opt.label,
       }))}
+      size="xs"
       value={String(value)}
       onChange={(value) => {
         const v = Number(value);
@@ -260,6 +254,96 @@ function TimeRangeSelect({
         if (v > 0) onChange(v);
       }}
     />
+  );
+}
+
+/** Shared shell for the tunnel charts: header row, legend, compact states. */
+function ChartPanel({
+  title,
+  description,
+  rangeMs,
+  onRangeChange,
+  loading,
+  error,
+  hasData,
+  emptyText,
+  refreshLabel,
+  onRefresh,
+  legend,
+  children,
+}: {
+  title: string;
+  description: string;
+  rangeMs: number;
+  onRangeChange: (v: number) => void;
+  loading: boolean;
+  error: string | null;
+  hasData: boolean;
+  emptyText: string;
+  refreshLabel: string;
+  onRefresh: () => void;
+  legend: { name: string; color: string }[];
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="dash-panel">
+      <div data-flush className="dash-panel-head flex-wrap">
+        <div className="min-w-0">
+          <h2 className="dash-panel-title">{title}</h2>
+          <p className="dash-panel-desc mt-0.5">{description}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {hasData && !loading && !error && (
+            <div className="chart-legend hidden sm:flex">
+              {legend.map((item) => (
+                <span
+                  key={item.name}
+                  className="chart-legend-item"
+                  style={
+                    { "--legend-color": item.color } as React.CSSProperties
+                  }
+                >
+                  {item.name}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            <TimeRangeSelect value={rangeMs} onChange={onRangeChange} />
+            <MantineTooltip label="刷新">
+              <ActionIcon
+                aria-label={refreshLabel}
+                color="gray"
+                loading={loading}
+                size={30}
+                variant="subtle"
+                onClick={onRefresh}
+              >
+                <RefreshCw size={14} />
+              </ActionIcon>
+            </MantineTooltip>
+          </div>
+        </div>
+      </div>
+      {loading ? (
+        <div className="chart-empty">
+          <Loader size="xs" />
+          正在加载…
+        </div>
+      ) : error ? (
+        <p className="chart-empty" data-tone="danger">
+          <WifiOff size={15} />
+          {error}
+        </p>
+      ) : hasData ? (
+        <div className="chart-frame h-[220px] px-2 pb-3">{children}</div>
+      ) : (
+        <p className="chart-empty">
+          <ChartLine size={15} />
+          {emptyText}
+        </p>
+      )}
+    </Card>
   );
 }
 
@@ -289,96 +373,72 @@ const QualityChartCard = React.memo(function QualityChartCard({
   const palette = useChartPalette();
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <SectionHeader
-          actions={
-            <>
-              <TimeRangeSelect value={rangeMs} onChange={onRangeChange} />
-              <MantineTooltip label="刷新">
-                <ActionIcon
-                  aria-label="刷新质量趋势"
-                  color="gray"
-                  loading={loading}
-                  variant="subtle"
-                  onClick={() => onRefresh(tunnelId)}
-                >
-                  <RefreshCw size={16} />
-                </ActionIcon>
-              </MantineTooltip>
-            </>
-          }
-          description="入口到出口、出口到测试目标的延迟变化"
-          icon={ChartLine}
-          title="质量趋势"
-        />
-      </CardHeader>
-      <CardBody className="pt-0">
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader size="sm" />
-          </div>
-        ) : error ? (
-          <p className="monitor-chart-empty text-danger-ink">{error}</p>
-        ) : data.length > 0 ? (
-          <div className="h-64">
-            <ResponsiveContainer height="100%" width="100%">
-              <LineChart data={data}>
-                <CartesianGrid opacity={0.3} strokeDasharray="3 3" />
-                <XAxis dataKey="time" fontSize={11} tick={chartTick} />
-                <YAxis
-                  fontSize={11}
-                  label={{
-                    value: "延迟 (ms)",
-                    angle: -90,
-                    position: "insideLeft",
-                    style: { fontSize: 11, fill: "currentColor" },
-                  }}
-                  tick={chartTick}
-                  tickFormatter={(v: any) => `${Number(v).toFixed(0)}ms`}
-                />
-                <Tooltip
-                  {...chartTooltipProps}
-                  formatter={(value: unknown, name: string) => {
-                    const n = Number(value);
+    <ChartPanel
+      description="入口到出口、出口到测试目标的延迟变化"
+      emptyText="所选时间范围内还没有质量记录"
+      error={error}
+      hasData={data.length > 0}
+      legend={[
+        { name: "入口→出口", color: palette.teal },
+        { name: "出口→测试目标", color: palette.blue },
+      ]}
+      loading={loading}
+      rangeMs={rangeMs}
+      refreshLabel="刷新质量趋势"
+      title="质量趋势"
+      onRangeChange={onRangeChange}
+      onRefresh={() => onRefresh(tunnelId)}
+    >
+      <ResponsiveContainer height="100%" width="100%">
+        <LineChart
+          data={data}
+          margin={{ top: 4, right: 12, left: 0, bottom: 0 }}
+        >
+          <CartesianGrid {...chartGridProps} />
+          <XAxis
+            {...chartAxisProps}
+            dataKey="time"
+            interval="preserveStartEnd"
+            minTickGap={32}
+          />
+          <YAxis
+            {...chartAxisProps}
+            tickFormatter={(v: any) => `${Number(v).toFixed(0)}ms`}
+            width={48}
+          />
+          <Tooltip
+            {...chartTooltipProps}
+            formatter={(value: unknown, name: string) => {
+              const n = Number(value);
 
-                    if (!Number.isFinite(n)) return "-";
-                    const label =
-                      name === "entryToExit"
-                        ? "入口→出口"
-                        : name === "exitToBing"
-                          ? "出口→测试目标"
-                          : name;
+              if (!Number.isFinite(n)) return "-";
+              const label =
+                name === "entryToExit"
+                  ? "入口→出口"
+                  : name === "exitToBing"
+                    ? "出口→测试目标"
+                    : name;
 
-                    return [`${n.toFixed(1)}ms`, label];
-                  }}
-                />
-                <Line
-                  connectNulls
-                  dataKey="entryToExit"
-                  dot={false}
-                  name="entryToExit"
-                  stroke={palette.teal}
-                  strokeWidth={2}
-                  type="monotone"
-                />
-                <Line
-                  connectNulls
-                  dataKey="exitToBing"
-                  dot={false}
-                  name="exitToBing"
-                  stroke={palette.blue}
-                  strokeWidth={2}
-                  type="monotone"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="monitor-chart-empty">所选时间范围内还没有质量记录</p>
-        )}
-      </CardBody>
-    </Card>
+              return [`${n.toFixed(1)}ms`, label];
+            }}
+          />
+          <Line
+            {...chartLineProps}
+            connectNulls
+            dataKey="entryToExit"
+            name="entryToExit"
+            stroke={palette.teal}
+          />
+          <Line
+            {...chartLineProps}
+            connectNulls
+            dataKey="exitToBing"
+            name="exitToBing"
+            stroke={palette.blue}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </ChartPanel>
   );
 });
 
@@ -414,73 +474,51 @@ const TrafficChartCard = React.memo(function TrafficChartCard({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <SectionHeader
-          actions={
-            <>
-              <TimeRangeSelect value={rangeMs} onChange={onRangeChange} />
-              <MantineTooltip label="刷新">
-                <ActionIcon
-                  aria-label="刷新流量趋势"
-                  color="gray"
-                  loading={loading}
-                  variant="subtle"
-                  onClick={() => onRefresh(tunnelId)}
-                >
-                  <RefreshCw size={16} />
-                </ActionIcon>
-              </MantineTooltip>
-            </>
-          }
-          description="隧道上下行流量"
-          icon={ArrowDownUp}
-          title="流量趋势"
-        />
-      </CardHeader>
-      <CardBody className="pt-0">
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader size="sm" />
-          </div>
-        ) : error ? (
-          <p className="monitor-chart-empty text-danger-ink">{error}</p>
-        ) : data.length > 0 ? (
-          <div className="h-64">
-            <ResponsiveContainer height="100%" width="100%">
-              <LineChart data={data}>
-                <CartesianGrid opacity={0.3} strokeDasharray="3 3" />
-                <XAxis dataKey="time" fontSize={11} tick={chartTick} />
-                <YAxis
-                  fontSize={11}
-                  tick={chartTick}
-                  tickFormatter={yFormatter}
-                />
-                <Tooltip {...chartTooltipProps} formatter={yFormatter} />
-                <Line
-                  dataKey="bytesIn"
-                  dot={false}
-                  name="入站流量"
-                  stroke={palette.teal}
-                  strokeWidth={2}
-                  type="monotone"
-                />
-                <Line
-                  dataKey="bytesOut"
-                  dot={false}
-                  name="出站流量"
-                  stroke={palette.red}
-                  strokeWidth={2}
-                  type="monotone"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="monitor-chart-empty">所选时间范围内还没有流量记录</p>
-        )}
-      </CardBody>
-    </Card>
+    <ChartPanel
+      description="隧道上下行流量"
+      emptyText="所选时间范围内还没有流量记录"
+      error={error}
+      hasData={data.length > 0}
+      legend={[
+        { name: "入站流量", color: palette.teal },
+        { name: "出站流量", color: palette.red },
+      ]}
+      loading={loading}
+      rangeMs={rangeMs}
+      refreshLabel="刷新流量趋势"
+      title="流量趋势"
+      onRangeChange={onRangeChange}
+      onRefresh={() => onRefresh(tunnelId)}
+    >
+      <ResponsiveContainer height="100%" width="100%">
+        <LineChart
+          data={data}
+          margin={{ top: 4, right: 12, left: 0, bottom: 0 }}
+        >
+          <CartesianGrid {...chartGridProps} />
+          <XAxis
+            {...chartAxisProps}
+            dataKey="time"
+            interval="preserveStartEnd"
+            minTickGap={32}
+          />
+          <YAxis {...chartAxisProps} tickFormatter={yFormatter} width={64} />
+          <Tooltip {...chartTooltipProps} formatter={yFormatter} />
+          <Line
+            {...chartLineProps}
+            dataKey="bytesIn"
+            name="入站流量"
+            stroke={palette.teal}
+          />
+          <Line
+            {...chartLineProps}
+            dataKey="bytesOut"
+            name="出站流量"
+            stroke={palette.red}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </ChartPanel>
   );
 });
 
@@ -633,11 +671,11 @@ function TunnelTopologyPathRow({ path }: { path: TunnelTopologyPath }) {
           Boolean(hop.errorMessage) || hop.latency < 0 || hop.loss > 0;
         const colorClass =
           hop.latency < 0 || hop.errorMessage
-            ? "text-danger"
+            ? "text-danger-ink"
             : hop.loss > 0
-              ? "text-warning"
-              : "text-success";
-        const borderColor = hasError ? "border-danger" : "";
+              ? "text-warning-ink"
+              : "text-success-ink";
+        const borderColor = hasError ? "border-danger-line" : "";
 
         return (
           <React.Fragment
@@ -650,25 +688,25 @@ function TunnelTopologyPathRow({ path }: { path: TunnelTopologyPath }) {
               />
             ) : null}
             <div
-              className="relative mx-1 flex min-w-[70px] shrink-0 flex-col items-center justify-center"
+              className="relative mx-1.5 flex min-w-[76px] shrink-0 flex-col items-center justify-center"
               title={hop.errorMessage}
             >
               <span
-                className={`mb-1 text-[10px] font-mono leading-none ${colorClass}`}
+                className={`mb-1 text-[11px] font-medium tabular-nums leading-none ${colorClass}`}
               >
                 {hop.latency >= 0 && !hop.errorMessage
                   ? `${hop.latency.toFixed(0)}ms`
                   : "超时"}
               </span>
               <div
-                className={`relative flex h-[2px] w-full items-center justify-end bg-default-200 ${hop.latency < 0 || hop.errorMessage ? "!bg-danger" : ""}`}
+                className={`relative flex h-px w-full items-center justify-end ${hop.latency < 0 || hop.errorMessage ? "bg-danger" : "bg-default-300"}`}
               >
                 <ArrowRight
-                  className={`absolute -right-2 z-10 h-3.5 w-3.5 rounded-full bg-background p-[1px] ${colorClass}`}
+                  className={`absolute -right-1.5 z-10 h-3 w-3 ${colorClass}`}
                 />
               </div>
               <span
-                className={`mt-1.5 text-[10px] font-mono leading-none ${hop.errorMessage || hop.loss > 0 ? "text-warning" : "text-default-400"}`}
+                className={`mt-1.5 text-[11px] tabular-nums leading-none ${hop.errorMessage || hop.loss > 0 ? "text-warning-ink" : "text-default-500"}`}
               >
                 {hop.errorMessage ? "探测失败" : `${hop.loss.toFixed(0)}% 丢包`}
               </span>
@@ -695,21 +733,14 @@ function TopologyNodeChip({
   borderColor?: string;
 }) {
   return (
-    <Badge
-      className={`shrink-0 font-mono shadow-sm ${borderColor}`}
-      color="gray"
-      size="sm"
-      variant="light"
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border bg-content1 px-2 py-1 ${borderColor || "border-divider"}`}
     >
-      <span className="flex items-center gap-1.5">
-        <span>{name}</span>
-        {isAlternative ? (
-          <span className="rounded-full bg-warning/20 px-1.5 py-0.5 text-[9px] font-semibold leading-none text-warning">
-            备选
-          </span>
-        ) : null}
-      </span>
-    </Badge>
+      <span className="mono-value">{name}</span>
+      {isAlternative ? (
+        <span className="text-[11px] font-medium text-warning-ink">备选</span>
+      ) : null}
+    </span>
   );
 }
 
@@ -730,30 +761,25 @@ const ForwardingChainTopology = React.memo(function ForwardingChainTopology({
   if (topologyPaths.length === 0) return null;
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <SectionHeader
-          description="每一跳的实时连通与延迟"
-          icon={Network}
-          title="全链路拓扑"
-        />
-      </CardHeader>
-      <CardBody className="pt-0">
-        <div className="max-h-80 space-y-1 overflow-auto pb-1">
-          {topologyPaths.map((path, index) => (
-            <div
-              key={path.key}
-              className={
-                index === 0
-                  ? "overflow-x-auto"
-                  : "overflow-x-auto border-t border-dashed border-divider/60"
-              }
-            >
-              <TunnelTopologyPathRow path={path} />
-            </div>
-          ))}
+    <Card className="dash-panel">
+      <div className="dash-panel-head">
+        <div className="flex min-w-0 items-baseline gap-2.5">
+          <h2 className="dash-panel-title shrink-0">
+            全链路拓扑
+            {topologyPaths.length > 1 && <small>{topologyPaths.length}</small>}
+          </h2>
+          <span className="dash-panel-desc hidden sm:block">
+            每一跳的实时连通与延迟
+          </span>
         </div>
-      </CardBody>
+      </div>
+      <ul className="dash-list max-h-80 overflow-auto">
+        {topologyPaths.map((path) => (
+          <li key={path.key} className="dash-row block overflow-x-auto py-1.5">
+            <TunnelTopologyPathRow path={path} />
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 });

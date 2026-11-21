@@ -54,7 +54,7 @@ export function NodeUpgradeModal({
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold">
+          <h2>
             {upgradeTarget === "batch"
               ? `批量升级 (${selectedIds.size} 个节点)`
               : "升级节点"}

@@ -21,10 +21,12 @@ export function SectionHeader({
   return (
     <div className="flex w-full min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-2">
       <div className="flex min-w-0 items-start gap-2.5">
-        <Icon className="mt-0.5 shrink-0 text-primary" size={18} />
+        <Icon className="mt-[3px] shrink-0 text-default-500" size={15} />
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-foreground">{title}</h2>
+            <h2 className="text-[14px] font-semibold leading-snug text-foreground">
+              {title}
+            </h2>
             {count !== undefined && (
               <Badge color="gray" size="sm" variant="light">
                 {count}
@@ -32,7 +34,7 @@ export function SectionHeader({
             )}
           </div>
           {description && (
-            <p className="mt-1 text-xs text-default-500">{description}</p>
+            <p className="mt-0.5 text-xs text-default-500">{description}</p>
           )}
         </div>
       </div>

@@ -1,0 +1,180 @@
+@layer components {
+  @media (min-width: 75em) {
+    .config-layout {
+      grid-template-columns: 180px minmax(0, 1fr);
+      align-items: start;
+    }
+    .config-nav {
+      flex-direction: column;
+      margin: 0;
+      padding: 0;
+    }
+  }
+  @media (min-width: 75em) {
+    .config-section {
+      scroll-margin-top: calc(var(--app-shell-header-height, 56px) + 16px);
+    }
+  }
+  @media (max-width: 39.99em) {
+    .wallpaper-tile {
+      flex-direction: row;
+    }
+    .wallpaper-preview {
+      flex: 0 0 96px;
+      aspect-ratio: auto;
+      border-bottom: 0;
+      border-right: 1px solid var(--border);
+    }
+  }
+  @media (min-width: 48em) {
+    .settings-row {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+      align-items: start;
+    }
+    .settings-row[data-wide] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .auth-network-line::after {
+      display: none;
+    }
+  }
+  @media (max-width: 75em) {
+    .monitor-summary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  /* Labels collapse to icons on phones; drop the gap reserved for them. */
+  @media (max-width: 39.99rem) {
+    .toolbar-icon-button {
+      padding-inline: 10px;
+    }
+    .toolbar-icon-button .mantine-Button-section[data-position="left"] {
+      margin-inline-end: 0;
+    }
+  }
+  @media (min-width: 40rem) {
+    .page-toolbar-start {
+      width: auto;
+      flex: 1 1 0;
+      flex-wrap: nowrap;
+    }
+    .page-toolbar-search {
+      max-width: 16rem;
+    }
+    .page-toolbar-end {
+      width: auto;
+    }
+    .page-toolbar-primary {
+      margin-left: 0;
+    }
+  }
+  @media (max-width: 62em) {
+    .auth-grid {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 480px;
+    }
+    .auth-intro {
+      display: none;
+    }
+  }
+  @media (max-width: 47.99em) {
+    .app-modal-viewport {
+      padding: max(12px, env(safe-area-inset-top))
+        max(12px, env(safe-area-inset-left), env(safe-area-inset-right))
+        max(12px, env(safe-area-inset-bottom));
+    }
+    .app-modal-header {
+      padding: 12px 12px 12px 16px;
+      gap: 8px;
+    }
+    .app-modal-body {
+      padding: 16px;
+    }
+    .app-modal-footer {
+      padding: 12px 16px;
+    }
+    .app-modal-footer > button {
+      flex: 1 1 auto;
+    }
+    .auth-header {
+      height: calc(64px + var(--safe-area-top));
+      padding: var(--safe-area-top) 20px 0;
+    }
+    .auth-layout main {
+      padding: calc(84px + var(--safe-area-top)) 12px
+        calc(28px + var(--safe-area-bottom));
+    }
+    .auth-grid {
+      padding: 12px;
+      border-radius: 18px;
+    }
+    .monitor-summary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .monitor-summary > .mantine-Paper-root {
+      padding: 14px;
+    }
+    .monitor-summary .metric-value {
+      font-size: 20px;
+      margin-top: 8px;
+    }
+    .monitor-summary-item {
+      padding: 16px 18px;
+    }
+  }
+  @media (pointer: coarse) {
+    .mantine-Button-root,
+    .mantine-ActionIcon-root,
+    .mantine-CloseButton-root,
+    .mantine-Burger-root {
+      min-height: 44px;
+    }
+    .mantine-ActionIcon-root,
+    .mantine-CloseButton-root,
+    .mantine-Burger-root {
+      min-width: 44px;
+    }
+    .mantine-Menu-item,
+    .mantine-Combobox-option {
+      min-height: 44px;
+    }
+    .mantine-Checkbox-body,
+    .mantine-Radio-body,
+    .mantine-Switch-body {
+      min-height: 44px;
+      align-items: center;
+    }
+  }
+  @media (max-width: 63.99em) and (pointer: coarse) {
+    /* Keep Safari from zooming the page when a small form field gets focus. */
+    .mantine-Input-input,
+    .mantine-PillsInput-field {
+      font-size: max(16px, var(--input-fz, 16px)) !important;
+    }
+    .mantine-Input-input {
+      min-height: 44px;
+    }
+    .mantine-Combobox-dropdown,
+    .mantine-Menu-dropdown {
+      max-width: calc(100vw - 24px);
+    }
+    .mantine-Combobox-option {
+      overflow-wrap: anywhere;
+    }
+    .mantine-Notifications-root {
+      right: max(12px, env(safe-area-inset-right));
+      left: max(12px, env(safe-area-inset-left));
+      width: auto;
+      max-width: none;
+    }
+    .mantine-Notifications-root[data-position^="top"] {
+      top: max(12px, var(--safe-area-top));
+    }
+    .mantine-Notifications-root[data-position^="bottom"] {
+      bottom: max(12px, var(--safe-area-bottom));
+    }
+  }
+}

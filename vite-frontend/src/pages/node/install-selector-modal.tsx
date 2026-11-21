@@ -37,7 +37,7 @@ export function InstallSelectorModal({
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold">
+          <h2>
             选择安装通道
             {installTargetNode ? ` - ${installTargetNode.name}` : ""}
           </h2>

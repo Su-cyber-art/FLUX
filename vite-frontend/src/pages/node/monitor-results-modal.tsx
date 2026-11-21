@@ -1,7 +1,7 @@
 import type * as React from "react";
 
-import { Badge, Button, Select, Table } from "@mantine/core";
-import { Play, RefreshCw } from "lucide-react";
+import { Button, Loader, Select, Table } from "@mantine/core";
+import { Activity, Play, RefreshCw } from "lucide-react";
 
 import {
   type ServiceMonitorApiItem,
@@ -60,7 +60,7 @@ export function MonitorResultsModal({
       <ModalContent>
         <ModalHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="text-base font-semibold truncate">
+            <div className="truncate text-[15px] font-semibold">
               监控记录
               {resultsMonitor?.name ? ` - ${resultsMonitor.name}` : ""}
             </div>
@@ -77,7 +77,7 @@ export function MonitorResultsModal({
             {modalResults.length > 0 ? (
               <div className="text-xs text-default-500 truncate">
                 最新检查:{" "}
-                <span className="font-mono">
+                <span className="tabular-nums">
                   {formatDateTime(modalResults[0].timestamp)}
                 </span>
               </div>
@@ -86,13 +86,15 @@ export function MonitorResultsModal({
           {resultsMonitorId != null ? (
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Select
-                className="w-28"
+                aria-label="记录条数"
+                className="w-24"
                 data={[
                   { value: "20", label: "20条" },
                   { value: "50", label: "50条" },
                   { value: "100", label: "100条" },
                   { value: "200", label: "200条" },
                 ]}
+                size="xs"
                 value={String(resultsLimit)}
                 onChange={(value) => {
                   const v = Number(value);
@@ -101,24 +103,22 @@ export function MonitorResultsModal({
                 }}
               />
               <Button
-                color="gray"
+                leftSection={<Play size={13} />}
                 size="xs"
-                variant="light"
+                variant="default"
                 onClick={() =>
                   resultsMonitorId != null && handleRunMonitor(resultsMonitorId)
                 }
               >
-                <Play className="w-4 h-4 mr-1" />
                 检查
               </Button>
               <Button
-                color="gray"
+                leftSection={<RefreshCw size={13} />}
                 loading={resultsLoading}
                 size="xs"
-                variant="light"
+                variant="default"
                 onClick={() => void loadResultsForModal()}
               >
-                <RefreshCw className="w-4 h-4 mr-1" />
                 刷新
               </Button>
             </div>
@@ -126,19 +126,18 @@ export function MonitorResultsModal({
         </ModalHeader>
         <ModalBody>
           {resultsLoading ? (
-            <div className="flex justify-center py-10">
-              <RefreshCw className="w-6 h-6 animate-spin" />
+            <div className="chart-empty">
+              <Loader size="xs" />
+              正在加载记录…
             </div>
           ) : modalResults.length > 0 ? (
-            <div className="app-table-scroll bg-transparent p-0 shadow-none border-none overflow-auto rounded-lg">
+            <div className="app-table-scroll overflow-hidden rounded-lg border border-divider">
               <Table
+                highlightOnHover
+                stickyHeader
                 aria-label="监控记录"
                 className="app-table min-w-[32rem]"
-                classNames={{
-                  th: "bg-transparent text-default-600 font-semibold text-sm border-b border-divider border-divider py-3  first:rounded-tl-xl last:rounded-tr-xl",
-                  td: "py-3 border-b border-divider/50 group-data-[last=true]:border-b-0",
-                  tr: "hover:bg-default-soft transition-colors",
-                }}
+                verticalSpacing={7}
               >
                 <Table.Thead>
                   <Table.Tr>
@@ -151,24 +150,21 @@ export function MonitorResultsModal({
                 <Table.Tbody>
                   {modalResults.map((r) => (
                     <Table.Tr key={r.id}>
-                      <Table.Td className="text-sm whitespace-nowrap">
-                        <span className="font-mono">
+                      <Table.Td className="whitespace-nowrap">
+                        <span className="mono-value">
                           {formatDateTime(r.timestamp)}
                         </span>
                       </Table.Td>
                       <Table.Td className="min-w-20 whitespace-nowrap">
-                        {r.success === 1 ? (
-                          <Badge color="teal" size="sm" variant="light">
-                            成功
-                          </Badge>
-                        ) : (
-                          <Badge color="red" size="sm" variant="light">
-                            失败
-                          </Badge>
-                        )}
+                        <span
+                          className="status-dot"
+                          data-tone={r.success === 1 ? "success" : "danger"}
+                        >
+                          {r.success === 1 ? "成功" : "失败"}
+                        </span>
                       </Table.Td>
                       <Table.Td className="whitespace-nowrap">
-                        <span className="font-mono text-sm">
+                        <span className="tabular-nums">
                           {Number.isFinite(r.latencyMs)
                             ? `${r.latencyMs.toFixed(0)}ms`
                             : "-"}
@@ -178,7 +174,7 @@ export function MonitorResultsModal({
                         <span
                           className={
                             r.errorMessage
-                              ? "text-danger text-xs"
+                              ? "text-danger-ink text-xs"
                               : "text-default-400 text-xs"
                           }
                         >
@@ -191,15 +187,15 @@ export function MonitorResultsModal({
               </Table>
             </div>
           ) : (
-            <div className="text-center py-10 text-default-500">
+            <p className="chart-empty">
+              <Activity size={15} />
               暂无监控记录
-            </div>
+            </p>
           )}
         </ModalBody>
         <ModalFooter>
           <Button
-            color="gray"
-            variant="light"
+            variant="default"
             onClick={() => {
               setResultsModalOpen(false);
               setResultsMonitorId(null);

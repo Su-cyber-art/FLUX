@@ -58,20 +58,20 @@ export function ForwardFormModal({
   handleSubmit,
 }: ForwardFormModalProps) {
   return (
-    <Modal opened={modalOpen} size="xl" onClose={() => setModalOpen(false)}>
+    <Modal opened={modalOpen} size="lg" onClose={() => setModalOpen(false)}>
       <ModalContent>
-        <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-xl font-bold">
-            {isEdit ? "编辑规则" : "新增规则"}
-          </h2>
-          <p className="text-small text-default-500">
-            {isEdit ? "修改现有规则配置的信息" : "创建新的规则配置"}
+        <ModalHeader>
+          <h2>{isEdit ? "编辑规则" : "新增规则"}</h2>
+          <p>
+            {isEdit
+              ? "修改入口、目标与连接限制，保存后立即下发到节点。"
+              : "把入口端口的流量转发到一个或多个目标地址。"}
           </p>
         </ModalHeader>
         <ModalBody>
-          <div className="pb-2">
+          <div>
             <FormSection title="基本信息">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-x-4 gap-y-4 md:grid-cols-2">
                 <TextInput
                   error={errors.name}
                   label="规则名称"
@@ -112,12 +112,13 @@ export function ForwardFormModal({
               description="外部客户端连接的端口与监听地址"
               title="入口"
             >
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-x-4 gap-y-4 md:grid-cols-2">
                 <TextInput
+                  classNames={{ input: "font-mono" }}
                   description={
                     currentTunnelPortRange
-                      ? `指定入口端口，留空自动分配 (允许范围: ${currentTunnelPortRange.min}-${currentTunnelPortRange.max})`
-                      : "指定入口端口，留空则从节点可用端口中自动分配"
+                      ? `留空自动分配，允许范围 ${currentTunnelPortRange.min}–${currentTunnelPortRange.max}`
+                      : "留空则从节点可用端口中自动分配"
                   }
                   error={errors.inPort}
                   label="入口端口"
@@ -180,10 +181,13 @@ export function ForwardFormModal({
 
             <FormSection description="流量最终转发到的地址" title="目标">
               <Textarea
-                description="格式: IP:端口 或 域名:端口，支持多个地址（每行一个）"
+                autosize
+                classNames={{ input: "font-mono text-[13px]" }}
+                description="格式：IP:端口 或 域名:端口，每行一个，可填写多个"
                 error={errors.remoteAddr}
                 label="落地地址"
                 maxRows={6}
+                minRows={4}
                 placeholder="请输入落地地址，多个地址用换行分隔，例如:&#10;192.168.1.100:10000&#10;[2001:db8::10]:10086&#10;test.example.com:10010"
                 value={form.remoteAddr}
                 onChange={(e) =>
@@ -219,7 +223,7 @@ export function ForwardFormModal({
             </FormSection>
             <section className="form-section">
               <AdvancedSection title="高级设置">
-                <div className="space-y-4 pb-2">
+                <div className="grid grid-cols-1 gap-4 pb-1 md:grid-cols-2">
                   <TextInput
                     description="大于 0 时优先于用户全局限制；0 或空表示使用用户全局限制，用户也为 0 时不限制。"
                     label="最大连接数"
@@ -251,48 +255,46 @@ export function ForwardFormModal({
                       }));
                     }}
                   />
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <Select
-                      data={[
-                        { value: "0", label: "禁用" },
-                        { value: "1", label: "Version 1" },
-                        { value: "2", label: "Version 2" },
-                      ]}
-                      description="入口监听接收 PROXY protocol，用于读取上游传入的真实客户端 IP。"
-                      label="Proxy Protocol 接收"
-                      placeholder="禁用"
-                      value={String(form.proxyProtocolReceive || 0)}
-                      onChange={(value) => {
-                        const selectedKey = value as string;
+                  <Select
+                    data={[
+                      { value: "0", label: "禁用" },
+                      { value: "1", label: "Version 1" },
+                      { value: "2", label: "Version 2" },
+                    ]}
+                    description="入口监听接收 PROXY protocol，用于读取上游传入的真实客户端 IP。"
+                    label="Proxy Protocol 接收"
+                    placeholder="禁用"
+                    value={String(form.proxyProtocolReceive || 0)}
+                    onChange={(value) => {
+                      const selectedKey = value as string;
 
-                        setForm((prev) => ({
-                          ...prev,
-                          proxyProtocolReceive: Number(selectedKey),
-                        }));
-                      }}
-                    />
-                    <Select
-                      data={[
-                        { value: "0", label: "禁用" },
-                        { value: "1", label: "Version 1" },
-                        { value: "2", label: "Version 2" },
-                      ]}
-                      description="连接目标地址时发送 PROXY protocol，用于向下游透传客户端真实 IP。"
-                      label="Proxy Protocol 发送"
-                      placeholder="禁用"
-                      value={String(form.proxyProtocolSend || 0)}
-                      onChange={(value) => {
-                        const selectedKey = value as string;
-                        const proxyProtocolSend = Number(selectedKey);
+                      setForm((prev) => ({
+                        ...prev,
+                        proxyProtocolReceive: Number(selectedKey),
+                      }));
+                    }}
+                  />
+                  <Select
+                    data={[
+                      { value: "0", label: "禁用" },
+                      { value: "1", label: "Version 1" },
+                      { value: "2", label: "Version 2" },
+                    ]}
+                    description="连接目标地址时发送 PROXY protocol，用于向下游透传客户端真实 IP。"
+                    label="Proxy Protocol 发送"
+                    placeholder="禁用"
+                    value={String(form.proxyProtocolSend || 0)}
+                    onChange={(value) => {
+                      const selectedKey = value as string;
+                      const proxyProtocolSend = Number(selectedKey);
 
-                        setForm((prev) => ({
-                          ...prev,
-                          proxyProtocol: proxyProtocolSend,
-                          proxyProtocolSend,
-                        }));
-                      }}
-                    />
-                  </div>
+                      setForm((prev) => ({
+                        ...prev,
+                        proxyProtocol: proxyProtocolSend,
+                        proxyProtocolSend,
+                      }));
+                    }}
+                  />
                   {isAdmin && (
                     <Select
                       clearable

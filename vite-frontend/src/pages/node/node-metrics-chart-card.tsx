@@ -5,7 +5,7 @@ import {
   SegmentedControl,
   Select,
 } from "@mantine/core";
-import { ChartLine, RefreshCw } from "lucide-react";
+import { ChartLine, CircleAlert, RefreshCw } from "lucide-react";
 import React from "react";
 import {
   CartesianGrid,
@@ -17,9 +17,14 @@ import {
   YAxis,
 } from "recharts";
 
-import { chartTooltipProps, useChartPalette } from "@/components/chart-theme";
-import { SectionHeader } from "@/components/section-header";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import {
+  chartAxisProps,
+  chartGridProps,
+  chartLineProps,
+  chartTooltipProps,
+  useChartPalette,
+} from "@/components/chart-theme";
+import { Card } from "@/components/ui/card";
 import { formatBytesPerSecond } from "@/pages/node/monitor-format";
 
 export type MetricType =
@@ -153,102 +158,130 @@ export const NodeMetricsChartCard = React.memo(function NodeMetricsChartCard({
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <SectionHeader
-          actions={
-            <>
-              <Select
-                required
-                aria-label="时间范围"
-                className="w-28"
-                data={[
-                  { value: String(15 * 60 * 1000), label: "15分钟" },
-                  { value: String(60 * 60 * 1000), label: "1小时" },
-                  { value: String(6 * 60 * 60 * 1000), label: "6小时" },
-                  { value: String(24 * 60 * 60 * 1000), label: "24小时" },
-                ]}
-                value={String(rangeMs)}
-                onChange={(value) => {
-                  const v = Number(value);
+    <Card className="dash-panel">
+      <div data-flush className="dash-panel-head flex-wrap">
+        <div className="min-w-0">
+          <h2 className="dash-panel-title">节点指标</h2>
+          <p className="dash-panel-desc mt-0.5">
+            资源占用、网络与连接的历史趋势
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Select
+            required
+            aria-label="时间范围"
+            className="w-24"
+            data={[
+              { value: String(15 * 60 * 1000), label: "15分钟" },
+              { value: String(60 * 60 * 1000), label: "1小时" },
+              { value: String(6 * 60 * 60 * 1000), label: "6小时" },
+              { value: String(24 * 60 * 60 * 1000), label: "24小时" },
+            ]}
+            size="xs"
+            value={String(rangeMs)}
+            onChange={(value) => {
+              const v = Number(value);
 
-                  if (v > 0) onRangeChange(v);
-                }}
-              />
-              <MantineTooltip label="刷新">
-                <ActionIcon
-                  aria-label="刷新指标"
-                  color="gray"
-                  loading={loading}
-                  variant="subtle"
-                  onClick={() => nodeId && onRefresh(nodeId)}
-                >
-                  <RefreshCw size={16} />
-                </ActionIcon>
-              </MantineTooltip>
-            </>
-          }
-          description="资源占用、网络与连接的历史趋势"
-          icon={ChartLine}
-          title="节点指标"
-        />
-      </CardHeader>
-      <CardBody className="space-y-4 pt-0">
-        <div className="overflow-x-auto">
+              if (v > 0) onRangeChange(v);
+            }}
+          />
+          <MantineTooltip label="刷新">
+            <ActionIcon
+              aria-label="刷新指标"
+              color="gray"
+              loading={loading}
+              size={30}
+              variant="subtle"
+              onClick={() => nodeId && onRefresh(nodeId)}
+            >
+              <RefreshCw size={14} />
+            </ActionIcon>
+          </MantineTooltip>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 pb-1">
+        <div className="max-w-full overflow-x-auto">
           <SegmentedControl
             aria-label="指标类型"
             data={METRIC_TYPE_BUTTONS.map((item) => ({
               value: item.key,
               label: item.label,
             }))}
-            size="sm"
+            size="xs"
             value={activeMetricType}
             onChange={(value) => onMetricTypeChange(value as MetricType)}
           />
         </div>
-
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader size="sm" />
+        {data.length > 0 && !loading && !error && (
+          <div className="chart-legend">
+            {chartConfig.lines.map((line) => (
+              <span
+                key={line.dataKey}
+                className="chart-legend-item"
+                style={{ "--legend-color": line.color } as React.CSSProperties}
+              >
+                {line.name}
+              </span>
+            ))}
           </div>
-        ) : error ? (
-          <p className="monitor-chart-empty text-danger-ink">{error}</p>
-        ) : data.length > 0 ? (
-          <>
-            <div className="h-64">
-              <ResponsiveContainer height="100%" width="100%">
-                <LineChart data={data}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="time" fontSize={12} />
-                  <YAxis fontSize={12} tickFormatter={yAxisTickFormatter} />
-                  <Tooltip
-                    {...chartTooltipProps}
-                    formatter={tooltipFormatter}
-                  />
-                  {chartConfig.lines.map((line) => (
-                    <Line
-                      key={line.dataKey}
-                      dataKey={line.dataKey}
-                      dot={false}
-                      name={line.name}
-                      stroke={line.color}
-                      strokeWidth={2}
-                      type="monotone"
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            {truncated && (
-              <div className="text-xs text-default-500">
-                数据点过多，已截断为最近 {maxRows} 条，建议缩小时间范围。
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="monitor-chart-empty">所选时间范围内还没有指标记录</p>
         )}
-      </CardBody>
+      </div>
+
+      {loading ? (
+        <div className="chart-empty">
+          <Loader size="xs" />
+          正在加载指标…
+        </div>
+      ) : error ? (
+        <p className="chart-empty" data-tone="danger">
+          <CircleAlert size={15} />
+          {error}
+        </p>
+      ) : data.length > 0 ? (
+        <>
+          <div className="chart-frame h-[220px] px-2 pb-3 pt-2">
+            <ResponsiveContainer height="100%" width="100%">
+              <LineChart
+                data={data}
+                margin={{ top: 4, right: 12, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid {...chartGridProps} />
+                <XAxis
+                  {...chartAxisProps}
+                  dataKey="time"
+                  interval="preserveStartEnd"
+                  minTickGap={32}
+                />
+                <YAxis
+                  {...chartAxisProps}
+                  tickFormatter={yAxisTickFormatter}
+                  width={activeMetricType === "network" ? 72 : 44}
+                />
+                <Tooltip {...chartTooltipProps} formatter={tooltipFormatter} />
+                {chartConfig.lines.map((line) => (
+                  <Line
+                    key={line.dataKey}
+                    {...chartLineProps}
+                    dataKey={line.dataKey}
+                    name={line.name}
+                    stroke={line.color}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          {truncated && (
+            <div className="dash-panel-foot">
+              数据点过多，已截断为最近 {maxRows} 条，建议缩小时间范围。
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="chart-empty">
+          <ChartLine size={15} />
+          所选时间范围内还没有指标记录
+        </p>
+      )}
     </Card>
   );
 });

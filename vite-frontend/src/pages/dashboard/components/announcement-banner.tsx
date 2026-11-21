@@ -6,7 +6,6 @@ import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
 import { Card, CardBody } from "@/components/ui/card";
-import { IconTile } from "@/components/ui/icon-tile";
 
 interface AnnouncementBannerProps {
   announcement: AnnouncementData;
@@ -21,16 +20,14 @@ export const AnnouncementBanner = ({
 
   return (
     <Card className="border-primary-line bg-primary-soft">
-      <CardBody className="p-4 sm:p-5">
-        <div className="flex items-center gap-3.5 sm:gap-4">
-          <IconTile round className="shrink-0" size="lg" tone="primary">
-            <Info size={20} />
-          </IconTile>
+      <CardBody className="px-4 py-3">
+        <div className="flex items-start gap-2.5">
+          <Info className="mt-[3px] shrink-0 text-primary-ink" size={15} />
           <div className="flex-1 min-w-0">
-            <h3 className="text-[15px] font-semibold text-foreground tracking-wide mb-1 sm:mb-1.5 mt-1.5">
+            <h3 className="mb-0.5 text-[13px] font-semibold text-foreground">
               公告
             </h3>
-            <div className="text-sm text-default-700 break-words leading-relaxed">
+            <div className="text-[13px] text-default-700 break-words leading-relaxed">
               <ReactMarkdown
                 components={{
                   p: ({ children }) => (

@@ -55,12 +55,12 @@ export function TunnelDeleteModal({
   return (
     <Modal
       opened={deleteModalOpen}
-      size="2xl"
+      size="lg"
       onClose={() => handleDeleteModalOpenChange(false)}
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">
-          <h2 className="text-lg font-bold sm:text-xl">删除隧道</h2>
+          <h2>删除隧道</h2>
           <p className="text-xs font-normal leading-5 text-default-500 sm:text-sm">
             {tunnelDeletePreview?.tunnelName || tunnelToDelete?.name
               ? `即将删除“${tunnelDeletePreview?.tunnelName || tunnelToDelete?.name}”，删除前会先检查是否有关联规则。`

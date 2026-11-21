@@ -1,0 +1,470 @@
+@layer components {
+  /* --- Page summary line under the toolbar --- */
+  .forward-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    margin: -4px 0 18px;
+    padding: 0 2px;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .forward-summary .status-dot {
+    font-size: 12px;
+    color: inherit;
+  }
+
+  /* --- Owner sections: a quiet header row, no card --- */
+  .forward-board {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .forward-owner-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 0 2px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .forward-owner-name {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .forward-owner-count {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .forward-owner-groups {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* --- Tunnel groups: slim collapsible header + content --- */
+  .forward-group {
+    position: relative;
+    min-width: 0;
+    border-radius: 10px;
+  }
+  .forward-group + .forward-group {
+    margin-top: 20px;
+  }
+  .forward-group[data-collapsed] + .forward-group {
+    margin-top: 4px;
+  }
+  .forward-group[data-dragging] {
+    z-index: 5;
+    background: var(--background);
+    box-shadow: var(--elevation-3);
+  }
+  .forward-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 30px;
+    margin-bottom: 8px;
+  }
+  .forward-group[data-collapsed] .forward-group-head {
+    margin-bottom: 0;
+  }
+  .forward-group-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-left: -6px;
+    padding: 4px 8px 4px 6px;
+    border-radius: 6px;
+    text-align: left;
+    transition: background-color var(--duration-fast) ease;
+  }
+  .forward-group-toggle:hover {
+    background: var(--default-soft);
+  }
+  .forward-group-toggle:focus-visible {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 1px;
+  }
+  .forward-group-chevron {
+    flex-shrink: 0;
+    color: var(--default-500);
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+  .forward-group[data-collapsed] .forward-group-chevron {
+    transform: rotate(-90deg);
+  }
+  .forward-group-name {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .forward-group-count {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+
+  /* Shared with the tunnel and node pages. */
+  .forward-drag-handle {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 28px;
+    border-radius: 6px;
+    color: var(--default-400);
+    cursor: grab;
+    touch-action: none;
+    transition:
+      background-color var(--duration-fast) ease,
+      color var(--duration-fast) ease;
+  }
+  .forward-drag-handle:hover {
+    color: var(--default-600);
+    background: var(--default-soft);
+  }
+  .forward-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  /* --- Shared item pieces --- */
+  .forward-title {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--foreground);
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--duration-fast) ease;
+  }
+  .forward-title:hover {
+    color: var(--primary);
+  }
+  .forward-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin-top: 1px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--default-500);
+    white-space: nowrap;
+  }
+  .forward-meta .status-dot {
+    gap: 5px;
+    font-size: 12px;
+  }
+  .forward-meta-sep {
+    color: var(--default-300);
+  }
+  .forward-addr {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    margin-left: -5px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    line-height: 20px;
+    text-align: left;
+    transition: background-color var(--duration-fast) ease;
+  }
+  .forward-addr:hover {
+    background: var(--default-soft);
+  }
+  .forward-addr:focus-visible {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 1px;
+  }
+  .forward-addr-copy {
+    flex-shrink: 0;
+    color: var(--default-400);
+    opacity: 0;
+    transition: opacity var(--duration-fast) ease;
+  }
+  .forward-addr:hover .forward-addr-copy,
+  .forward-addr:focus-visible .forward-addr-copy {
+    opacity: 1;
+  }
+  .forward-addr-more {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--primary-ink);
+  }
+  .forward-flow {
+    min-width: 0;
+  }
+  .forward-flow-total,
+  .forward-flow-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .forward-flow-total {
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 18px;
+    color: var(--foreground);
+  }
+  .forward-flow-detail {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--default-500);
+  }
+  .forward-action {
+    color: var(--default-500);
+  }
+  .forward-action:hover {
+    color: var(--foreground);
+  }
+  .forward-state {
+    font-size: 12px;
+    color: var(--default-500);
+    white-space: nowrap;
+  }
+  .forward-state[data-tone="success"] {
+    color: var(--default-600);
+  }
+  .forward-state[data-tone="warning"] {
+    color: var(--warning-ink);
+  }
+  .forward-state[data-tone="danger"] {
+    color: var(--danger-ink);
+    font-weight: 550;
+  }
+
+  /* --- Card view --- */
+  .forward-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    gap: 12px;
+  }
+  .forward-card {
+    height: 100%;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .forward-card[data-selected] {
+    border-color: var(--primary-line);
+    background: var(--primary-soft);
+  }
+  .forward-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .forward-card-check {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .forward-card-controls {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    margin: -3px -6px 0 0;
+  }
+  .forward-card-route {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+  }
+  .forward-card-route > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .forward-card-route dt {
+    flex-shrink: 0;
+    width: 26px;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .forward-card-route dd {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+  }
+  .forward-card-foot {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .forward-card-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    margin: 0 -6px -2px 0;
+  }
+
+  /* --- List view: one bordered table block per group --- */
+  .forward-table {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--content1);
+  }
+  .forward-list {
+    container: forward-list / inline-size;
+  }
+  .forward-list-head {
+    display: none;
+  }
+  .forward-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "lead name status"
+      "lead in in"
+      "lead out out"
+      "lead flow actions";
+    align-items: center;
+    gap: 4px 10px;
+    padding: 10px 12px;
+    background: var(--content1);
+    transition: background-color var(--duration-fast) ease;
+  }
+  .forward-row + .forward-row {
+    border-top: 1px solid var(--border);
+  }
+  .forward-row:hover {
+    background: var(--content2);
+  }
+  .forward-row[data-selected] {
+    background: var(--primary-soft);
+  }
+  .forward-row[data-dragging] {
+    position: relative;
+    z-index: 5;
+    background: var(--content1);
+    box-shadow: var(--elevation-3);
+  }
+  .forward-row-lead {
+    grid-area: lead;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    align-self: start;
+  }
+  .forward-row-name {
+    grid-area: name;
+    min-width: 0;
+  }
+  .forward-row .forward-title {
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 18px;
+  }
+  .forward-row-in {
+    grid-area: in;
+  }
+  .forward-row-out {
+    grid-area: out;
+  }
+  .forward-row-in,
+  .forward-row-out {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .forward-row-label {
+    flex-shrink: 0;
+    width: 26px;
+    font-size: 12px;
+    color: var(--default-500);
+  }
+  .forward-row-flow {
+    grid-area: flow;
+    min-width: 0;
+  }
+  .forward-row .forward-flow[data-align="end"] {
+    text-align: left;
+  }
+  .forward-row-status {
+    grid-area: status;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .forward-row-actions {
+    grid-area: actions;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+  }
+  @container forward-list (min-width: 820px) {
+    .forward-list-head,
+    .forward-row {
+      grid-template-columns:
+        44px minmax(140px, 1.1fr) minmax(0, 1.2fr) minmax(0, 1.4fr)
+        150px 100px 92px;
+      grid-template-areas: "lead name in out flow status actions";
+      column-gap: 16px;
+      padding-inline: 12px;
+    }
+    .forward-list-head {
+      display: grid;
+      align-items: center;
+      height: 34px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--default-500);
+      white-space: nowrap;
+      background: var(--content2);
+      border-bottom: 1px solid var(--border);
+    }
+    .forward-list-head .forward-row-flow {
+      text-align: right;
+    }
+    .forward-list-head .forward-row-status {
+      justify-content: flex-start;
+    }
+    .forward-row {
+      min-height: 48px;
+      padding-block: 6px;
+    }
+    .forward-row-lead {
+      align-self: center;
+    }
+    .forward-row-label {
+      display: none;
+    }
+    .forward-row-status {
+      justify-content: flex-start;
+    }
+    .forward-row .forward-flow[data-align="end"] {
+      text-align: right;
+    }
+  }
+}

@@ -1205,21 +1205,16 @@ export default function TunnelPage() {
       />
 
       {tunnels.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-default-500">
+        <div className="tunnel-summary">
           <span>
-            共{" "}
-            <span className="font-semibold text-foreground">
-              {sortedTunnels.length}
-            </span>{" "}
-            条隧道
+            共 <strong>{sortedTunnels.length}</strong> 条隧道
             {sortedTunnels.length !== tunnels.length &&
               `（已筛选，全部 ${tunnels.length} 条）`}
           </span>
           <span>隧道转发 {chainTunnelCount}</span>
           <span>端口转发 {sortedTunnels.length - chainTunnelCount}</span>
           {disabledTunnelCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-warning-ink">
-              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+            <span className="status-dot text-warning-ink" data-tone="warning">
               停用 {disabledTunnelCount}
             </span>
           )}
@@ -1337,7 +1332,7 @@ export default function TunnelPage() {
             items={sortableTunnelIds}
             strategy={rectSortingStrategy}
           >
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(290px,1fr))] gap-4">
+            <div className="tunnel-grid">
               {sortedTunnels.map((tunnel) => (
                 <SortableTunnelItem key={tunnel.id} id={tunnel.id}>
                   {(listeners) => (

@@ -11,6 +11,7 @@ import {
 } from "@mantine/core";
 import {
   Activity,
+  ChartLine,
   Edit,
   MoreVertical,
   Play,
@@ -33,11 +34,13 @@ import {
   type ServiceMonitorResultApiItem,
 } from "@/api/types";
 import {
+  chartAxisProps,
+  chartGridProps,
+  chartLineProps,
   chartTooltipProps,
   type ChartSeriesColor,
 } from "@/components/chart-theme";
-import { SectionHeader } from "@/components/section-header";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 interface ServiceMonitorPanelProps {
   serviceMonitorRangeMs: number;
@@ -90,81 +93,86 @@ export function ServiceMonitorPanel({
   palette,
 }: ServiceMonitorPanelProps) {
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <SectionHeader
-          actions={
-            <>
-              <Select
-                required
-                aria-label="时间范围"
-                className="w-28"
-                data={[
-                  { value: String(60 * 60 * 1000), label: "1小时" },
-                  {
-                    value: String(6 * 60 * 60 * 1000),
-                    label: "6小时",
-                  },
-                  {
-                    value: String(24 * 60 * 60 * 1000),
-                    label: "24小时",
-                  },
-                ]}
-                value={String(serviceMonitorRangeMs)}
-                onChange={(value) => {
-                  const v = Number(value);
+    <Card className="dash-panel">
+      <div data-flush className="dash-panel-head flex-wrap">
+        <div className="min-w-0">
+          <h2 className="dash-panel-title">
+            服务监控
+            {detailServiceMonitors.length > 0 && (
+              <small>{detailServiceMonitors.length}</small>
+            )}
+          </h2>
+          <p className="dash-panel-desc mt-0.5">TCP / ICMP 可用性与延迟</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Select
+            required
+            aria-label="时间范围"
+            className="w-24"
+            data={[
+              { value: String(60 * 60 * 1000), label: "1小时" },
+              {
+                value: String(6 * 60 * 60 * 1000),
+                label: "6小时",
+              },
+              {
+                value: String(24 * 60 * 60 * 1000),
+                label: "24小时",
+              },
+            ]}
+            size="xs"
+            value={String(serviceMonitorRangeMs)}
+            onChange={(value) => {
+              const v = Number(value);
 
-                  if (v > 0) setServiceMonitorRangeMs(v);
+              if (v > 0) setServiceMonitorRangeMs(v);
+            }}
+          />
+          {resolvedActiveMonitorId != null && (
+            <MantineTooltip label="刷新">
+              <ActionIcon
+                aria-label="刷新监控记录"
+                color="gray"
+                size={30}
+                variant="subtle"
+                onClick={() => {
+                  void loadMonitorResults(resolvedActiveMonitorId, {
+                    rangeMs: serviceMonitorRangeMs,
+                  });
                 }}
-              />
-              {resolvedActiveMonitorId != null && (
-                <MantineTooltip label="刷新">
-                  <ActionIcon
-                    aria-label="刷新监控记录"
-                    color="gray"
-                    variant="subtle"
-                    onClick={() => {
-                      void loadMonitorResults(resolvedActiveMonitorId, {
-                        rangeMs: serviceMonitorRangeMs,
-                      });
-                    }}
-                  >
-                    <RefreshCw size={16} />
-                  </ActionIcon>
-                </MantineTooltip>
-              )}
-              <Button
-                leftSection={<Plus size={15} />}
-                size="xs"
-                variant="light"
-                onClick={() => handleOpenEditModal()}
               >
-                添加监控
-              </Button>
-            </>
-          }
-          description="TCP / ICMP 可用性与延迟"
-          icon={Activity}
-          title="服务监控"
-        />
-      </CardHeader>
-      <CardBody className="space-y-4 pt-0">
+                <RefreshCw size={14} />
+              </ActionIcon>
+            </MantineTooltip>
+          )}
+          <Button
+            leftSection={<Plus size={14} />}
+            size="xs"
+            variant="default"
+            onClick={() => handleOpenEditModal()}
+          >
+            添加监控
+          </Button>
+        </div>
+      </div>
+      <div className="space-y-3 px-4 pb-4">
         {monitorsLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader size="sm" />
+          <div className="chart-empty">
+            <Loader size="xs" />
+            正在加载服务监控…
           </div>
         ) : detailServiceMonitors.length > 0 ? (
           <>
             {/* Monitor switcher buttons – like metric type tabs */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {detailServiceMonitors.map((monitor) => {
                 const lr = getLatestResult(monitor.id);
-                const dot =
+                const tone =
                   monitor.enabled !== 1 || !lr
-                    ? "bg-default-400"
+                    ? undefined
                     : lr.success === 1
-                      ? "bg-success"
-                      : "bg-danger";
+                      ? "success"
+                      : "danger";
                 const isActive = monitor.id === resolvedActiveMonitorId;
 
                 return (
@@ -186,9 +194,7 @@ export function ServiceMonitorPanel({
                       }
                     }}
                   >
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`}
-                    />
+                    <span aria-hidden className="status-dot" data-tone={tone} />
                     {monitor.name}
                   </button>
                 );
@@ -197,35 +203,31 @@ export function ServiceMonitorPanel({
 
             {/* Active monitor info bar */}
             {resolvedActiveMonitor && (
-              <div className="flex items-center justify-between gap-3 rounded-lg bg-default-soft px-3 py-2">
-                <div className="flex items-center gap-3 min-w-0 flex-wrap">
-                  <Badge size="sm" variant="light">
+              <div className="mon-infobar justify-between">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                  <Badge color="gray" size="sm" variant="light">
                     {resolvedActiveMonitor.type.toUpperCase()}
                   </Badge>
-                  <span className="font-mono text-xs text-default-500">
+                  <span className="mono-value">
                     {resolvedActiveMonitor.target}
                   </span>
-                  <span className="text-xs text-default-500">
-                    每秒测试，30秒上报
-                  </span>
+                  <span>每秒测试，30秒上报</span>
                   {activeLatestResult &&
                   Number.isFinite(activeLatestResult.latencyMs) ? (
-                    <span className="font-mono text-xs font-semibold text-success-ink">
+                    <span className="font-medium tabular-nums text-foreground">
                       {activeLatestResult.latencyMs.toFixed(0)}ms
                     </span>
                   ) : null}
                   {activeStale ? (
-                    <Badge color="orange" size="sm" variant="light">
+                    <span className="status-dot" data-tone="warning">
                       陈旧
-                    </Badge>
+                    </span>
                   ) : null}
                   {resolvedActiveMonitor.enabled !== 1 ? (
-                    <Badge color="gray" size="sm" variant="light">
-                      已禁用
-                    </Badge>
+                    <span className="status-dot">已禁用</span>
                   ) : null}
                 </div>
-                <Menu position="bottom-start">
+                <Menu position="bottom-end">
                   <Menu.Target>
                     <ActionIcon
                       aria-label="监控操作"
@@ -280,16 +282,25 @@ export function ServiceMonitorPanel({
               </div>
             )}
 
-            {/* Chart area – same h-64 as node metrics */}
+            {/* Chart area */}
             {activeLatencyData.length > 0 ? (
-              <div className="h-64">
+              <div className="chart-frame h-[220px]">
                 <ResponsiveContainer height="100%" width="100%">
-                  <LineChart data={activeLatencyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" fontSize={12} />
+                  <LineChart
+                    data={activeLatencyData}
+                    margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid {...chartGridProps} />
+                    <XAxis
+                      {...chartAxisProps}
+                      dataKey="time"
+                      interval="preserveStartEnd"
+                      minTickGap={32}
+                    />
                     <YAxis
-                      fontSize={12}
+                      {...chartAxisProps}
                       tickFormatter={(v: number) => `${Math.round(v)}ms`}
+                      width={48}
                     />
                     <Tooltip
                       {...chartTooltipProps}
@@ -299,27 +310,29 @@ export function ServiceMonitorPanel({
                       ]}
                     />
                     <Line
+                      {...chartLineProps}
                       connectNulls={false}
                       dataKey="latency"
-                      dot={false}
                       name="延迟"
                       stroke={palette.teal}
-                      strokeWidth={2}
-                      type="monotone"
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="monitor-chart-empty">暂无检查记录</p>
+              <p className="chart-empty">
+                <ChartLine size={15} />
+                暂无检查记录
+              </p>
             )}
           </>
         ) : (
-          <p className="monitor-chart-empty">
+          <p className="chart-empty">
+            <Activity size={15} />
             还没有服务监控，点击“添加监控”创建
           </p>
         )}
-      </CardBody>
+      </div>
     </Card>
   );
 }

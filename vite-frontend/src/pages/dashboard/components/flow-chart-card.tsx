@@ -9,9 +9,12 @@ import {
 } from "recharts";
 import { ChartLine } from "lucide-react";
 
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { PageEmptyState } from "@/components/page-state";
-import { SectionHeader } from "@/components/section-header";
+import { Card } from "@/components/ui/card";
+import {
+  chartAxisProps,
+  chartGridProps,
+  chartTooltipProps,
+} from "@/components/chart-theme";
 
 interface FlowChartPoint {
   time: string;
@@ -38,11 +41,9 @@ const compactBytes = (value: number | string) => {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 text-right">
-      <p className="text-[11px] text-default-500">{label}</p>
-      <p className="truncate text-sm font-semibold tabular-nums text-foreground">
-        {value}
-      </p>
+    <div className="chart-stat">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
     </div>
   );
 }
@@ -57,114 +58,110 @@ export const FlowChartCard = ({
     (max, point) => (point.flow > max.flow ? point : max),
     { time: "", flow: 0 },
   );
+  // An all-zero series is a flat line on an arbitrary axis; say so instead.
+  const showChart = hasData && total > 0;
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <SectionHeader
-          actions={
-            hasData && (
-              <div className="flex items-center gap-6">
-                <Stat label="合计" value={formatFlow(total)} />
-                <Stat
-                  label={peak.time ? `峰值 · ${peak.time}` : "峰值"}
-                  value={formatFlow(peak.flow)}
-                />
-              </div>
-            )
-          }
-          description="按小时统计的计费流量"
-          icon={ChartLine}
-          title="近 24 小时流量"
-        />
-      </CardHeader>
-      <CardBody className="pt-0">
-        {!hasData ? (
-          <PageEmptyState className="h-56" message="暂无流量统计数据" />
-        ) : (
-          <div className="flow-chart h-60 w-full lg:h-72">
-            <ResponsiveContainer height="100%" width="100%">
-              <AreaChart
-                data={chartData}
-                margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient
-                    id="dashboard-flow-fill"
-                    x1="0"
-                    x2="0"
-                    y1="0"
-                    y2="1"
-                  >
-                    <stop
-                      className="flow-chart-stop"
-                      offset="0%"
-                      stopOpacity={0.32}
-                    />
-                    <stop
-                      className="flow-chart-stop"
-                      offset="100%"
-                      stopOpacity={0}
-                    />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 4" vertical={false} />
-                <XAxis
-                  axisLine={false}
-                  dataKey="time"
-                  interval="preserveStartEnd"
-                  minTickGap={28}
-                  tick={{ fill: "currentColor", fontSize: 11 }}
-                  tickLine={false}
-                  tickMargin={8}
-                />
-                <YAxis
-                  axisLine={false}
-                  tick={{ fill: "currentColor", fontSize: 11 }}
-                  tickFormatter={compactBytes}
-                  tickLine={false}
-                  width={56}
-                />
-                <Tooltip
-                  content={({
-                    active,
-                    payload,
-                    label,
-                  }: {
-                    active?: boolean;
-                    payload?: Array<{ value?: number | string }>;
-                    label?: string | number;
-                  }) => {
-                    if (!active || !payload?.length) return null;
-                    const value = Number(payload[0]?.value);
-
-                    return (
-                      <div className="chart-tooltip">
-                        <p className="text-xs text-default-500">{label}</p>
-                        <p className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
-                          {formatFlow(Number.isFinite(value) ? value : 0)}
-                        </p>
-                      </div>
-                    );
-                  }}
-                />
-                <Area
-                  activeDot={{ r: 5, strokeWidth: 2.5 }}
-                  className="flow-chart-area"
-                  dataKey="flow"
-                  fill="url(#dashboard-flow-fill)"
-                  fillOpacity={1}
-                  // The dashboard polls every few seconds; animating each refresh would replay the curve.
-                  isAnimationActive={false}
-                  strokeLinecap="round"
-                  strokeWidth={2.25}
-                  type="monotone"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+    <Card className="dash-panel">
+      <div data-flush className="dash-panel-head">
+        <div className="min-w-0">
+          <h2 className="dash-panel-title">近 24 小时流量</h2>
+          <p className="dash-panel-desc mt-0.5">按小时统计的计费流量</p>
+        </div>
+        {showChart && (
+          <dl className="m-0 flex items-center gap-5">
+            <Stat label="合计" value={formatFlow(total)} />
+            <Stat
+              label={peak.time ? `峰值 · ${peak.time}` : "峰值"}
+              value={formatFlow(peak.flow)}
+            />
+          </dl>
         )}
-      </CardBody>
+      </div>
+      {!showChart ? (
+        <p className="chart-empty pt-2">
+          <ChartLine size={15} />
+          {hasData ? "近 24 小时没有产生流量" : "暂无流量统计数据"}
+        </p>
+      ) : (
+        <div className="flow-chart chart-frame h-[220px] w-full px-2 pb-3">
+          <ResponsiveContainer height="100%" width="100%">
+            <AreaChart
+              data={chartData}
+              margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient
+                  id="dashboard-flow-fill"
+                  x1="0"
+                  x2="0"
+                  y1="0"
+                  y2="1"
+                >
+                  <stop
+                    className="flow-chart-stop"
+                    offset="0%"
+                    stopOpacity={0.18}
+                  />
+                  <stop
+                    className="flow-chart-stop"
+                    offset="100%"
+                    stopOpacity={0}
+                  />
+                </linearGradient>
+              </defs>
+              <CartesianGrid {...chartGridProps} />
+              <XAxis
+                {...chartAxisProps}
+                dataKey="time"
+                interval="preserveStartEnd"
+                minTickGap={28}
+              />
+              <YAxis
+                {...chartAxisProps}
+                tickFormatter={compactBytes}
+                width={48}
+              />
+              <Tooltip
+                content={({
+                  active,
+                  payload,
+                  label,
+                }: {
+                  active?: boolean;
+                  payload?: Array<{ value?: number | string }>;
+                  label?: string | number;
+                }) => {
+                  if (!active || !payload?.length) return null;
+                  const value = Number(payload[0]?.value);
+
+                  return (
+                    <div style={chartTooltipProps.contentStyle}>
+                      <p style={chartTooltipProps.labelStyle}>{label}</p>
+                      <p className="text-[12.5px] font-semibold tabular-nums text-foreground">
+                        {formatFlow(Number.isFinite(value) ? value : 0)}
+                      </p>
+                    </div>
+                  );
+                }}
+                cursor={chartTooltipProps.cursor}
+              />
+              <Area
+                activeDot={{ r: 3.5, strokeWidth: 2 }}
+                className="flow-chart-area"
+                dataKey="flow"
+                fill="url(#dashboard-flow-fill)"
+                fillOpacity={1}
+                // The dashboard polls every few seconds; animating each refresh would replay the curve.
+                isAnimationActive={false}
+                strokeLinecap="round"
+                strokeWidth={1.5}
+                type="monotone"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </Card>
   );
 };

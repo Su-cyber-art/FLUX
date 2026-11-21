@@ -1,17 +1,10 @@
 import type { ReactNode } from "react";
 
-import {
-  ActionIcon,
-  Menu,
-  Tooltip,
-  Badge,
-  Button,
-  Checkbox,
-} from "@mantine/core";
+import { ActionIcon, Menu, Tooltip, Checkbox } from "@mantine/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ArrowRight,
+  ChevronRight,
   Ellipsis,
   GripVertical,
   SquarePen,
@@ -20,7 +13,6 @@ import {
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-import { type SemanticColor, uiColor } from "@/components/ui/shared";
 import { cn } from "@/lib/utils";
 import {
   getTunnelFlowDisplay,
@@ -55,15 +47,17 @@ const toRouteNodes = (
   items: ChainTunnel[] | undefined,
   nodeMap: Map<number, Node>,
 ): RouteNode[] =>
-  (items ?? []).map((item) => {
-    const node = nodeMap.get(item.nodeId);
+  (items ?? [])
+    .filter((item) => item.nodeId !== -1)
+    .map((item) => {
+      const node = nodeMap.get(item.nodeId);
 
-    return {
-      id: item.nodeId,
-      name: node?.name ?? `节点 #${item.nodeId}`,
-      online: node?.status === 1,
-    };
-  });
+      return {
+        id: item.nodeId,
+        name: node?.name ?? `节点 #${item.nodeId}`,
+        online: node?.status === 1,
+      };
+    });
 
 /** Entry, relay hops and exit of a tunnel, resolved to node names. */
 export const tunnelRoute = (
@@ -85,109 +79,133 @@ export const tunnelRoute = (
   ];
 };
 
-const tunnelStatus = (tunnel: Tunnel): { tone: SemanticColor; text: string } =>
-  tunnel.status === 1
-    ? { tone: "success", text: "启用" }
-    : { tone: "warning", text: "停用" };
+/** Cards have room for three stages; fold multiple relay hops into one. */
+const compactRoute = (stages: RouteStage[]): RouteStage[] => {
+  if (stages.length <= 3) return stages;
+  const relays = stages.slice(1, -1);
 
-const RouteNodes = ({ nodes }: { nodes: RouteNode[] }) => {
+  return [
+    stages[0],
+    {
+      role: `中转 ×${relays.length}`,
+      nodes: relays.flatMap((stage) => stage.nodes),
+    },
+    stages[stages.length - 1],
+  ];
+};
+
+/** Chain protocols (relay hops, then exit), de-duplicated, upper-cased. */
+const tunnelProtocols = (tunnel: Tunnel): string[] => {
+  if (tunnel.type !== 2) return [];
+  const groups = [
+    ...(tunnel.chainNodes ?? []),
+    ...(tunnel.outNodeId?.length ? [tunnel.outNodeId] : []),
+  ];
+  const protocols = groups
+    .map((group) => group[0]?.protocol?.trim().toUpperCase())
+    .filter((value): value is string => Boolean(value));
+
+  return Array.from(new Set(protocols));
+};
+
+const formatRatio = (ratio: number) => `${Number(Number(ratio).toFixed(2))}x`;
+
+const nodesTitle = (stage: RouteStage) =>
+  `${stage.role}\n${stage.nodes
+    .map((node) => `${node.name}（${node.online ? "在线" : "离线"}）`)
+    .join("\n")}`;
+
+const RouteNodeLabel = ({ nodes }: { nodes: RouteNode[] }) => {
   if (nodes.length === 0) {
-    return <span className="text-xs text-default-400">未配置</span>;
+    return <span className="tunnel-node tunnel-node-empty">未配置</span>;
   }
   const [first, ...rest] = nodes;
 
   return (
-    <span
-      className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md bg-default-soft px-2 py-0.5 text-xs text-default-700"
-      title={nodes
-        .map((node) => `${node.name}（${node.online ? "在线" : "离线"}）`)
-        .join("\n")}
-    >
-      <span
-        className={cn(
-          "h-1.5 w-1.5 shrink-0 rounded-full",
-          first.online ? "bg-success" : "bg-default-400",
-        )}
-      />
-      <span className="truncate">{first.name}</span>
+    <span className="tunnel-node" data-online={first.online || undefined}>
+      <span className="tunnel-node-name">{first.name}</span>
       {rest.length > 0 && (
-        <span className="shrink-0 font-semibold text-primary-ink">
-          +{rest.length}
-        </span>
+        <span className="tunnel-node-more">+{rest.length}</span>
       )}
     </span>
   );
 };
 
-/** Vertical route used on cards. */
-const TunnelRouteSteps = ({ stages }: { stages: RouteStage[] }) => (
-  <ol className="tunnel-route">
-    {stages.map((stage, index) => (
-      <li key={`${stage.role}-${index}`} className="tunnel-route-step">
-        <span className="tunnel-route-role">{stage.role}</span>
-        <RouteNodes nodes={stage.nodes} />
+/** Card route: role caption above each node, chevrons between stages. */
+const TunnelPath = ({ stages }: { stages: RouteStage[] }) => (
+  <ol className="tunnel-path">
+    {compactRoute(stages).map((stage, index) => (
+      <li
+        key={`${stage.role}-${index}`}
+        className="tunnel-stage"
+        title={nodesTitle(stage)}
+      >
+        <span className="tunnel-stage-role">{stage.role}</span>
+        <RouteNodeLabel nodes={stage.nodes} />
       </li>
     ))}
   </ol>
 );
 
-/** Inline route used in list rows. */
-const TunnelRouteInline = ({ stages }: { stages: RouteStage[] }) => (
-  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+/** List route: one line, role as a muted prefix. */
+const TunnelPathInline = ({ stages }: { stages: RouteStage[] }) => (
+  <div className="tunnel-path-inline">
     {stages.map((stage, index) => (
       <span
         key={`${stage.role}-${index}`}
-        className="inline-flex min-w-0 max-w-full items-center gap-1.5"
+        className="tunnel-inline-stage"
+        title={nodesTitle(stage)}
       >
         {index > 0 && (
-          <ArrowRight className="shrink-0 text-default-400" size={13} />
+          <ChevronRight className="tunnel-inline-arrow" size={12} />
         )}
-        <RouteNodes nodes={stage.nodes} />
+        <span className="tunnel-stage-role">{stage.role}</span>
+        <RouteNodeLabel nodes={stage.nodes} />
       </span>
     ))}
   </div>
 );
 
-const TunnelMeta = ({ tunnel }: { tunnel: Tunnel }) => (
-  <p className="truncate text-xs text-default-500">
-    {[
-      getTunnelFlowDisplay(tunnel.flow),
-      `倍率 ${tunnel.trafficRatio}x`,
-      tunnel.type === 2 && tunnel.ipPreference
-        ? tunnel.ipPreference === "v4"
-          ? "IPv4 优先"
-          : "IPv6 优先"
-        : "",
-    ]
-      .filter(Boolean)
-      .join(" · ")}
-  </p>
+const TunnelStatus = ({ tunnel }: { tunnel: Tunnel }) => (
+  <span
+    className="status-dot"
+    data-tone={tunnel.status === 1 ? "success" : "warning"}
+  >
+    {tunnel.status === 1 ? "启用" : "停用"}
+  </span>
 );
 
-const TunnelChips = ({ tunnel }: { tunnel: Tunnel }) => {
-  const type = getTunnelTypeDisplay(tunnel.type);
-  const status = tunnelStatus(tunnel);
+/** Type · protocol · flow · ratio · IP preference. */
+const TunnelMeta = ({
+  tunnel,
+  showRatio = true,
+}: {
+  tunnel: Tunnel;
+  showRatio?: boolean;
+}) => {
+  const protocols = tunnelProtocols(tunnel);
+  const preference =
+    tunnel.type === 2 && tunnel.ipPreference
+      ? tunnel.ipPreference === "v4"
+        ? "IPv4 优先"
+        : "IPv6 优先"
+      : "";
 
   return (
-    <>
-      <Badge
-        color={uiColor(type.color as SemanticColor)}
-        size="xs"
-        variant="light"
-      >
-        {type.text}
-      </Badge>
-      {tunnel.status !== 1 && (
-        <Badge
-          color={uiColor(status.tone)}
-          leftSection={<span className="badge-dot" />}
-          size="xs"
-          variant="light"
-        >
-          {status.text}
-        </Badge>
+    <p className="tunnel-meta">
+      <span>{getTunnelTypeDisplay(tunnel.type).text}</span>
+      {protocols.length > 0 && (
+        <span className="mono-value">{protocols.join("/")}</span>
       )}
-    </>
+      <span>{getTunnelFlowDisplay(tunnel.flow)}</span>
+      <span
+        className={cn("mono-value", !showRatio && "tunnel-meta-ratio")}
+        title="流量倍率"
+      >
+        {formatRatio(tunnel.trafficRatio)}
+      </span>
+      {preference && <span>{preference}</span>}
+    </p>
   );
 };
 
@@ -200,7 +218,7 @@ const TunnelMoreMenu = ({
 }) => (
   <Menu withinPortal position="bottom-end" shadow="md" width={150}>
     <Menu.Target>
-      <ActionIcon aria-label="更多操作" color="gray" variant="subtle">
+      <ActionIcon aria-label="更多操作" color="gray" size="md" variant="subtle">
         <Ellipsis size={16} />
       </ActionIcon>
     </Menu.Target>
@@ -214,6 +232,40 @@ const TunnelMoreMenu = ({
       </Menu.Item>
     </Menu.Dropdown>
   </Menu>
+);
+
+const TunnelActions = ({
+  tunnel,
+  handlers,
+}: {
+  tunnel: Tunnel;
+  handlers: TunnelItemHandlers;
+}) => (
+  <div className="tunnel-actions">
+    <Tooltip label="编辑">
+      <ActionIcon
+        aria-label="编辑隧道"
+        color="gray"
+        size="md"
+        variant="subtle"
+        onClick={() => handlers.onEdit(tunnel)}
+      >
+        <SquarePen size={15} />
+      </ActionIcon>
+    </Tooltip>
+    <Tooltip label="诊断">
+      <ActionIcon
+        aria-label="诊断隧道"
+        color="gray"
+        size="md"
+        variant="subtle"
+        onClick={() => handlers.onDiagnose(tunnel)}
+      >
+        <Stethoscope size={15} />
+      </ActionIcon>
+    </Tooltip>
+    <TunnelMoreMenu handlers={handlers} tunnel={tunnel} />
+  </div>
 );
 
 export const SortableTunnelItem = ({
@@ -275,71 +327,48 @@ export const TunnelCard = ({
   return (
     <Card
       className={cn(
-        "h-full gap-3 p-4",
+        "tunnel-card",
         selected && "border-primary-line bg-primary-soft",
       )}
+      data-disabled={tunnel.status !== 1 || undefined}
     >
-      <div className="flex items-start gap-2.5">
+      <div className="tunnel-card-head">
         {selectMode && (
           <Checkbox
             aria-label={`选择 ${tunnel.name}`}
             checked={selected}
-            className="mt-0.5"
+            className="mt-px"
+            size="xs"
             onChange={() => handlers.onToggleSelect(tunnel.id)}
           />
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <h3
-              className="truncate text-[15px] font-semibold text-foreground"
-              title={tunnel.name}
-            >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <h3 className="tunnel-name" title={tunnel.name}>
               {tunnel.name}
             </h3>
-            <TunnelChips tunnel={tunnel} />
+            <TunnelStatus tunnel={tunnel} />
           </div>
-          <div className="mt-0.5">
-            <TunnelMeta tunnel={tunnel} />
-          </div>
+          <TunnelMeta tunnel={tunnel} />
         </div>
         {dragListeners && (
           <button
             aria-label="拖拽排序"
-            className="forward-drag-handle -mr-1"
+            className="tunnel-drag-handle"
             title="拖拽排序"
             type="button"
             {...dragListeners}
           >
-            <GripVertical size={15} />
+            <GripVertical size={14} />
           </button>
         )}
       </div>
 
-      <TunnelRouteSteps stages={tunnelRoute(tunnel, nodeMap)} />
+      <TunnelPath stages={tunnelRoute(tunnel, nodeMap)} />
       {bestExit && <div className="flex min-w-0">{bestExit}</div>}
 
-      <div className="mt-auto flex items-center gap-1.5 border-t border-divider pt-3">
-        <Button
-          color="gray"
-          leftSection={<SquarePen size={14} />}
-          size="xs"
-          variant="subtle"
-          onClick={() => handlers.onEdit(tunnel)}
-        >
-          编辑
-        </Button>
-        <Button
-          color="gray"
-          leftSection={<Stethoscope size={14} />}
-          size="xs"
-          variant="subtle"
-          onClick={() => handlers.onDiagnose(tunnel)}
-        >
-          诊断
-        </Button>
-        <div className="ml-auto">
-          <TunnelMoreMenu handlers={handlers} tunnel={tunnel} />
-        </div>
+      <div className="tunnel-card-foot">
+        <TunnelActions handlers={handlers} tunnel={tunnel} />
       </div>
     </Card>
   );
@@ -355,17 +384,20 @@ export const TunnelListHeader = ({
   onToggleAll: (selected: boolean) => void;
 }) => (
   <div className="tunnel-list-head" role="presentation">
-    <div className="tunnel-row-lead">
+    <div className="tunnel-cell-lead">
       <Checkbox
         aria-label="全选"
         checked={isAllSelected}
         indeterminate={isIndeterminate}
+        size="xs"
         onChange={(event) => onToggleAll(event.currentTarget.checked)}
       />
     </div>
-    <div className="tunnel-row-name">隧道</div>
-    <div className="tunnel-row-route">链路</div>
-    <div className="tunnel-row-actions">操作</div>
+    <div className="tunnel-cell-name">隧道</div>
+    <div className="tunnel-cell-route">链路</div>
+    <div className="tunnel-cell-ratio">倍率</div>
+    <div className="tunnel-cell-status">状态</div>
+    <div className="tunnel-cell-actions">操作</div>
   </div>
 );
 
@@ -384,53 +416,32 @@ export const TunnelRow = ({
 
   return (
     <div className="tunnel-row" data-selected={selected || undefined}>
-      <div className="tunnel-row-lead">
+      <div className="tunnel-cell-lead">
         <Checkbox
           aria-label={`选择 ${tunnel.name}`}
           checked={selected}
+          size="xs"
           onChange={() => handlers.onToggleSelect(tunnel.id)}
         />
       </div>
-      <div className="tunnel-row-name min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <span
-            className="truncate text-sm font-medium text-foreground"
-            title={tunnel.name}
-          >
-            {tunnel.name}
-          </span>
-          <TunnelChips tunnel={tunnel} />
-        </div>
-        <div className="mt-0.5">
-          <TunnelMeta tunnel={tunnel} />
-        </div>
+      <div className="tunnel-cell-name">
+        <span className="tunnel-name" title={tunnel.name}>
+          {tunnel.name}
+        </span>
+        <TunnelMeta showRatio={false} tunnel={tunnel} />
       </div>
-      <div className="tunnel-row-route min-w-0 space-y-1.5">
-        <TunnelRouteInline stages={tunnelRoute(tunnel, nodeMap)} />
-        {bestExit && <div className="flex min-w-0">{bestExit}</div>}
+      <div className="tunnel-cell-route">
+        <TunnelPathInline stages={tunnelRoute(tunnel, nodeMap)} />
+        {bestExit && <div className="mt-1 flex min-w-0">{bestExit}</div>}
       </div>
-      <div className="tunnel-row-actions">
-        <Tooltip label="编辑">
-          <ActionIcon
-            aria-label="编辑隧道"
-            color="gray"
-            variant="subtle"
-            onClick={() => handlers.onEdit(tunnel)}
-          >
-            <SquarePen size={16} />
-          </ActionIcon>
-        </Tooltip>
-        <Tooltip label="诊断">
-          <ActionIcon
-            aria-label="诊断隧道"
-            color="gray"
-            variant="subtle"
-            onClick={() => handlers.onDiagnose(tunnel)}
-          >
-            <Stethoscope size={16} />
-          </ActionIcon>
-        </Tooltip>
-        <TunnelMoreMenu handlers={handlers} tunnel={tunnel} />
+      <div className="tunnel-cell-ratio mono-value">
+        {formatRatio(tunnel.trafficRatio)}
+      </div>
+      <div className="tunnel-cell-status">
+        <TunnelStatus tunnel={tunnel} />
+      </div>
+      <div className="tunnel-cell-actions">
+        <TunnelActions handlers={handlers} tunnel={tunnel} />
       </div>
     </div>
   );

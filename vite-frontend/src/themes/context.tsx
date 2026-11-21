@@ -49,6 +49,18 @@ const cssVariablesResolver: CSSVariablesResolver = (theme) => {
       `var(--mantine-color-${color}-3)`;
   });
 
+  // Mantine surfaces (Paper, inputs, dropdowns) follow the console tokens.
+  light["--mantine-color-body"] = "#ffffff";
+  light["--mantine-color-default"] = "#ffffff";
+  light["--mantine-color-default-hover"] = "#f6f7f8";
+  light["--mantine-color-default-border"] = "rgb(15 17 21 / 0.13)";
+  light["--mantine-color-dimmed"] = "#6b6b74";
+  dark["--mantine-color-body"] = "#111114";
+  dark["--mantine-color-default"] = "#141417";
+  dark["--mantine-color-default-hover"] = "#1b1b1f";
+  dark["--mantine-color-default-border"] = "rgb(255 255 255 / 0.11)";
+  dark["--mantine-color-dimmed"] = "#8f8f98";
+
   return { variables: {}, light, dark };
 };
 const readMode = (): ThemeMode => {
@@ -153,28 +165,52 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           '"Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
         fontFamilyMonospace:
           '"Geist Mono Variable", "SFMono-Regular", "Cascadia Code", Consolas, monospace',
-        headings: { fontFamily: "inherit", fontWeight: "750" },
+        // Console scale: 14px body, 13px controls, 12px meta.
+        fontSizes: {
+          xs: "12px",
+          sm: "13px",
+          md: "14px",
+          lg: "16px",
+          xl: "18px",
+        },
+        headings: {
+          fontFamily: "inherit",
+          fontWeight: "600",
+          sizes: {
+            h1: { fontSize: "22px", lineHeight: "1.3" },
+            h2: { fontSize: "18px", lineHeight: "1.35" },
+            h3: { fontSize: "15px", lineHeight: "1.4" },
+            h4: { fontSize: "14px", lineHeight: "1.45" },
+          },
+        },
         radius: {
-          xs: "6px",
-          sm: "8px",
-          md: "10px",
-          lg: "14px",
-          xl: "22px",
+          xs: "4px",
+          sm: "6px",
+          md: "7px",
+          lg: "10px",
+          xl: "14px",
+        },
+        spacing: {
+          xs: "8px",
+          sm: "12px",
+          md: "16px",
+          lg: "20px",
+          xl: "28px",
         },
         // Surfaces are separated by hairlines; shadows only lift floating layers.
         shadows: {
-          xs: "0 1px 2px rgb(24 24 27 / 0.04)",
-          sm: "0 1px 2px rgb(24 24 27 / 0.05)",
-          md: "0 1px 2px rgb(24 24 27 / 0.05), 0 8px 20px -8px rgb(24 24 27 / 0.12)",
-          lg: "0 2px 6px -2px rgb(24 24 27 / 0.08), 0 16px 36px -10px rgb(24 24 27 / 0.16)",
-          xl: "0 2px 6px -2px rgb(24 24 27 / 0.08), 0 20px 48px -12px rgb(24 24 27 / 0.2)",
+          xs: "0 1px 2px rgb(15 17 21 / 0.04)",
+          sm: "0 1px 2px rgb(15 17 21 / 0.06)",
+          md: "0 1px 2px rgb(15 17 21 / 0.05), 0 6px 16px -6px rgb(15 17 21 / 0.12)",
+          lg: "0 1px 3px rgb(15 17 21 / 0.06), 0 12px 32px -8px rgb(15 17 21 / 0.18)",
+          xl: "0 2px 6px rgb(15 17 21 / 0.08), 0 24px 56px -12px rgb(15 17 21 / 0.24)",
         },
         // Neutral ramps shared with the --default-* tokens in styles/globals.css.
         colors: {
           gray: [
             "#fafafa",
             "#f4f4f5",
-            "#ececee",
+            "#ededef",
             "#e4e4e7",
             "#d4d4d8",
             "#a1a1aa",
@@ -184,16 +220,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             "#18181b",
           ],
           dark: [
-            "#e4e4e7",
-            "#b0b0b8",
-            "#8e8e98",
-            "#5a5a62",
-            "#3a3a3f",
-            "#2c2c30",
-            "#242427",
-            "#1c1c1f",
-            "#121214",
-            "#09090b",
+            "#ededef",
+            "#b4b4bb",
+            "#8f8f98",
+            "#5d5d66",
+            "#34343a",
+            "#26262b",
+            "#1d1d21",
+            "#151518",
+            "#0f0f12",
+            "#0a0a0c",
           ],
           // Accent and status ramps tuned to the tray-and-card palette.
           blue: [
@@ -273,10 +309,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           // Explicit variant so `[data-variant="filled"]` styles apply to default buttons.
           Button: {
             defaultProps: { radius: "md", size: "sm", variant: "filled" },
-            styles: { label: { fontWeight: 600 } },
+            styles: { label: { fontWeight: 550 } },
           },
           ActionIcon: { defaultProps: { radius: "md" } },
           Input: { defaultProps: { radius: "md" } },
+          TextInput: { defaultProps: { size: "sm" } },
+          PasswordInput: { defaultProps: { size: "sm" } },
+          NumberInput: { defaultProps: { size: "sm" } },
+          Paper: { defaultProps: { radius: "lg" } },
           Menu: {
             defaultProps: {
               zIndex: 450,
@@ -324,15 +364,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             },
           },
           SegmentedControl: {
-            defaultProps: { transitionDuration: 260 },
+            defaultProps: { transitionDuration: 200, size: "sm" },
           },
           Progress: {
-            defaultProps: { radius: "xl", size: "sm", transitionDuration: 600 },
+            defaultProps: { radius: "xl", size: 6, transitionDuration: 600 },
           },
           Notification: { defaultProps: { radius: "lg" } },
           Alert: { defaultProps: { icon: <Info size={18} /> } },
           Badge: {
-            defaultProps: { radius: "sm", fw: 600, tt: "none" },
+            defaultProps: { radius: "sm", fw: 550, tt: "none" },
           },
           Select: {
             defaultProps: {
@@ -351,7 +391,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             defaultProps: {
               highlightOnHover: true,
               horizontalSpacing: "md",
-              verticalSpacing: "sm",
+              verticalSpacing: 10,
             },
           },
           DateInput: {
